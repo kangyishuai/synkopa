@@ -109,7 +109,7 @@ export function insertMenu(c: Channel, x: number, y: number) {
 }
 
 /** Right-click on a channel: piano roll, step fills, rename / colour / clone / delete. */
-export function chanMenu(c: Channel, x: number, y: number) {
+export function chanMenu(c: Channel, x: number, y: number, clipboardItems: MenuItem[]) {
   const pt = curPat(); if (!pt) return;
   const steps = stepsOf(pt);
   const edit = (notes: Note[], label: string) => commit([putNotes(pt, notes)], label);
@@ -117,6 +117,7 @@ export function chanMenu(c: Channel, x: number, y: number) {
     { t: 'title', label: c.name + ' · ' + chanKindLabel(c) },
     { t: 'item', label: 'Piano roll', kbd: 'F7', act: () => openRoll(c.id) },
     { t: 'sub', label: t('b.pe.replace'), items: instrumentItems(p => replaceChannel(c, p), f => void replaceWithFile(c, f)) },
+    ...clipboardItems,
     { t: 'sep' },
     { t: 'item', label: t('b.pe.fill2'), act: () => edit(fillEvery(pt.notes, c.id, steps, 2), t('b.pe.fill')) },
     { t: 'item', label: t('b.pe.fill4'), act: () => edit(fillEvery(pt.notes, c.id, steps, 4), t('b.pe.fill')) },
@@ -131,7 +132,7 @@ export function chanMenu(c: Channel, x: number, y: number) {
     { t: 'item', label: t('b.pe.clone'), act: () => cloneChannel(c) },
     { t: 'sep' },
     { t: 'item', label: t('b.pe.delete'), danger: true, act: () => deleteChannel(c) },
-  ], 470);
+  ], 520);
 }
 
 /**

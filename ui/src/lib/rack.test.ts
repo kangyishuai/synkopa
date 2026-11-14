@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { samplerDefault, type Channel, type Note, type Project } from '../api/types';
 import { applyAll } from './applyOps';
 import { copyChannelNotes, gridW, pasteChannelNotes } from './pattern';
-import { fitOnScreen, moveIndex, RACK_FIT_STEPS, rackFitWidth } from './rack';
+import { fitOnScreen, moveIndex, RACK_FIT_STEPS, rackFitWidth, rackMoveIndex, rackSampleDrop } from './rack';
 
 const geo = { left: 212, cw: 22, pad: 8, min: 480, room: 5000 };
 const ch = (id: number, name: string): Channel => ({ id, name, color: '#4f8ef7', kind: 'sample', source: 1, sampler: samplerDefault(), vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root: 60 });
@@ -49,12 +49,27 @@ describe('Channel Rack: move a channel', () => {
     expect(moveIndex(2, 3, 1)).toBeNull();
     expect(moveIndex(-1, 3, 1)).toBeNull();
   });
+  it('accounts for removing the dragged channel before inserting at a gap', () => {
+    expect(rackMoveIndex(0, 3)).toBe(2);
+    expect(rackMoveIndex(2, 0)).toBe(0);
+    expect(rackMoveIndex(1, 1)).toBeNull();
+    expect(rackMoveIndex(1, 2)).toBeNull();
+    expect(rackMoveIndex(-1, 2)).toBeNull();
+  });
   it('is one putChannel op with an index (the engine reorders, nothing else changes)', () => {
     const p = project([]);
     const out = applyAll(p, [{ op: 'putChannel', channel: p.channels![2], index: 1 }]);
     expect(out.channels!.map(c => c.name)).toEqual(['Kick', 'Hat', 'Clap']);
     const back = applyAll(out, [{ op: 'putChannel', channel: out.channels![1], index: 2 }]);
     expect(back.channels!.map(c => c.name)).toEqual(['Kick', 'Clap', 'Hat']);
+  });
+});
+
+describe('Channel Rack sample drop', () => {
+  it('inserts on either edge and replaces in the center of a row', () => {
+    expect(rackSampleDrop(2, 30)).toBe('before');
+    expect(rackSampleDrop(15, 30)).toBe('replace');
+    expect(rackSampleDrop(28, 30)).toBe('after');
   });
 });
 

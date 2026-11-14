@@ -9,7 +9,7 @@ import { t } from '../lib/i18n';
 import { TOTAL_BEATS, VOL_UNITY, type Channel } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
 import { barsText, cellsBetween, clearChannel, copyChannelNotes, fitCw, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setStep, setVelAt, stepsOf, type ChannelClip } from '../lib/pattern';
-import { moveIndex } from '../lib/rack';
+import { moveIndex, rackMoveIndex } from '../lib/rack';
 import { noteName } from '../lib/pitch';
 import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
 import { commit, Gesture } from '../state/edit';
@@ -19,7 +19,7 @@ import {
 } from '../state/pattern';
 import { arrVersion } from '../state/store';
 import { say, setU, U } from '../state/ui';
-import { dblCheck, track } from '../ui/drag';
+import { dblCheck, edgeScroller, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
 import { channelIcon, InstIcon } from '../ui/instIcons';
@@ -51,6 +51,7 @@ function Rack(props: { z: number }) {
   const graphSize = useSize(() => graphWrap);
   const data = useDataVersion();
   const [scroll, setScroll] = createSignal({ x: 0, y: 0 });
+  const [moveSlot, setMoveSlot] = createSignal<number | null>(null);
   const layer = new Layer();
   // the pattern plus one greyed bar (FL): a step clicked there makes the pattern a bar longer
   // While steps are being painted the grid keeps its step width and count: the first step in the
@@ -219,8 +220,8 @@ function Rack(props: { z: number }) {
     });
   });
   /** Ctrl+C / X / V: copy, cut, paste the selected channel's notes in the current pattern (FL). */
-  const clipboardKey = (k: 'c' | 'x' | 'v') => {
-    const c = selCh(), p = pt(); if (!c) return;
+  const editClipboard = (c: Channel, k: 'c' | 'x' | 'v') => {
+    const p = pt();
     const notes = unwrap(p).notes;
     if (k === 'v') {
       if (!rackClip) { say(t('b.rk.clipEmpty')); return; }
@@ -234,16 +235,65 @@ function Rack(props: { z: number }) {
     if (k === 'x') commit([putNotes(p, clearChannel(notes, c.id))], t('b.rk.gestCut'));
     say(t(k === 'x' ? 'b.rk.cut' : 'b.rk.copied', { notes: notesText(clip.length), name: c.name, pat: p.name }));
   };
+  const openChannelMenu = (c: Channel, e: MouseEvent) => {
+    e.preventDefault();
+    selectChannel(c.id);
+    chanMenu(c, e.clientX, e.clientY, [
+      { t: 'item', label: t('b.rk.copyNotes'), kbd: 'Ctrl+C', disabled: !pt().notes.some(n => n.ch === c.id), act: () => editClipboard(c, 'c') },
+      { t: 'item', label: t('b.rk.gestPaste'), kbd: 'Ctrl+V', disabled: rackClip == null, act: () => editClipboard(c, 'v') },
+    ]);
+  };
+  const moveChannelTo = (c: Channel, to: number) => {
+    commit([chanOp(c, {}, to)], t('b.rk.gestMove'));
+    say(t('b.rk.moved', { name: c.name, n: to + 1, of: chans().length }));
+    const top = to * RACK_ROW, h = size().h;
+    if (top < scroll().y) setScroll(s => ({ ...s, y: top }));
+    else if (top + RACK_ROW > scroll().y + h) setScroll(s => ({ ...s, y: Math.min(maxScroll().y, top + RACK_ROW - h) }));
+  };
   /** Alt+↑ / ↓: move the selected channel one row (FL); the row stays in view. */
   const moveChannel = (d: number) => {
     const c = selCh(); if (!c) return;
     const list = chans(), to = moveIndex(list.findIndex(x => x.id === c.id), list.length, d);
     if (to == null) { say(t(d < 0 ? 'b.rk.moveTop' : 'b.rk.moveBottom', { name: c.name })); return; }
-    commit([chanOp(c, {}, to)], t('b.rk.gestMove'));
-    say(t('b.rk.moved', { name: c.name, n: to + 1, of: list.length }));
-    const top = to * RACK_ROW, h = size().h;
-    if (top < scroll().y) setScroll(s => ({ ...s, y: top }));
-    else if (top + RACK_ROW > scroll().y + h) setScroll(s => ({ ...s, y: Math.min(maxScroll().y, top + RACK_ROW - h) }));
+    moveChannelTo(c, to);
+  };
+  const startChannelMove = (c: Channel, e: PointerEvent) => {
+    if (e.button !== 0 || !e.isPrimary) return;
+    e.preventDefault();
+    const body = gridWrap.parentElement;
+    const slotAt = (ev: PointerEvent) => {
+      if (!gridWrap.isConnected || document.elementFromPoint(ev.clientX, ev.clientY)?.closest('.rackbody') !== body) return null;
+      const y = ev.clientY - gridWrap.getBoundingClientRect().top + scroll().y;
+      return clamp(Math.round(y / RACK_ROW), 0, chans().length);
+    };
+    // Row indices can change while dragging. Resolve the channel again at drop time.
+    const destination = (slot: number) => rackMoveIndex(chans().findIndex(row => row.id === c.id), slot);
+    const showSlot = (ev: PointerEvent) => {
+      const slot = slotAt(ev);
+      setMoveSlot(slot != null && destination(slot) != null ? slot : null);
+      return slot;
+    };
+    const scroller = edgeScroller(() => gridWrap.getBoundingClientRect(), (_dx, dy) => {
+      const y = clamp(scroll().y + dy, 0, maxScroll().y);
+      if (y === scroll().y) return false;
+      setScroll(s => ({ ...s, y }));
+      return true;
+    }, showSlot, { y: true });
+    let dragging = false;
+    track(ev => {
+      if (ev.pointerId !== e.pointerId) return;
+      dragging ||= Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) > 4;
+      if (!dragging) return;
+      if (showSlot(ev) == null) scroller.stop();
+      else scroller.move(ev);
+    }, ev => {
+      scroller.stop();
+      setMoveSlot(null);
+      if (!dragging || ev.type !== 'pointerup' || ev.pointerId !== e.pointerId) return;
+      const slot = slotAt(ev), channel = chanById(c.id);
+      const to = slot == null ? null : destination(slot);
+      if (channel && to != null) moveChannelTo(channel, to);
+    }, 'grabbing');
   };
   const onKey = (e: KeyboardEvent) => {
     const tg = (e.target as HTMLElement).tagName;
@@ -251,7 +301,8 @@ function Rack(props: { z: number }) {
     const k = e.key.toLowerCase();
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && (k === 'c' || k === 'x' || k === 'v')) {
       e.preventDefault(); e.stopPropagation();
-      clipboardKey(k);
+      const c = selCh();
+      if (c) editClipboard(c, k);
       return;
     }
     if (e.ctrlKey || e.metaKey) return;
@@ -308,7 +359,7 @@ function Rack(props: { z: number }) {
         <div class="rackbody" onWheel={wheel}>
           <div class="rackleft" style={{ width: RACK_LEFT + 'px' }}>
             <div style={{ transform: `translateY(${-scroll().y}px)` }}>
-              <For each={chans()}>{c => <ChanRow c={c} />}</For>
+              <For each={chans()}>{c => <ChanRow c={c} onMenu={openChannelMenu} onMove={startChannelMove} />}</For>
               <div class="crow addrow" style={{ height: RACK_ROW + 'px' }}>
                 <button class="smallbtn addch" title={t('b.pe.addChTitle')}
                   onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); addChannelMenu(r.left, r.bottom + 4); }}>
@@ -324,6 +375,9 @@ function Rack(props: { z: number }) {
             <Show when={!chans().length}><div class="pstate">{t('b.pe.noChannels')}</div></Show>
             <Show when={hbar()}>{b => <div class="hbar"><div style={{ left: b().left + 'px', width: b().width + 'px' }} onPointerDown={hbarDown} /></div>}</Show>
           </div>
+          <Show when={moveSlot() != null}>
+            <div class="rack-move-line" style={{ transform: `translateY(${moveSlot()! * RACK_ROW - scroll().y}px)` }} />
+          </Show>
         </div>
         {/* always mounted (hidden when off) so its size is observed from the start */}
         <div class="lanerow" style={{ height: GRAPH_H + 'px', display: graph() ? 'flex' : 'none' }}>
@@ -348,7 +402,7 @@ function Rack(props: { z: number }) {
   );
 }
 
-function ChanRow(props: { c: Channel }) {
+function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => void; onMove: (c: Channel, e: PointerEvent) => void }) {
   const c = () => props.c;
   const sel = () => selChan()?.id === c().id;
   const anySolo = () => channels().some(x => x.solo);
@@ -358,7 +412,7 @@ function ChanRow(props: { c: Channel }) {
   const volT = () => ({ kind: 'chanVol' as const, id: c().id }), panT = () => ({ kind: 'chanPan' as const, id: c().id });
   const panOp = (v: number) => chanOp(live(), { pan: Math.round(clamp(v * 2 - 1, -1, 1) * 100) / 100 });
   const nameDown = (e: PointerEvent) => {
-    if (e.button === 2) { e.preventDefault(); e.stopPropagation(); selectChannel(c().id); chanMenu(c(), e.clientX, e.clientY); return; }
+    if (e.button === 2) { e.stopPropagation(); props.onMenu(c(), e); return; }
     if (e.button !== 0) return;
     selectChannel(c().id);
     if (e.ctrlKey || e.metaKey) { audition(c().id, undefined, 0.8, true); return; }
@@ -368,8 +422,8 @@ function ChanRow(props: { c: Channel }) {
   return (
     <div class="crow" data-ch={c().id} classList={{ sel: sel(), muted: c().mute || (anySolo() && !c().solo) }} style={{ height: RACK_ROW + 'px' }}
       onPointerDown={e => { if (e.button === 0) selectChannel(c().id); }}
-      onContextMenu={e => { e.preventDefault(); selectChannel(c().id); chanMenu(c(), e.clientX, e.clientY); }}>
-      <span class="cstrip" style={{ background: c().color }} />
+      onContextMenu={e => props.onMenu(c(), e)}>
+      <span class="cstrip" style={{ color: c().color }} title={t('b.rk.dragChannel')} onPointerDown={e => props.onMove(c(), e)} />
       <button class="led" classList={{ on: !c().mute && (!anySolo() || c().solo), solo: c().solo }}
         title={t('b.pe.ledTitle', { state: t(c().mute ? 'b.pe.ledMuted' : c().solo ? 'b.pe.ledSolo' : 'b.pe.ledActive') })}
         onPointerDown={e => {

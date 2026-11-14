@@ -376,14 +376,16 @@ export function addSampler(sourceId: Id, root?: number, index?: number) {
 }
 /**
  * Import audio files and add one sampler channel per file: library files (which may know their
- * root key), or with nothing given the files picked in the dialog. `index`: where in the rack.
+ * root key), or with nothing given the files picked in the dialog. Resolve the insertion index
+ * after import so it follows its anchor if the rack order changes while loading the files.
  */
-export async function addSamplerFiles(files?: LibFile[] | null, index?: number) {
+export async function addSamplerFiles(files?: LibFile[] | null, index?: () => number | undefined) {
   try {
     const list: { path: string; root?: number }[] | undefined = files ?? (await be().pickAudioFiles())?.map(path => ({ path }));
     if (!list?.length) return;
     const ids = await importSources(list.map(f => f.path));
-    ids.forEach((id, k) => addSampler(id, list[k]?.root, index != null ? index + k : undefined));
+    const at = index?.();
+    ids.forEach((id, k) => addSampler(id, list[k]?.root, at != null ? at + k : undefined));
   } catch (e) { say(t('b.st.samplerErr', { err: String(e) })); }
 }
 export function cloneChannel(c: Channel) {

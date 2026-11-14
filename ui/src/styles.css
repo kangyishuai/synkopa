@@ -500,16 +500,20 @@ select option { background: var(--bg4); color: var(--fg); }
 .rack, .roll { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .rackbody { flex: 1; min-height: 0; display: flex; border-bottom: 1px solid var(--bg0); background: var(--bg2); }
 /* room around the rows and the steps: the rack read as squeezed into its frame */
-.rackbody { padding: 8px 0; }
-.rackbody > .rackleft { margin: -8px 0; padding: 8px 0; }
+.rackbody { --rack-padding: 8px; position: relative; overflow: hidden; padding: var(--rack-padding) 0; }
+.rackbody > .rackleft { margin: calc(-1 * var(--rack-padding)) 0; padding: var(--rack-padding) 0; }
 .rackbody > .rackgrid { margin: 0 10px; }
 .rack .lanerow > .lanecv { margin: 0 10px; }
 .rackleft { flex: none; overflow: hidden; background: var(--bg3); border-right: 1px solid var(--bg0); }
 .rackgrid { position: relative; flex: 1; min-width: 0; overflow: hidden; background: var(--bg2); }
 .crow { display: flex; align-items: center; gap: 5px; padding: 0 8px 0 0; border-bottom: 1px solid color-mix(in srgb, var(--bg0) 60%, transparent); box-sizing: border-box; }
 .crow.sel { background: var(--sel-bg2); }
-.crow.dropon { box-shadow: inset 0 0 0 1px var(--blue); background: var(--sel-bg2); }
-.crow .cstrip { width: 4px; align-self: stretch; flex: none; }
+.crow[data-sample-drop="replace"] { box-shadow: inset 0 0 0 1px var(--blue); background: var(--sel-bg2); }
+.crow[data-sample-drop="before"] { box-shadow: inset 0 2px var(--blue); }
+.crow[data-sample-drop="after"] { box-shadow: inset 0 -2px var(--blue); }
+.rack-move-line { position: absolute; top: calc(var(--rack-padding) - 1px); inset-inline: 0 10px; height: 2px; background: var(--blue); pointer-events: none; }
+.crow .cstrip { display: flex; width: 9px; margin-right: -5px; align-self: stretch; flex: none; cursor: grab; touch-action: none; }
+.crow .cstrip::before { content: ''; width: 4px; background: currentColor; }
 .crow.muted .cstrip { opacity: .35; }
 .crow .miniknob { transform: scale(.84); }
 .led { width: 10px; height: 10px; flex: none; padding: 0; border: 0; border-radius: 50%; background: var(--line2); cursor: pointer; margin-left: 2px; }

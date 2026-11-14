@@ -36,3 +36,18 @@ export function moveIndex(i: number, n: number, d: number): number | null {
   const to = i + d;
   return i < 0 || to < 0 || to >= n || to === i ? null : to;
 }
+
+/** Convert a gap in the current list to the index after removing the dragged channel. */
+export function rackMoveIndex(from: number, slot: number): number | null {
+  if (from < 0) return null;
+  const index = slot > from ? slot - 1 : slot;
+  return index === from ? null : index;
+}
+
+/** A sample dropped near a row boundary creates a channel. The middle replaces its sound. */
+export function rackSampleDrop(offset: number, height: number): 'before' | 'after' | 'replace' {
+  const edge = Math.min(6, height / 4);
+  if (offset < edge) return 'before';
+  if (offset >= height - edge) return 'after';
+  return 'replace';
+}

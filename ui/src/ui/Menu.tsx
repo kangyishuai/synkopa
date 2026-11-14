@@ -61,7 +61,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                   </Match>
                   <Match when={it.t === 'item' && it}>
                     {i => (
-                      <button class="mi" role={i().checked != null ? 'menuitemcheckbox' : 'menuitem'} aria-checked={i().checked} classList={{ danger: !!i().danger, dis: !!i().disabled }} title={i().title ?? ''} onPointerEnter={() => setOpen(null)}
+                      <button class="mi" role={i().checked != null ? 'menuitemcheckbox' : 'menuitem'} aria-checked={i().checked} aria-disabled={i().disabled} classList={{ danger: !!i().danger, dis: !!i().disabled }} title={i().title ?? ''} onPointerEnter={() => setOpen(null)}
                         onClick={() => { if (i().disabled) return; closeMenu(); i().act(); }}>
                         <span class="row" style={{ gap: '8px' }}>
                           <Show when={i().icon} fallback={<MenuIco g={glyph(i())} />}>

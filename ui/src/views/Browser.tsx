@@ -4,6 +4,7 @@ import { be } from '../api/backend';
 import type { Channel, ClipKind, Id, Kit, LibFile, LibraryProgress, Source } from '../api/types';
 import { clamp, fmtBytes, baseName } from '../lib/format';
 import { t } from '../lib/i18n';
+import { rackSampleDrop } from '../lib/rack';
 import { snapFloor } from '../lib/snap';
 import * as A from '../state/actions';
 import { getPeaks, peakRange, peaksVersion } from '../state/peaks';
@@ -12,7 +13,7 @@ import { openMenu, say, setU, U } from '../state/ui';
 import { dblCheck, track } from '../ui/drag';
 import { fitCanvas } from '../ui/frameLoop';
 import { dropClipAt, gridPoint } from './Playlist';
-import { addSamplerFiles, chanById, newPattern, openPattern, replaceWithFile } from '../state/pattern';
+import { addSamplerFiles, chanById, channels, newPattern, openPattern, replaceWithFile } from '../state/pattern';
 import { libGroup, STD_KIT } from '../state/library';
 import { FACTORY_FILES } from '../lib/factory';
 import { groupFiles, groupOpen, matches, searchTerms, stepIndex } from '../lib/libraryView';
@@ -31,8 +32,9 @@ function dragGhost(e: PointerEvent, name: string, color: string, onClick: () => 
     if (!drag && Math.hypot(ev.clientX - sx, ev.clientY - sy) > 4) drag = true;
     if (drag) setU('ghost', { x: ev.clientX + 12, y: ev.clientY + 8, name: over?.(ev.clientX, ev.clientY) ?? name, color });
   }, ev => {
-    if (over) markRow(null);
+    if (over) markRow();
     setU('ghost', null);
+    if (ev.type !== 'pointerup') return;
     if (!drag) return onClick();
     onDrop(ev.clientX, ev.clientY, ev.altKey);
   }, 'grabbing');
@@ -216,36 +218,52 @@ function onListKey(e: KeyboardEvent) {
   }
 }
 
-/**
- * Where a library file let go at a client point goes (FL): onto a channel's row in the Channel
- * Rack, or onto a sampler's window = that channel plays it (a sampler keeps its settings, another
- * instrument becomes a sampler; notes and routing stay); elsewhere on the rack = a new sampler
- * channel at the end; anywhere else it is imported, as an audio clip when the point is on a
- * playlist track. One source either way.
- */
-function fileTarget(x: number, y: number): { replace?: Channel; row?: HTMLElement; rack?: boolean } {
+type SampleDrop =
+  | { kind: 'replace'; channel: Channel; row?: HTMLElement }
+  | { kind: 'before' | 'after'; channel: Channel; row: HTMLElement }
+  | { kind: 'append' | 'import' };
+
+function fileTarget(x: number, y: number): SampleDrop {
   const el = document.elementFromPoint(x, y) as HTMLElement | null;
   const w = el?.closest<HTMLElement>('[data-channel-window]'), win = w ? chanById(Number(w.dataset.channelWindow)) : undefined;
-  if (win?.kind === 'sample') return { replace: win };
-  const row = el?.closest<HTMLElement>('.rackwin [data-ch]') ?? undefined, c = row ? chanById(Number(row.dataset.ch)) : undefined;
-  if (c && row) return { replace: c, row };
-  return { rack: !!(w || el?.closest('.rackwin')) };
+  if (win?.kind === 'sample') return { kind: 'replace', channel: win };
+  const row = el?.closest<HTMLElement>('.rackwin [data-ch]');
+  const channel = row ? chanById(Number(row.dataset.ch)) : undefined;
+  if (channel && row) {
+    const { top, height } = row.getBoundingClientRect();
+    return { kind: rackSampleDrop(y - top, height), channel, row };
+  }
+  return { kind: w || el?.closest('.rackwin') ? 'append' : 'import' };
 }
-let marked: HTMLElement | null = null;
-/** Outline the rack row a drop would replace. */
-function markRow(row: HTMLElement | null | undefined) {
-  if (marked === (row ?? null)) return;
-  marked?.classList.remove('dropon'); marked = row ?? null; marked?.classList.add('dropon');
+let marked: HTMLElement | undefined;
+function markRow(row?: HTMLElement, kind?: 'replace' | 'before' | 'after') {
+  if (marked === row && marked?.dataset.sampleDrop === kind) return;
+  if (marked) delete marked.dataset.sampleDrop;
+  marked = row;
+  if (row && kind) row.dataset.sampleDrop = kind;
 }
 function fileOver(x: number, y: number): string | null {
   const d = fileTarget(x, y);
-  markRow(d.row);
-  return d.replace ? t('d.br.dropReplace', { name: d.replace.name }) : d.rack ? t('d.br.dropNewCh') : null;
+  if ('row' in d) markRow(d.row, d.kind);
+  else markRow();
+  switch (d.kind) {
+    case 'replace': return t('d.br.dropReplace', { name: d.channel.name });
+    case 'before': return t('d.br.dropBefore', { name: d.channel.name });
+    case 'after': return t('d.br.dropAfter', { name: d.channel.name });
+    case 'append': return t('d.br.dropNewCh');
+    case 'import': return null;
+  }
 }
 function dropFile(f: LibFile, x: number, y: number, alt: boolean) {
   const d = fileTarget(x, y);
-  if (d.replace) return void replaceWithFile(d.replace, f);
-  if (d.rack) return void addSamplerFiles([f]);
+  if (d.kind === 'replace') return void replaceWithFile(d.channel, f);
+  if (d.kind === 'before' || d.kind === 'after') {
+    return void addSamplerFiles([f], () => {
+      const index = channels().findIndex(c => c.id === d.channel.id);
+      return index < 0 ? undefined : index + (d.kind === 'after' ? 1 : 0);
+    });
+  }
+  if (d.kind === 'append') return void addSamplerFiles([f]);
   void importAt([f.path], x, y, alt);
 }
 
