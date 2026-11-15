@@ -1,5 +1,5 @@
-//! The standard library: the one-shots that ship inside the program, so a new project has
-//! real, visible samples in its Channel Rack without a download.
+//! The standard library: the one-shots and loops that ship inside the program, so a new
+//! project has real, visible samples in its Channel Rack without a download.
 //!
 //! The files are embedded (`crates/engine/library`, built by `scripts/make-factory-library.py` from
 //! CC0 recordings, see `THIRD_PARTY_NOTICES.md`). A project names them, and any other file of
@@ -35,7 +35,9 @@ pub struct FactoryFile {
 pub const KIT: &str = "Standard";
 /// Prefix of a portable library path.
 pub const SCHEME: &str = "lib:";
-/// Every file is 44.1 kHz and peaks at −1 dBFS (the build script normalises them).
+/// Every file is 44.1 kHz and peaks at −1 dBFS (the build script normalises them). One-shots
+/// are FLAC; loops (group `Loops`, `loop-<name>-<bpm>[-<key>].ogg`) are Ogg Vorbis cut to whole
+/// bars at the tempo in their name.
 const SR: u32 = 44_100;
 const PEAK_DB: f32 = -1.0;
 
@@ -102,7 +104,7 @@ pub fn install() -> std::io::Result<PathBuf> {
     Ok(dir)
 }
 
-const COLORS: [(&str, &str); 10] = [
+const COLORS: [(&str, &str); 11] = [
     ("Kicks", "#4f8ef7"),
     ("Snares", "#d9678f"),
     ("Claps", "#d9678f"),
@@ -113,6 +115,7 @@ const COLORS: [(&str, &str); 10] = [
     ("Tonal", "#7c8cf8"),
     ("Orchestra", "#c98a5a"),
     ("FX", "#b07cf0"),
+    ("Loops", "#47b8a8"),
 ];
 
 pub fn color(f: &FactoryFile) -> &'static str {
@@ -207,6 +210,8 @@ mod tests {
             "flute-staccato.flac",
             "harp.flac",
             "harp-high.flac",
+            "choir-shot.flac",
+            "steel-drum.flac",
         ];
         for name in pitched {
             let f = file(name).unwrap_or_else(|| panic!("{name} is not in the library"));
@@ -223,6 +228,56 @@ mod tests {
             let a = crate::sources::Audio::load_path(&lib_path(f.file), Path::new(".")).unwrap();
             let key = key_near(&a, f.root);
             assert!((key - f.root as f64).abs() <= 0.15, "{name}: its C sounds key {key:.2}");
+        }
+    }
+
+    /// The table and the folder it embeds from list the same files (a file left in the folder
+    /// would ship in no build and be credited for nothing).
+    #[test]
+    fn the_table_lists_every_file_of_the_library_folder() {
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("library");
+        let mut on_disk: Vec<String> =
+            std::fs::read_dir(&dir).unwrap().map(|e| e.unwrap().file_name().to_string_lossy().into_owned()).collect();
+        let mut table: Vec<String> = files().iter().map(|f| f.file.to_string()).collect();
+        on_disk.sort();
+        table.sort();
+        assert_eq!(on_disk, table);
+        for f in files() {
+            let ext = Path::new(f.file).extension().and_then(|e| e.to_str());
+            assert_eq!(ext, Some(if f.group == "Loops" { "ogg" } else { "flac" }), "{}", f.file);
+        }
+    }
+
+    /// A loop is a whole number of 4/4 bars at the tempo its name gives, so it repeats in time
+    /// when the project runs at that tempo.
+    #[test]
+    fn loops_are_whole_bars_at_the_tempo_in_their_name() {
+        let loops: Vec<_> = files().iter().filter(|f| f.group == "Loops").collect();
+        assert!(loops.len() >= 10);
+        for f in loops {
+            let stem = f.file.strip_prefix("loop-").and_then(|s| s.strip_suffix(".ogg")).unwrap_or_else(|| panic!("{}", f.file));
+            let bpm: f64 = stem.split('-').find_map(|p| p.parse().ok()).unwrap_or_else(|| panic!("{}: no tempo in the name", f.file));
+            assert!(f.name.contains(&format!(" {bpm} ")) || f.name.ends_with(&format!(" {bpm}")), "{}: name {}", f.file, f.name);
+            let bars = f.dur * bpm / 240.0;
+            assert!((bars - bars.round()).abs() * 240.0 / bpm < 0.001 && bars.round() >= 1.0, "{}: {bars} bars", f.file);
+            assert!(!f.pitched, "{}", f.file);
+        }
+    }
+
+    /// Every file THIRD_PARTY_NOTICES.md credits by name is in the library, and every loop
+    /// (all from Freesound uploaders) is credited there.
+    #[test]
+    fn credited_files_exist_and_every_loop_is_credited() {
+        let notices = include_str!("../../../THIRD_PARTY_NOTICES.md");
+        let (_, rest) = notices.split_once("<!-- factory-credits:begin -->").expect("credits begin mark");
+        let (block, _) = rest.split_once("<!-- factory-credits:end -->").expect("credits end mark");
+        let credited: Vec<&str> = block.lines().filter_map(|l| l.strip_prefix("* `")?.split_once('`').map(|(f, _)| f)).collect();
+        assert!(credited.len() >= 38, "{} credited", credited.len());
+        for c in &credited {
+            assert!(file(c).is_some(), "{c} is credited but not in the library");
+        }
+        for f in files().iter().filter(|f| f.group == "Loops") {
+            assert!(credited.contains(&f.file), "{} is not credited", f.file);
         }
     }
 

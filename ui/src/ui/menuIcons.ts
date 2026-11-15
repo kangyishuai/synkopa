@@ -9,7 +9,7 @@ import {
   faWaveSquare, faCircle, faFolderOpen, faBell, faBolt, faCircleDot, faCloud, faDrumSteelpan, faGuitar, faHandsClapping, faRadio,
   faStairs, faWind, faDrum, faCompactDisc, faHandFist,
   faFloppyDisk, faFilePen, faFileExport, faFileZipper, faFileImport, faGear, faRightFromBracket, faRotateRight,
-  faMagnifyingGlassPlus, faMagnifyingGlassMinus, faWindowRestore, faArrowsRotate, faGift,
+  faMagnifyingGlassPlus, faMagnifyingGlassMinus, faWindowRestore, faArrowsRotate, faGift, faRepeat,
   faUpRightAndDownLeftFromCenter, faDownLeftAndUpRightToCenter, faComments,
 } from '@fortawesome/free-solid-svg-icons';
 import { INST_ICONS } from './instIcons';
@@ -127,7 +127,7 @@ export const builtinGlyph = (inst: string): MenuGlyph => BUILTIN[inst] ?? INST_I
 const LIB_GROUP: Record<string, MenuGlyph> = {
   Kicks: g(faCircleDot), Snares: g(faDrum), Claps: g(faHandsClapping), Hats: g(faDrumSteelpan),
   Cymbals: g(faCompactDisc), Toms: INST_ICONS.drums, Percussion: g(faHandFist), Tonal: g(faMusic),
-  Orchestra: g(faWind), FX: INST_ICONS.fx,
+  Orchestra: g(faWind), FX: INST_ICONS.fx, Loops: g(faRepeat),
 };
 /** Glyph for a standard-library sample group (by its id, not its translated name); other folders get the sample icon. */
 export const libGlyph = (group: string): MenuGlyph => LIB_GROUP[group] ?? INST_ICONS.sample;

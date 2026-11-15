@@ -3324,6 +3324,31 @@
         "repo": "https://github.com/sgossner/VSCO-2-CE",
         "commit": "440300901dfe9275fd84e0b7763af1f8443ae62e",
         "license": "CC0-1.0"
+      },
+      "stargate": {
+        "repo": "https://github.com/stargatedaw/stargate-sample-pack",
+        "commit": "dbfd6ec52d4ed53b60bdbea5fc6adf295127c027",
+        "license": "CC0-1.0"
+      },
+      "mck": {
+        "repo": "https://github.com/MckAudio/MckSamplePacks",
+        "commit": "5db40e8fe26785c256845a5bb38921b2654a887f",
+        "license": "CC0-1.0"
+      },
+      "omi": {
+        "repo": "https://github.com/Yale-OMI/sample-pack-vol-1",
+        "commit": "9ad3da067dff97aa4bd8588a97ee0419b02c0acc",
+        "license": "CC0-1.0"
+      },
+      "steeldrum": {
+        "repo": "https://github.com/sfzinstruments/jlearman.SteelDrum",
+        "commit": "dc15a36ad69a43b0d240fcbd0cc78fbc61b2b47e",
+        "license": "Unlicense"
+      },
+      "fs": {
+        "site": "https://freesound.org",
+        "license": "CC0-1.0",
+        "files": "high-quality previews of CC0 sounds"
       }
     },
     "files": [
@@ -3434,6 +3459,234 @@
         "path": "sd8/SD7525.WAV",
         "sha256": "dc5c0d5c84cd5e09890c19f8263d2ec3729e59abc27d1def574ef41928de935b",
         "bytes": 22094
+      },
+      {
+        "source": "fs",
+        "path": "132418",
+        "sha256": "3b37a94e974244fe7c1a8b98d510cbfc1bc41463cd163e9251462954eaf7907c",
+        "bytes": 26784
+      },
+      {
+        "source": "fs",
+        "path": "177242",
+        "sha256": "197108983686613d34eba2777e2c3936655367ce557c2f35cdbb6ce4f045eddc",
+        "bytes": 183264
+      },
+      {
+        "source": "fs",
+        "path": "190942",
+        "sha256": "0b10e8ca9159a6710f75c1cb65441f40b43ab20ea7896daef8a98ac5362b6596",
+        "bytes": 20660
+      },
+      {
+        "source": "fs",
+        "path": "199823",
+        "sha256": "e36bdb29732f4338abe920dcf31f1fbbb02ee914e885406cc31f81c5af6f9b92",
+        "bytes": 12432
+      },
+      {
+        "source": "fs",
+        "path": "219266",
+        "sha256": "efc28f0afc87a87c6844785e479ab1ddfb1a3cd8e9170b9b0354d38a938b6ead",
+        "bytes": 31310
+      },
+      {
+        "source": "fs",
+        "path": "240745",
+        "sha256": "54cca787bb26aac6bd05cf2bfe9eab29eab6a730f2c0c6dc8498272d0d36fed3",
+        "bytes": 27333
+      },
+      {
+        "source": "fs",
+        "path": "240893",
+        "sha256": "898c85de798fcbe83c99e53b9693c9cf6e20b067158ddf71d4daea055ed16842",
+        "bytes": 19629
+      },
+      {
+        "source": "fs",
+        "path": "332604",
+        "sha256": "5ec852c15b828188a248983a02cb814a233056d08cc89bc81a080c28884a4505",
+        "bytes": 8544
+      },
+      {
+        "source": "fs",
+        "path": "353396",
+        "sha256": "a5b0b3f82d025191aad1fb0367515f3f15cc1c494c49f105ff8aa6e4cc5e9ee3",
+        "bytes": 12367
+      },
+      {
+        "source": "fs",
+        "path": "355065",
+        "sha256": "021e2c2ade5f41e30ac06fc095958235a5d9fd8ccd89d670898cc97a49446793",
+        "bytes": 11376
+      },
+      {
+        "source": "fs",
+        "path": "428073",
+        "sha256": "cd886173aa0270c9adbdb04fa14eb7f4cde53bd70506a4bf8d6e14de00e6bfd9",
+        "bytes": 44575
+      },
+      {
+        "source": "fs",
+        "path": "428292",
+        "sha256": "b5692b6ca8d81fc03d1ee8a553113f33f4844addcbe4bdd616a92bf496bc9940",
+        "bytes": 295175
+      },
+      {
+        "source": "fs",
+        "path": "474961",
+        "sha256": "5d3621b8ef3cf3a1a20a6907e59544eeed653777a7bd2798a333ae65bab8db2a",
+        "bytes": 301189
+      },
+      {
+        "source": "fs",
+        "path": "484645",
+        "sha256": "cac4afc678ea6068e931dbbda32755e737353a44fc95597fe3302c0b12457e96",
+        "bytes": 163691
+      },
+      {
+        "source": "fs",
+        "path": "491285",
+        "sha256": "9c04a34ce904fd574f19abf8177e32aaec5c6e65f7522b18e8199c20c607aac7",
+        "bytes": 283836
+      },
+      {
+        "source": "fs",
+        "path": "501761",
+        "sha256": "e87b0abc4dd370bec4f0910471fd470f7628e630572781866502c7a4c2670cff",
+        "bytes": 22387
+      },
+      {
+        "source": "fs",
+        "path": "514880",
+        "sha256": "1dca987bff971f0c8f1eabdad751c4a09098894b453775f191320850ccc71088",
+        "bytes": 57618
+      },
+      {
+        "source": "fs",
+        "path": "517297",
+        "sha256": "337aef70146ee72f5ac2b3b464b5713ed4bd715fd7d451ed57bc81762a4880bd",
+        "bytes": 6681
+      },
+      {
+        "source": "fs",
+        "path": "521664",
+        "sha256": "457346b0835c4313e72d3203f9c0931bffc52f8c6ef3a148db6afe9b622b20c5",
+        "bytes": 203902
+      },
+      {
+        "source": "fs",
+        "path": "561207",
+        "sha256": "c512a725e9c866277b3fa0f8e7f8f311d5cca619bb0fac2e3620958f2a8b7e49",
+        "bytes": 49306
+      },
+      {
+        "source": "fs",
+        "path": "574346",
+        "sha256": "f66a920b571507a62bd9d3a801f4c0a5c643b68814d5c595e51a42078af33136",
+        "bytes": 606056
+      },
+      {
+        "source": "fs",
+        "path": "663687",
+        "sha256": "7f932fe207ee074102ba17d966e88185809db1f8c4e81db736aac12c8f7a425e",
+        "bytes": 278976
+      },
+      {
+        "source": "fs",
+        "path": "697731",
+        "sha256": "8ddeaa823d5fe6e1d838ff469aed2c6885aec5f28fb3bd9693aabae012154590",
+        "bytes": 177310
+      },
+      {
+        "source": "fs",
+        "path": "713120",
+        "sha256": "31c6cda58bfa417fe75e41b5c0a1de929d699faf3e561b631259faac11a5c4a3",
+        "bytes": 341759
+      },
+      {
+        "source": "fs",
+        "path": "729532",
+        "sha256": "2f0e5d8a80c5d1061be782f0f6b599066406af160ed73428fe10912f2330d58f",
+        "bytes": 23712
+      },
+      {
+        "source": "fs",
+        "path": "75037",
+        "sha256": "fed0e787d4169a516d0ef59ab7a494c7314cefcca99611a71dc0efb4ad4febef",
+        "bytes": 9341
+      },
+      {
+        "source": "fs",
+        "path": "816813",
+        "sha256": "e833328f2b4d22c1714713946d3122eb13e71b4060b146161752e22ebeb3de57",
+        "bytes": 29376
+      },
+      {
+        "source": "fs",
+        "path": "852268",
+        "sha256": "cb4b41857b483c0e2f64415fb9db6a9d8f33591bb4b6125e9e8be396835dd315",
+        "bytes": 562600
+      },
+      {
+        "source": "fs",
+        "path": "91791",
+        "sha256": "e79055f9dbef5556f1039877343f605dd96bb2d61222e2b3c3cce4d932e1bee6",
+        "bytes": 7983
+      },
+      {
+        "source": "mck",
+        "path": "TR8/BD/008_808_Bass_Drum_Long_2.wav",
+        "sha256": "0f4d67b2661058475143c3b6fe93b25f641288c86006b44ff6a6a1a43a3b7157",
+        "bytes": 720042
+      },
+      {
+        "source": "mck",
+        "path": "TR8/HATS/001_808_Open_HiHat.wav",
+        "sha256": "6efa55f16cb339cb8062873cc4bcaa660b1486eb3909867803ea416b9bb699d6",
+        "bytes": 178094
+      },
+      {
+        "source": "mck",
+        "path": "TR8/HATS/004_808_Closed_HiHat_Short.wav",
+        "sha256": "5177fb4072a8184007968a34b2d9a7c12f057728952656a5d5b246e8205f09ce",
+        "bytes": 318990
+      },
+      {
+        "source": "mck",
+        "path": "TR8/PERC/017_808_Hand_Clap.wav",
+        "sha256": "a62ebaac8938662de572f928a10503e004335d178d497a7cc5671158d707bd2e",
+        "bytes": 320664
+      },
+      {
+        "source": "mck",
+        "path": "TR8/SD/001_808_Snare_Drum_1.wav",
+        "sha256": "2e0b9f54fdf70594505465d92c760a63ca4eedd76a29ef489a6864023d51d72b",
+        "bytes": 319622
+      },
+      {
+        "source": "omi",
+        "path": "OMI_FX/OMI_fx_downlifter_melodic.wav",
+        "sha256": "13b546e3f32a5e3643a2d90ea51bae3496c9f99987500f69f41fdfaa526d93b0",
+        "bytes": 950952
+      },
+      {
+        "source": "stargate",
+        "path": "stargate-sample-pack/fugue-state-audio/drums/hihats/x0xproc2-hatclsd.wav",
+        "sha256": "49e1268f26e2a90c492049a5d89e85478e03419fb166bb11b751a8ba4c2c196e",
+        "bytes": 33236
+      },
+      {
+        "source": "stargate",
+        "path": "stargate-sample-pack/fugue-state-audio/drums/kicks/sdbkit-sub-a.wav",
+        "sha256": "2ccab3dc777b7ce607bdb7dec396bb6feed658edb6b016b7068240c8f8780a51",
+        "bytes": 516446
+      },
+      {
+        "source": "steeldrum",
+        "path": "flac/SteelDrum_072__C5_3-2.flac",
+        "sha256": "568837e8d56ababde16c329b0c101928db158a69b9c2a9fdaa673cad6d082aeb",
+        "bytes": 107073
       },
       {
         "source": "vcsl",
