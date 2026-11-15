@@ -7,6 +7,12 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Use LV2 effects on Linux.** WAVE finds the LV2 plugins installed on your system (for example LSP,
+  x42, swh and others) next to your VST3s: pick one from Plugins in the effect picker, edit it in
+  WAVE's parameter list and automate it. Its settings are saved with the project. Needs liblilv
+  (installed with the .deb and .rpm packages; WAVE tells you what to install when it is missing).
+- **Plugin delay is compensated.** VST3 and LV2 effects that report a latency (lookahead
+  limiters, linear-phase EQs) now stay in time with the rest of the mix.
 - **Dock the Channel rack and the Piano roll.** Click the dock button in a window's title bar,
   or use the View menu, to keep the Channel rack on the left of the Playlist and the Piano roll
   under it, so they never get lost behind other windows. Drag their edges to resize them.

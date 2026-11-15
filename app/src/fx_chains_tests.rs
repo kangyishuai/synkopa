@@ -40,7 +40,7 @@ fn with_chain() -> (Arc<Engine>, u64) {
     delay.preset = None;
     let vst = Fx {
         id: next(),
-        kind: FxKind::Vst3,
+        kind: FxKind::Plugin,
         bypass: false,
         mix: 0.8,
         preset: None,
@@ -85,7 +85,7 @@ fn a_saved_chain_loads_into_another_project_exactly_and_leaves_the_insert_alone(
         listed,
         [json!({ "name": "Vocal chain", "effects": [
         { "type": "eq", "name": "Parametric EQ" }, { "type": "comp", "name": "Compressor" },
-        { "type": "delay", "name": "Delay" }, { "type": "vst3", "name": "Nowhere Verb" }], "plugins": 1 })],
+        { "type": "delay", "name": "Delay" }, { "type": "plugin", "name": "Nowhere Verb" }], "plugins": 1 })],
         "{listed:?}"
     );
 

@@ -1,7 +1,7 @@
 //! FX chain presets: the effects of a mixer insert, in order, saved by name to the user's library
 //! and loaded onto any insert of any project (FL Studio's *Save / Open mixer track state*, REAPER's
 //! FX chains). A chain holds the effects only: type, parameters, EQ bands, dry/wet, bypass, Warp
-//! maps and VST3 plugin state. Never the insert's volume, pan, name, colour, routing or automation.
+//! maps and hosted plugin (VST3 / LV2) state. Never the insert's volume, pan, name, colour, routing or automation.
 //!
 //! One JSON file per preset, `<name>.wavechain`, in `%LOCALAPPDATA%\WAVE\FX Chains` (the same
 //! root as the library). The file name is the preset's name.
@@ -92,10 +92,10 @@ fn read(path: &Path) -> R<Vec<Fx>> {
     Ok(file.fx)
 }
 
-/// What a list row shows about an effect: the plugin's name for VST3, else the effect's name.
+/// What a list row shows about an effect: the plugin's name for a hosted plugin (VST3 or LV2), else the effect's name.
 fn fx_label(f: &Fx) -> String {
     match &f.plugin {
-        Some(p) if f.kind == FxKind::Vst3 => p.name.clone(),
+        Some(p) if f.kind == FxKind::Plugin => p.name.clone(),
         _ => wave_engine::catalog::type_name(f.kind).to_string(),
     }
 }
@@ -114,7 +114,7 @@ pub fn list(dir: &Path) -> Vec<Value> {
                 Ok(fx) => json!({
                     "name": name,
                     "effects": fx.iter().map(|f| json!({ "type": f.kind, "name": fx_label(f) })).collect::<Vec<_>>(),
-                    "plugins": fx.iter().filter(|f| f.kind == FxKind::Vst3).count(),
+                    "plugins": fx.iter().filter(|f| f.kind == FxKind::Plugin).count(),
                 }),
                 Err(e) => json!({ "name": name, "effects": [], "plugins": 0, "error": e }),
             };
@@ -238,7 +238,7 @@ pub fn control(app: &dyn Host, cmd: &str, a: &Value, if_revision: Option<u64>) -
             };
             let name = need_str(a, "name")?;
             // from the command line, plugins only run (and report load errors) when asked to
-            let has_plugins = find(&dir, name).and_then(|p| read(&p).ok()).is_some_and(|fx| fx.iter().any(|f| f.kind == FxKind::Vst3));
+            let has_plugins = find(&dir, name).and_then(|p| read(&p).ok()).is_some_and(|fx| fx.iter().any(|f| f.kind == FxKind::Plugin));
             if has_plugins {
                 app.ensure_live_plugins();
             }
