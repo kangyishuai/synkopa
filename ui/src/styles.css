@@ -527,6 +527,8 @@ select option { background: var(--bg4); color: var(--fg); }
 .patselbtn:hover { border-color: var(--line3); }
 .patselbtn .num { flex: none; font-size: 10px; color: var(--fg4); }
 .patselbtn .ell { flex: 1; text-align: left; }
+.patselarrow { width: 20px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line2); border-left: 0; background: var(--bg1); color: var(--fg3); cursor: pointer; padding: 0; }
+.patselarrow:hover { color: var(--fg-hi); border-color: var(--line3); }
 .patselnew { width: 24px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line2); border-left: 0; border-radius: 0 4px 4px 0; background: var(--bg1); color: var(--fg3); cursor: pointer; padding: 0; }
 .patselnew:hover { color: var(--fg-hi); border-color: var(--line3); }
 .patwin .winhd { gap: 6px; }
@@ -635,7 +637,7 @@ select option { background: var(--bg4); color: var(--fg); }
 .tbhint .hinttxt { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--fg5); }
 .tbhint .offgrid { flex: none; }
 .tbhint .inrow { flex: none; }
-.toolbar .patselbox, .toolbar .patselbtn, .toolbar .patselnew { height: 28px; box-sizing: border-box; }
+.toolbar .patselbox, .toolbar .patselbtn, .toolbar .patselarrow, .toolbar .patselnew { height: 28px; box-sizing: border-box; }
 .tbmid { min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .tbmid > * { flex-shrink: 0; }
 .mainvol { display: flex; align-items: center; height: 30px; padding: 0 3px; }

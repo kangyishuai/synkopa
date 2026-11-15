@@ -342,8 +342,9 @@ function PatSelector() {
   };
   return (
     <div class="patselbox" data-patsel>
-      <button class="patselbtn" title={t('b.ps.title')} onWheel={wheel}
-        onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); patternMenu(r.left, r.bottom + 4, true); }}>
+      {/* the name shows the pattern in the Channel Rack; the arrow (or a right-click) lists the patterns */}
+      <button class="patselbtn" title={t('b.ps.title')} onWheel={wheel} onClick={() => openRack()}
+        onContextMenu={e => { e.preventDefault(); const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); patternMenu(r.left, r.bottom + 4, true); }}>
         <Show when={curPat()} fallback={<span class="ell" style={{ color: 'var(--fg5)' }}>—</span>}>
           {p => <>
             <span class="num mono">{n()}</span>
@@ -351,6 +352,9 @@ function PatSelector() {
             <span class="ell">{p().name}</span>
           </>}
         </Show>
+      </button>
+      <button class="patselarrow" title={t('b.ps.list')} aria-label={t('b.ps.list')}
+        onClick={e => { const r = (e.currentTarget.previousElementSibling as HTMLElement).getBoundingClientRect(); patternMenu(r.left, r.bottom + 4, true); }}>
         <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
       </button>
       <button class="patselnew" title={t('b.pat.new')} onClick={() => { newPattern(); openRack(); }}><Icon d="M12 5v14 M5 12h14" size={11} /></button>
