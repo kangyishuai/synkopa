@@ -193,8 +193,8 @@ impl Synth {
             note_id,
             vel: vel.clamp(0.0, 1.0),
             pedal_held: false,
-            phase: 0.0,
             // a stolen voice starts from where it was: no click
+            phase: if restart { v.phase } else { 0.0 },
             env: if restart { v.env } else { 0.0 },
             ic1: v.ic1,
             ic2: v.ic2,

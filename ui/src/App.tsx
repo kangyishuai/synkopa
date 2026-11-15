@@ -152,6 +152,8 @@ function onKey(e: KeyboardEvent) {
   if (m && k === 'o') { e.preventDefault(); return void A.projectOpen(); }
   if (m && k === 's') { e.preventDefault(); return void A.projectSave(e.shiftKey); }
   if (m && e.shiftKey && k === 'r') { e.preventDefault(); return setU('exportOpen', true); }
+  // the Mix view hides the Playlist: its clip keys must not edit an arrangement nobody sees
+  if (U.mixView && ((m && !e.altKey && 'abdcxvm'.includes(k)) || e.key === 'Delete' || e.key === 'Backspace' || (e.shiftKey && e.key.startsWith('Arrow')))) return;
   if (m && k === 'a') { e.preventDefault(); return A.selectAll(); }
   if (m && (k === 'b' || k === 'd')) { e.preventDefault(); return A.duplicate(); } // Ctrl+B (FL) and Ctrl+D (Ableton/Reaper); preventDefault also stops the browser bookmark
   if (m && k === 'c') { e.preventDefault(); return A.copy(); }

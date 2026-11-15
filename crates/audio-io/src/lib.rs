@@ -325,12 +325,16 @@ impl AudioIo {
                                 lost = None;
                                 let reason = why.as_deref().unwrap_or("the device was unavailable");
                                 status = AudioStatus { note: Some(format!("Audio restarted by itself: {reason}.")), restarts, ..st };
-                            } else if st.unavailable_output.is_some() {
+                            } else if st.unavailable_output.is_some() && cfg_now.host == "asio" {
+                                // an ASIO driver whose device is gone is not probed again:
+                                // the user switches to WASAPI or retries
                                 lost = None;
-                                if cfg_now.host == "asio" {
-                                    finish_interrupted_audio(&engine);
-                                    want_input = false;
-                                }
+                                finish_interrupted_audio(&engine);
+                                want_input = false;
+                                status = st;
+                            } else if st.unavailable_output.is_some() {
+                                // any other named output comes back when it is plugged in again
+                                lost = Some((Instant::now() + retry_delay(tries), tries + 1));
                                 status = st;
                             } else {
                                 lost = Some((Instant::now() + retry_delay(tries), tries + 1));

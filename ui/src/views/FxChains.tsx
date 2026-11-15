@@ -115,7 +115,13 @@ function FxChainLoader(props: { insId: Id; x: number; y: number }) {
   };
 
   const key = (e: KeyboardEvent) => {
-    if (renaming() || deleting()) return;
+    if (renaming()) return;
+    if (deleting()) {
+      // Esc backs out of the confirmation, not out of the whole window
+      e.stopPropagation();
+      if (e.key === 'Escape') { e.preventDefault(); setDeleting(null); }
+      return;
+    }
     e.stopPropagation();
     if (e.key === 'Escape') { e.preventDefault(); close(); }
     else if (e.key === 'ArrowDown') { e.preventDefault(); setSel(i => Math.min(i + 1, shown().length - 1)); }

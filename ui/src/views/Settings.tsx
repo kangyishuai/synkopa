@@ -2,7 +2,7 @@ import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show }
 import { be } from '../api/backend';
 import { PLUGIN_FORMAT_LABEL, type AudioConfig, type AudioDevices, type AudioHost, type AudioStatus, type CliStatus, type MidiDevice, type PluginInfo, type PluginScan } from '../api/types';
 import * as A from '../state/actions';
-import { applyAudioConfig, audioApplyError, audioBusy, audioStatus, switchToWasapi } from '../state/audioWatch';
+import { applyAudioConfig, audioApplyError, audioBusy, audioStatus, refreshAudioStatus, switchToWasapi } from '../state/audioWatch';
 import { keyName, midiFlash, midiFollow, midiStatus, selectMidiDevice, setMidiFollow, setMidiTarget } from '../state/midi';
 import { S } from '../state/store';
 import { say, setU, U } from '../state/ui';
@@ -31,6 +31,7 @@ function SettingsDialog() {
   const st = audioStatus;
   const busy = audioBusy;
   onMount(() => {
+    void refreshAudioStatus();
     be().audioHosts().then(setHosts).catch(e => setErr(String(e)));
     be().cliStatus().then(setCli).catch(() => {});
   });

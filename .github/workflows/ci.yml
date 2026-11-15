@@ -76,7 +76,6 @@ jobs:
         run: cargo test --workspace
         env:
           WAVE_VST3_TEST_INSTRUMENT: ${{ github.workspace }}/app/resources/plugins/WAVE Demo Synth.vst3
-esources\plugins\WAVE Demo Synth.vst3
       - name: ASIO device recovery tests
         run: cargo test --locked -p wave-audio-io --features asio
       - name: Build app with ASIO and the session CLI

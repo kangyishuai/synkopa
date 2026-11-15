@@ -19,6 +19,9 @@ const [audioToast, setAudioToast] = createSignal<AudioStatus | null>(null);
 const [audioBusy, setAudioBusy] = createSignal(false);
 const [audioApplyError, setAudioApplyError] = createSignal<string | null>(null);
 export { audioStatus, audioToast, audioBusy, audioApplyError };
+/** Reads the status again: the engine reports device changes by itself, but not an input it
+ * opened for recording or its dropout count. */
+export const refreshAudioStatus = () => be().audioGetConfig().then(setAudioStatus).catch(() => {});
 export const dismissAudioToast = () => setAudioToast(null);
 
 /** Subscribe before fetching the snapshot so startup or a hot unplug can't be missed. */

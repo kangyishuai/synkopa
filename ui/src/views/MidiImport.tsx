@@ -78,7 +78,7 @@ export function MidiImport() {
     <Show when={U.midiWin}>
       <div class="overlay" onPointerDown={close}>
         <div class="dialog mididlg" role="dialog" aria-modal="true" aria-label={t('d.midi.title', { name: fileName() })} onPointerDown={e => e.stopPropagation()}
-          onKeyDown={e => { if (e.key === 'Enter' && !e.repeat && (e.target as HTMLElement).tagName !== 'BUTTON') { e.preventDefault(); void run(); } }} data-midi-dialog>
+          onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter' && !e.repeat && (e.target as HTMLElement).tagName !== 'BUTTON') { e.preventDefault(); void run(); } }} data-midi-dialog>
           <div class="hd">
             <span title={U.midiWin?.path}>{into() ? t('d.midi.titleInto', { name: fileName() }) : t('d.midi.title', { name: fileName() })}</span>
             <button onClick={close} aria-label={t('d.midi.cancel')}>×</button>

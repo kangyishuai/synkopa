@@ -4,7 +4,7 @@ What changed in each release of WAVE. The newest version comes first; its sectio
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
-## Unreleased
+## 0.9.16 — 2026-11-15
 
 ### Added
 - **WAVE Demo Synth comes with WAVE.** A small VST3 synth (saw, square or triangle through a
@@ -41,6 +41,34 @@ shown in the app after an update and is published as the release notes (see
   rack to select several, pick an insert and press Ctrl+L to send them all there, or Shift+Ctrl+L
   to give each its own insert from that one on (new inserts are added and named after the
   channels). Both are in a strip's right-click menu too, and one Ctrl+Z undoes them.
+- **Chorus and Phaser effects.** A new Modulation group in the effect picker: Chorus (Chorus,
+  Ensemble and Vibrato modes) and Phaser (2 to 12 stages), both with a rate you can sync to
+  the tempo, a live display of what they do and presets to start from.
+- **Save an insert's effects as an FX chain preset.** Save the whole chain of a mixer insert
+  by name and load it onto any insert of any project, replacing what is there or adding to
+  it. Loading is one undo step; rename and delete presets in place.
+- **Import and export MIDI files.** File → Import MIDI file… (or drop a `.mid` on the Playlist)
+  lists the parts in the file with the WAVE instrument each one becomes: drums become
+  samplers, pianos WAVE Keys, everything else the closest synth preset. The parts you pick land
+  on the Playlist as one pattern, with the file's tempo if you want it. A channel's menu
+  imports one part into that channel. Export writes the whole song or one pattern as a
+  standard MIDI file, one track per channel.
+- **Find missing audio when a project opens.** When samples or recordings were moved, WAVE
+  shows a Missing audio dialog: point it at a folder (subfolders included) and it relinks
+  everything it finds, lets you choose when several files match, or locate a file by hand.
+  Missing clips are marked FILE MISSING in the Playlist and a toolbar chip reopens the dialog.
+  Each relink can be undone.
+- **Export 16-bit WAV.** CD-quality WAV for the mix or stems next to 24-bit and 32-bit float,
+  dithered by default.
+- **Watch an export as it renders.** The Export dialog shows the file in progress with a live
+  waveform, the bar being rendered, elapsed and remaining time, the peak level with a clipping
+  warning, and which stems are done.
+- **Copy, paste and reorder in the Channel rack.** Copy and paste a channel's notes from its
+  menu, drag channels to reorder them, and drop a sample from the library between two
+  channels to add it exactly there.
+- **Switch to WASAPI when your ASIO interface is unplugged (Windows).** If the interface goes
+  away, the audio notification and Settings → Audio offer Switch to WASAPI to keep playing
+  through the default Windows output, and Retry ASIO once it is back.
 
 ### Changed
 - The Channel rack and the Piano roll remember where you put them when floating, after a restart too.
@@ -58,6 +86,17 @@ shown in the app after an update and is published as the release notes (see
   Clips whose notes you already edited keep them.
 - *Copy notes* keeps the timing you sang instead of snapping to the 1/16 grid, which moved
   notes and dropped quick ones. The pasted notes stay selected: Quantize snaps them in one step.
+- The Export dialog is grouped into "What to export" and "File format" and says what it will
+  write: the file name or number of files, length, sample rate, format and estimated size.
+  Sample rate and tail are remembered, and Enter starts the export.
+- A sampler channel's window and the sample window are now one sample editor with the same
+  controls in both places.
+- Piano roll notes on a sampler stop at their length (or the end of the sample), in One-shot
+  mode too. Step sequencer hits still play the sample to its end.
+
+### Fixed
+- WAVE recovers when a Focusrite USB interface is not connected: it waits for Windows to
+  detect the interface before opening any ASIO driver instead of probing a missing device.
 
 ## 0.9.15 — 2026-11-14
 

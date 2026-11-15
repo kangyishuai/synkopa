@@ -761,7 +761,9 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
         }
         "missing" => send(cx, a, "missing", json!({})),
         "relink" => {
-            let abs = |p: &str| std::fs::canonicalize(p).map(|x| x.display().to_string()).unwrap_or_else(|_| p.to_string());
+            // not `canonicalize`: on Windows it yields a `\\?\C:\…` path, which a save then cannot make
+            // relative to the project folder
+            let abs = |p: &str| std::path::absolute(p).map(|x| x.display().to_string()).unwrap_or_else(|_| p.to_string());
             match (a.get("folder"), a.num("source").map_err(u)?, a.get("path")) {
                 (Some(f), None, None) => send(cx, a, "relink", json!({ "folder": abs(f) })),
                 (None, Some(id), Some(p)) => send(cx, a, "relink", json!({ "sourceId": id as u64, "path": abs(p) })),

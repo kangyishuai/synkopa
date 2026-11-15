@@ -201,7 +201,12 @@ impl IComponentTrait for Processor {
     }
 
     unsafe fn getState(&self, state: *mut IBStream) -> tresult {
-        let values: Vec<f64> = (0..PARAMS.len()).map(|i| self.param(i)).collect();
+        let mut values: Vec<f64> = (0..PARAMS.len()).map(|i| self.param(i)).collect();
+        // where the pedal and the pitch wheel happen to be is not part of the sound: a project
+        // saved (or an export started) with the pedal down must not load with every note held
+        for held in [id::PEDAL, id::BEND] {
+            values[held as usize] = PARAMS[held as usize].def;
+        }
         write_stream(state, &dsp::save_params(&values))
     }
 }

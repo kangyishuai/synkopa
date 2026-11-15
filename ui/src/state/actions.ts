@@ -248,7 +248,7 @@ export function cancelExportOrClose() {
 function afterProjectLoad() {
   clearPeaks();
   batch(() => {
-    setU({ sel: [], plugs: [], editor: null, start: 0, menu: null });
+    setU({ sel: [], chSel: [], plugs: [], editor: null, start: 0, menu: null });
     const m = S.project.inserts[1] ?? S.project.inserts[0];
     if (m) setU({ mixSel: m.id, fxSel: m.fx[0]?.id ?? null });
     const p = S.project.patterns[0];

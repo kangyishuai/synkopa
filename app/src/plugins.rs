@@ -137,8 +137,9 @@ impl PluginFactory for Factory {
                 (proc, Handle::Lv2(h))
             }
             PluginRef::VST3 => {
+                let path = self.0.vst3_path(p);
                 let (proc, h) =
-                    wave_vst3::instantiate(&p.path, &p.cid, state.as_deref(), sr, max_block).map_err(|e| format!("{}: {e}", p.name))?;
+                    wave_vst3::instantiate(&path, &p.cid, state.as_deref(), sr, max_block).map_err(|e| format!("{}: {e}", p.name))?;
                 (proc, Handle::Vst3(h))
             }
             other => return Err(format!("{}: WAVE does not host `{other}` plugins", p.name)),
@@ -153,7 +154,8 @@ impl PluginFactory for Factory {
             return Err(format!("{}: {} instruments are not supported (VST3 only)", p.name, p.format_label()));
         }
         let state = p.state.as_deref().and_then(|s| base64::engine::general_purpose::STANDARD.decode(s).ok());
-        let (inst, h) = wave_vst3::instantiate_instrument(&p.path, &p.cid, state.as_deref(), sr, max_block, !live)
+        let path = self.0.vst3_path(p);
+        let (inst, h) = wave_vst3::instantiate_instrument(&path, &p.cid, state.as_deref(), sr, max_block, !live)
             .map_err(|e| format!("{}: {e}", p.name))?;
         if live {
             self.0.handles.lock().insert(chan_id, Handle::Vst3(h));
@@ -255,6 +257,25 @@ impl Plugins {
             return Some(x);
         }
         find(&self.scan(false))
+    }
+
+    /// Where to load a project's VST3 from: its saved path, or, when nothing is there any
+    /// more, the installed plugin with the same class id. A plugin that comes with WAVE moves
+    /// with the installation (another user or computer, a new AppImage mount on every start),
+    /// and a project must not lose it for that.
+    fn vst3_path(&self, p: &PluginRef) -> String {
+        if std::path::Path::new(&p.path).exists() {
+            return p.path.clone();
+        }
+        let find = |r: &ScanResult| {
+            r.instruments
+                .iter()
+                .chain(&r.plugins)
+                .find(|e| e.format == PluginRef::VST3 && e.cid.eq_ignore_ascii_case(&p.cid) && std::path::Path::new(&e.path).exists())
+                .map(|e| e.path.clone())
+        };
+        let known = self.known.lock().as_ref().map(find);
+        known.unwrap_or_else(|| find(&self.scan(false))).unwrap_or_else(|| p.path.clone())
     }
 
     fn handle(&self, fx: Id) -> Result<Handle, String> {
