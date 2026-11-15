@@ -4,15 +4,55 @@ What changed in each release of WAVE. The newest version comes first; its sectio
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
-## Unreleased
+## 0.9.17 — 2026-11-15
 
 ### Added
+- **Trap sounds and melodic loops in the library.** 38 new sounds you can use freely: five
+  808s tuned to their root, kicks, snares, claps, open and closed hats, percussion, impacts,
+  risers and sub drops, and a new Loops group of ten keys, piano, pluck, guitar, pad and flute
+  loops with their tempo and key in the name.
+- **Drop a sample from anywhere onto the Channel Rack.** Drag a file from Explorer or your web
+  browser, or a sample from Browser ▸ Project ▸ Audio: on a channel's edge it becomes a new
+  sampler there, on its middle it replaces the sample, below the channels it is added at the
+  end. The channel it lands on lights up while you drag.
+- **Export in place.** Right-click a clip (or press Ctrl+Alt+E) to render the selected clips,
+  with their mixer effects, into one audio clip on a new track right below them; the originals
+  are muted, and Ctrl+Z undoes it all.
+- **Drag effects between mixer channels.** Drag an effect onto another mixer strip to move it
+  there (with Ctrl to copy it), or drag the effect list's header to move the whole chain.
+- **Stop twice to silence everything.** A second Stop (or Ctrl+H) cuts reverb and delay tails,
+  held notes and the preview at once, without a click.
+- **Windows at a click.** Buttons for the Browser, the Channel Rack and the Piano roll sit in the
+  toolbar and light up when open. Click the pattern name in the toolbar, or a pattern in the
+  Browser, to see it in the Channel Rack; switching patterns shows a closed rack.
+- **Double-click to jump to the mixer.** Double-click the header of a sample or channel window,
+  or a track's icon, and the mixer opens on its channel.
+- **Double-click a sample in Browser ▸ Project ▸ Audio to hear it.**
 - **Live coding from a text file: `wave watch song.txt`.** Write the song as `wave` commands
   in a file (tempo, step patterns, effects…), start the loop and save: the song changes while
   it plays, every time you save. The file is the song: remove a line and its effect is gone.
   Each save is one undo step; a mistake in the file changes nothing and the terminal names the
   line; an edit you make in WAVE meanwhile is not overwritten. Without the app,
   `wave -p song.wave watch song.txt --render preview.wav` bounces a preview on every save.
+
+### Changed
+- **A sample's sound is shared by all its clips**, as in FL Studio: volume, pan, pitch,
+  normalize, reverse and the mixer channel set in the sample window change every clip of that
+  sample. "Make unique" splits one off.
+- **The mixer channel set in a sample window belongs to that sample**, not to the whole
+  playlist track (the track's own routing is still in the track menu).
+- **The song loops as soon as the last clip ends**: an audio file a hair longer than its bars
+  no longer adds an empty bar.
+- Track numbers are gone from the playlist headers.
+
+### Fixed
+- **Notes you play are heard at once** while the song is stopped. With a long look-ahead effect
+  such as the Vocal Rider in the mix, a plugin instrument could sound up to 1.6 s late.
+- **"Open plugin GUI" opens the plugin's window in front of WAVE.** It could open behind it and
+  look like nothing happened; the button now also follows the window when you close it, and a
+  plugin with no window of its own (WAVE Demo Synth) says so.
+- Hosted VST3 plugins can no longer repeat their previous block of audio, and effects no longer
+  do extra work on the audio thread.
 
 ## 0.9.16 — 2026-11-15
 
