@@ -656,10 +656,32 @@ const paramTitle = (p: PluginParam) =>
  * `id` is the effect's id, or with `instrument` a plugin-instrument channel's (its parameters cannot be automated yet,
  * and a plugin that did not load leaves the channel silent rather than passing audio through).
  */
+/** Plugin classes known to have no window of their own (asked once per session): their button is a note. */
+const NO_EDITOR_CIDS = new Set<string>();
+
 export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boolean }) {
   const [params, setParams] = createSignal<PluginParam[]>([]);
   const [err, setErr] = createSignal<string | null>(null);
   const [guiOpen, setGuiOpen] = createSignal(false);
+  const [guiErr, setGuiErr] = createSignal<string | null>(null);
+  const noEditor = () => !!props.plugin && NO_EDITOR_CIDS.has(props.plugin.cid);
+  const [noEd, setNoEd] = createSignal(noEditor());
+  // the plugin's window can be closed with its own X: the button follows it
+  let poll = 0;
+  createEffect(() => {
+    if (!guiOpen()) return;
+    poll = window.setInterval(() => { be().pluginEditorOpen(props.id).then(o => { if (!o) setGuiOpen(false); }).catch(() => {}); }, 700);
+    onCleanup(() => clearInterval(poll));
+  });
+  const toggleGui = () => {
+    const open = !guiOpen();
+    setGuiErr(null);
+    be().pluginEditor(props.id, open).then(() => setGuiOpen(open)).catch(e => {
+      const msg = String(e);
+      if (/NO_EDITOR/.test(msg)) { if (props.plugin) NO_EDITOR_CIDS.add(props.plugin.cid); setNoEd(true); return; }
+      setGuiErr(t('c.fx.guiFail', { e: msg.replace(/^Error:\s*/, '') }));
+    });
+  };
   // VST3 editor windows exist on Windows only; LV2 editors are not hosted: there the list is the plugin's UI
   const [editors, setEditors] = createSignal(true);
   const isLv2 = () => props.plugin?.format === 'lv2';
@@ -683,15 +705,15 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
     <div style={{ padding: '12px 14px', display: 'flex', 'flex-direction': 'column', gap: '10px' }}>
       <div class="row" style={{ gap: '8px' }}>
         <Show when={editors() && !isLv2()} fallback={<span class="note" style={{ flex: 'none' }} title={isLv2() ? t('c.fx.guiNoneLv2') : t('c.fx.guiNone')}>{t('c.fx.guiNoneShort')}</span>}>
-          <button class="smallbtn primary" style={{ height: '26px', padding: '0 12px' }} onClick={() => {
-            const open = !guiOpen();
-            be().pluginEditor(props.id, open).then(() => setGuiOpen(open)).catch(e => say(t('c.fx.guiFail', { e: String(e) })));
-          }}>{guiOpen() ? t('c.fx.guiClose') : t('c.fx.guiOpen')}</button>
+          <Show when={!noEd()} fallback={<span class="note" style={{ flex: 'none' }} title={t('c.fx.guiNoWindowTip')}>{t('c.fx.guiNoWindow')}</span>}>
+            <button class="smallbtn primary" style={{ height: '26px', padding: '0 12px' }} onClick={toggleGui}>{guiOpen() ? t('c.fx.guiClose') : t('c.fx.guiOpen')}</button>
+          </Show>
         </Show>
         <span class="fxp-badge" style={{ flex: 'none' }}>{label()}</span>
         <span class="note ell" style={{ flex: 1 }} title={props.plugin?.cid}>{[props.plugin?.vendor, props.plugin?.path || props.plugin?.cid].filter(Boolean).join(' · ')}</span>
       </div>
       <input class="textin" placeholder={t('c.fx.searchParam')} value={q()} onInput={e => setQ(e.currentTarget.value)} onKeyDown={e => e.stopPropagation()} />
+      <Show when={guiErr()}>{e => <span class="note err">{e()}</span>}</Show>
       <Show when={loadErr() ?? err()}>{e => <span class="note err">{loadErr() ? t(props.instrument ? 'c.fx.instNotLoaded' : 'c.fx.pluginNotLoaded', { e: e() }) : e()}</span>}</Show>
       <div style={{ 'max-height': '320px', overflow: 'auto', 'padding-right': '4px' }}>
         <For each={shown()} fallback={<span class="note">{t('c.fx.noParams')}</span>}>

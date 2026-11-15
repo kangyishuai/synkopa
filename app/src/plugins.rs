@@ -120,6 +120,9 @@ pub fn register_bundled(resource_dir: Option<std::path::PathBuf>) {
     }
 }
 
+/// The error of a plugin that has no window of its own (WAVE Demo Synth): the UI matches its prefix.
+pub const NO_EDITOR: &str = "NO_EDITOR: this plugin has no window of its own; its parameters are listed below";
+
 pub struct Plugins {
     handles: Mutex<HashMap<Id, Handle>>,
     known: Mutex<Option<ScanResult>>,
@@ -300,6 +303,14 @@ impl Plugins {
         self.handle(fx)?.set_param(id, v)
     }
 
+    /// Whether the plugin's own window is open (the user may have closed it with its X).
+    pub fn editor_open(&self, fx: Id) -> Result<bool, String> {
+        Ok(match self.handle(fx)? {
+            Handle::Vst3(h) => h.is_editor_open(),
+            Handle::Lv2(_) => false,
+        })
+    }
+
     pub fn editor(&self, app: &tauri::AppHandle, fx: Id, open: bool) -> Result<(), String> {
         let h = match self.handle(fx)? {
             Handle::Vst3(h) => h,
@@ -309,7 +320,7 @@ impl Plugins {
             }
         };
         if open && !h.has_editor() {
-            return Err("this plugin has no editor; use the parameter list".into());
+            return Err(NO_EDITOR.into());
         }
         let (tx, rx) = std::sync::mpsc::channel();
         let a = app.clone();
@@ -320,7 +331,11 @@ impl Plugins {
             } else {
                 h.close_editor()
             };
-            let _ = tx.send(r.map_err(|e| e.to_string()));
+            let _ = tx.send(r.map_err(|e| match e {
+                // the UI recognises this one: it turns the button into a note instead of an error
+                wave_vst3::Vst3Error::NoEditor => NO_EDITOR.to_string(),
+                e => e.to_string(),
+            }));
         })
         .map_err(|e| e.to_string())?;
         rx.recv().map_err(|e| e.to_string())?

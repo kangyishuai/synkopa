@@ -14,6 +14,7 @@ pub(crate) fn create_window(
     _size: WindowSize,
     _events: Sender<WindowEvent>,
     _ticks: Arc<AtomicU64>,
+    _owner: isize,
 ) -> Result<isize, WindowError> {
     Err(WindowError::Unsupported)
 }

@@ -213,6 +213,10 @@ pub struct InsertRt {
     pdc_l: Vec<f32>,
     pdc_r: Vec<f32>,
     pdc_w: usize,
+    /// The compensation delay is in the signal path: only while something plays (song or
+    /// pattern loop), where inserts must line up. Stopped, what is played live (a step click,
+    /// the typing keyboard, MIDI) is heard at once instead of waiting for the slowest insert.
+    pdc_on: bool,
     dry_l: Vec<f32>,
     dry_r: Vec<f32>,
     /// Samples the insert's input has been exact digital silence (see [`gate`]).
@@ -245,6 +249,7 @@ impl InsertRt {
             pdc_l: vec![],
             pdc_r: vec![],
             pdc_w: 0,
+            pdc_on: true,
             dry_l: vec![0.0; max_block],
             dry_r: vec![0.0; max_block],
             quiet: 0,
@@ -988,6 +993,8 @@ impl Rt {
                         // (an effect added or bypassed anywhere) must not drop up to the whole
                         // compensation delay (seconds with a long look-ahead Rider) on every insert
                         let mut pdc_carried = false;
+                        // stopped, a new line starts out of the path (see `InsertRt::pdc_on`)
+                        ins.pdc_on = self.playing || self.pat_play.is_some() || self.instant.is_none();
                         if let Some(old) = self.graph.inserts.iter_mut().find(|i| i.id == ins.id) {
                             ins.g_cur = old.g_cur;
                             pdc_carried = carry_pdc(ins, old);
@@ -1617,6 +1624,7 @@ impl Rt {
         let count = g.inserts.len();
         if count > 0 {
             let (enabled, watch) = (self.skip_silent, &self.watch[..self.watch_n]);
+            let aligned = ctx.playing || self.instant.is_none();
             if self.workers > 1 && count > 4 && watch.is_empty() {
                 // offline: the effect chains of the non-master inserts are independent, so
                 // worker threads take them one by one (the sum into the master stays in order)
@@ -1631,14 +1639,14 @@ impl Rt {
                                 let j = next.fetch_add(1, Relaxed);
                                 let Some(cell) = cells.get(j) else { break };
                                 let mut ins = cell.lock().unwrap();
-                                process_insert(&mut ins, j + 1, n, &ctx, enabled, &[], &mut taps, shared);
+                                process_insert(&mut ins, j + 1, n, &ctx, aligned, enabled, &[], &mut taps, shared);
                             }
                         });
                     }
                 });
             } else {
                 for (k, insert) in g.inserts.iter_mut().enumerate().skip(1) {
-                    process_insert(insert, k, n, &ctx, enabled, watch, &mut self.taps, &self.shared);
+                    process_insert(insert, k, n, &ctx, aligned, enabled, watch, &mut self.taps, &self.shared);
                 }
             }
             let (head, tail) = g.inserts.split_at_mut(1);
@@ -1649,7 +1657,7 @@ impl Rt {
                     master.r[i] += ins.r[i];
                 }
             }
-            process_insert(master, 0, n, &ctx, enabled, watch, &mut self.taps, &self.shared);
+            process_insert(master, 0, n, &ctx, aligned, enabled, watch, &mut self.taps, &self.shared);
         }
 
         // ---- out: master + click (delayed like the music) + preview
@@ -1886,8 +1894,20 @@ fn play(
 
 /// One insert's turn in a block: silence gate, effect chain, fader/pan, PDC delay. Leaves the
 /// insert's output in `ins.l`/`ins.r` (or `ins.idle` set: it contributes nothing).
+/// `aligned`: the PDC delay is in the path (see `InsertRt::pdc_on`): while playing, and
+/// always in an offline render (its tail after the end still needs the compensation).
 #[allow(clippy::too_many_arguments)]
-fn process_insert(ins: &mut InsertRt, k: usize, n: usize, ctx: &ProcessCtx, enabled: bool, watch: &[Id], taps: &mut Taps, shared: &Shared) {
+fn process_insert(
+    ins: &mut InsertRt,
+    k: usize,
+    n: usize,
+    ctx: &ProcessCtx,
+    aligned: bool,
+    enabled: bool,
+    watch: &[Id],
+    taps: &mut Taps,
+    shared: &Shared,
+) {
     // also set here: offline renders run chains on worker threads, each with its own float mode
     let _no_denormals = crate::processor::NoDenormals::new();
     let gate = gate(ins, n, enabled, watch);
@@ -1932,17 +1952,31 @@ fn process_insert(ins: &mut InsertRt, k: usize, n: usize, ctx: &ProcessCtx, enab
         }
     }
     ins.g_cur = target;
-    if !ins.pdc_l.is_empty() && !ins.low_lat {
+    if !ins.pdc_l.is_empty() && !ins.low_lat && (aligned || ins.pdc_on) {
         let d = ins.pdc_l.len();
+        // a stop switches from delayed to direct output: crossfade across this block instead of
+        // jumping (tails still ringing would click). A start switches at once: the line is empty
+        // then, and what plays first is the pre-roll, not heard.
+        let (from, to) = (if ins.pdc_on && !aligned { 1.0 } else { 0.0 }, if aligned { 1.0 } else { 0.0 });
+        let from = if aligned { 1.0 } else { from };
+        let step = (to - from) / n as f32;
         for i in 0..n {
             let w = ins.pdc_w;
             let (a, b) = (ins.pdc_l[w], ins.pdc_r[w]);
             ins.pdc_l[w] = ins.l[i];
             ins.pdc_r[w] = ins.r[i];
-            ins.l[i] = a;
-            ins.r[i] = b;
+            let k = if from == to { to } else { from + step * (i + 1) as f32 };
+            ins.l[i] = a * k + ins.l[i] * (1.0 - k);
+            ins.r[i] = b * k + ins.r[i] * (1.0 - k);
             ins.pdc_w = if w + 1 == d { 0 } else { w + 1 };
         }
+        if !aligned {
+            // stopped: the line restarts empty at the next play (bounded: the line's length, once per stop)
+            ins.pdc_l.fill(0.0);
+            ins.pdc_r.fill(0.0);
+            ins.pdc_w = 0;
+        }
+        ins.pdc_on = aligned;
     }
 }
 

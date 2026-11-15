@@ -178,6 +178,9 @@ pub struct Service {
     owner: ThreadId,
     next_id: AtomicU64,
     registry: Arc<Registry>,
+    /// The application window plugin windows belong to (0 = none): they stay above it,
+    /// minimise with it and come up in front of it however the click reached the app.
+    owner_window: std::sync::atomic::AtomicIsize,
 }
 
 impl Default for Service {
@@ -190,7 +193,19 @@ impl Service {
     /// A service owned by the calling thread, which must be the thread running
     /// the application's event loop.
     pub fn new() -> Self {
-        Self { owner: std::thread::current().id(), next_id: AtomicU64::new(1), registry: Arc::new(Mutex::new(Vec::new())) }
+        Self {
+            owner: std::thread::current().id(),
+            next_id: AtomicU64::new(1),
+            registry: Arc::new(Mutex::new(Vec::new())),
+            owner_window: std::sync::atomic::AtomicIsize::new(0),
+        }
+    }
+
+    /// Make plugin windows opened from now on *owned* by the application window `handle`
+    /// (an `HWND` on Windows): an unowned window may open behind the app when the click
+    /// came through another process (a webview), and it would hide behind the app later.
+    pub fn set_owner_window(&self, handle: isize) {
+        self.owner_window.store(handle, Ordering::Relaxed);
     }
 
     /// The thread this service (and every window it opens) belongs to.
@@ -220,7 +235,7 @@ impl Service {
         let size = options.size.clamped();
         let (sender, receiver) = channel();
         let ticks = Arc::new(AtomicU64::new(0));
-        let hwnd = backend::create_window(options, size, sender, Arc::clone(&ticks))?;
+        let hwnd = backend::create_window(options, size, sender, Arc::clone(&ticks), self.owner_window.load(Ordering::Relaxed))?;
 
         let id = WindowId(self.next_id.fetch_add(1, Ordering::Relaxed));
         self.registry.lock().push((id, hwnd));

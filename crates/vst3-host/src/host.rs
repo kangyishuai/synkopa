@@ -737,7 +737,6 @@ pub(crate) struct Counters {
     pub(crate) process_errors: AtomicU64,
     /// Instrument events that did not fit a block's event list.
     pub(crate) events_dropped: AtomicU64,
-    pub(crate) ok_calls: AtomicU64,
 }
 
 #[cfg(test)]

@@ -871,17 +871,13 @@ impl Vst3Effect {
         // Every pointer in `data` is to a live local or this effect's own
         // buffers; each channel buffer holds at least `frames <= max_block`
         // samples, the maximum given to `setupProcessing`.
+        // a plugin that flags its output silent may leave the buffer as it was: never replay
+        // the previous block (that is a buzz). The buffers are the plugin's, not yet in `data`.
+        self.io.main_out[0][..frames].fill(0.0);
+        self.io.main_out[1][..frames].fill(0.0);
         let result = unsafe { self.processor.process(&mut data) };
         self.continuous_samples += frames as i64;
         if result == kResultOk {
-            if std::env::var_os("WAVE_DIAG").is_some() {
-                let calls = self.shared.counters.ok_calls.fetch_add(1, Ordering::Relaxed);
-                if calls < 30 {
-                    let outp = self.io.main_out[0][..frames].iter().fold(0f32, |a, v| a.max(v.abs()));
-                    let nan = self.io.main_out[0][..frames].iter().filter(|v| v.is_nan()).count();
-                    eprintln!("[diag-vst3] call {calls} frames {frames} out_peak {outp:.4} nan {nan} this {:p}", self as *const _);
-                }
-            }
             l.copy_from_slice(&self.io.main_out[0][..frames]);
             r.copy_from_slice(&self.io.main_out[1][..frames]);
         } else {
@@ -1394,6 +1390,9 @@ impl Vst3Instrument {
         };
         // SAFETY: as in `Vst3Effect::run_block`: active and processing, every pointer is to a
         // live local or this instrument's own buffers, `frames <= max_block`.
+        // as in `Vst3Effect::run_block`: a plugin that skips writing must not replay the last block
+        self.io.main_out[0][..frames].fill(0.0);
+        self.io.main_out[1][..frames].fill(0.0);
         let result = unsafe { self.processor.process(&mut data) };
         self.continuous_samples += frames as i64;
         if result == kResultOk {

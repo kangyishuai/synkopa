@@ -1448,7 +1448,14 @@ export class MockBackend implements Backend {
     const pl = this.hosted(fxId);
     if (!pl) throw new Error(`${fxId} is not a loaded plugin effect or instrument`);
     if (open && pl.format === 'lv2') throw new Error('LV2 plugins are edited in WAVE\'s parameter list (their own editor windows are not supported yet)');
+    // WAVE Demo Synth has no window of its own (plugins.rs `NO_EDITOR`)
+    if (open && /demo synth/i.test(pl.name)) throw new Error('NO_EDITOR: this plugin has no window of its own; its parameters are listed below');
+    if (open) this.editors.add(fxId); else this.editors.delete(fxId);
   }
+  private editors = new Set<Id>();
+  async pluginEditorOpen(fxId: Id) { return this.editors.has(fxId); }
+  /** Test hook: the user closed the plugin's window with its X. */
+  closeEditorWindow(fxId: Id) { this.editors.delete(fxId); }
   async pluginState(fxId: Id): Promise<string> {
     if (!this.hosted(fxId)) throw new Error(`${fxId} is not a loaded plugin effect or instrument`);
     // the mock's "state" is its parameter values

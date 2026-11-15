@@ -20,11 +20,11 @@ use windows_sys::Win32::Graphics::Gdi::{GetStockObject, BLACK_BRUSH, HBRUSH};
 use windows_sys::Win32::System::LibraryLoader::GetModuleHandleW;
 use windows_sys::Win32::UI::HiDpi::{AdjustWindowRectExForDpi, GetDpiForWindow};
 use windows_sys::Win32::UI::WindowsAndMessaging::{
-    CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetWindow, GetWindowLongPtrW, IsWindow, KillTimer, RegisterClassW,
-    SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW, CW_USEDEFAULT, GWLP_USERDATA, GW_CHILD,
-    MINMAXINFO, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER, SW_SHOWNORMAL, USER_DEFAULT_SCREEN_DPI, WINDOW_EX_STYLE, WM_CLOSE, WM_DPICHANGED,
-    WM_GETMINMAXINFO, WM_NCCREATE, WM_NCDESTROY, WM_SIZE, WM_TIMER, WNDCLASSW, WS_CAPTION, WS_CLIPCHILDREN, WS_MAXIMIZEBOX, WS_MINIMIZEBOX,
-    WS_OVERLAPPED, WS_SYSMENU, WS_THICKFRAME,
+    BringWindowToTop, CreateWindowExW, DefWindowProcW, DestroyWindow, GetClientRect, GetWindow, GetWindowLongPtrW, IsWindow, KillTimer,
+    RegisterClassW, SetForegroundWindow, SetTimer, SetWindowLongPtrW, SetWindowPos, ShowWindow, CREATESTRUCTW, CS_HREDRAW, CS_VREDRAW,
+    CW_USEDEFAULT, GWLP_USERDATA, GW_CHILD, MINMAXINFO, SWP_NOACTIVATE, SWP_NOMOVE, SWP_NOZORDER, SW_SHOWNORMAL, USER_DEFAULT_SCREEN_DPI,
+    WINDOW_EX_STYLE, WM_CLOSE, WM_DPICHANGED, WM_GETMINMAXINFO, WM_NCCREATE, WM_NCDESTROY, WM_SIZE, WM_TIMER, WNDCLASSW, WS_CAPTION,
+    WS_CLIPCHILDREN, WS_MAXIMIZEBOX, WS_MINIMIZEBOX, WS_OVERLAPPED, WS_SYSMENU, WS_THICKFRAME,
 };
 
 use crate::service::{WindowError, WindowEvent, WindowId, WindowOptions, WindowSize, WindowState, MIN_WINDOW_SIZE, PUMP_INTERVAL_MS};
@@ -120,8 +120,11 @@ pub(crate) fn create_window(
     size: WindowSize,
     events: Sender<WindowEvent>,
     ticks: Arc<AtomicU64>,
+    owner: isize,
 ) -> Result<isize, WindowError> {
     ensure_class()?;
+    // owned by the app window (not a child: it keeps its own frame), so it stays in front of it
+    let owner = if alive(owner) { owner as HWND } else { ptr::null_mut() };
     let style = style_for(options.resizable);
     // The real DPI is unknown until the window exists (it depends on the
     // monitor), so create at the default scale and correct immediately after.
@@ -151,7 +154,7 @@ pub(crate) fn create_window(
             CW_USEDEFAULT,
             rect.right - rect.left,
             rect.bottom - rect.top,
-            ptr::null_mut(),
+            owner,
             ptr::null_mut(),
             GetModuleHandleW(ptr::null()),
             state.cast::<c_void>(),
@@ -197,7 +200,13 @@ pub(crate) fn destroy_window(hwnd: isize) {
 pub(crate) fn show_window(hwnd: isize) {
     if alive(hwnd) {
         // SAFETY: created by this module on this thread.
-        unsafe { ShowWindow(hwnd as HWND, SW_SHOWNORMAL) };
+        // and in front: the click that asked for it may have gone to another process (the
+        // webview), and then a plain show leaves a new window behind the app
+        unsafe {
+            ShowWindow(hwnd as HWND, SW_SHOWNORMAL);
+            BringWindowToTop(hwnd as HWND);
+            SetForegroundWindow(hwnd as HWND);
+        }
     }
 }
 
