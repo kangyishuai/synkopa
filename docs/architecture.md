@@ -780,6 +780,21 @@ movement inside the note toward its centre; `gain` dB). Start from
 latency-free; during a gesture the previous render keeps playing and the new
 one is made at `end_gesture`.
 
+**Where the analysis' notes come from** (`crates/engine/src/note_track.rs`): a sung curve is
+not a keyboard part, so notes are decided over the whole phrase rather than wherever the pitch
+leaves a semitone. Viterbi over semitone states reads each frame either as it is (inside a
+plateau the voice holds for 70 ms) or averaged over a vibrato cycle (vibrato and drift move
+around a note, not to another; the average stops at glides so it never smears a note change);
+a change costs a fixed penalty. Short notes join the neighbour nearest in pitch; a short note
+with no plateau is a glide and is shared out between its neighbours (a scoop or fall at a phrase
+edge joins its note); a note change moves to a spectral onset close to it (a new syllable); and
+a held pitch is split where a strong spectral onset shows a re-sung syllable (`PitchAnalysis.
+onsets`, 24-band log flux, not sent to the UI). Clips with edits keep their stored notes; only
+unedited clips are segmented again. Tune to Reference still segments the *reference* melody
+with the plain splitter (`pitch::segment`), which suits its stepwise curve. Parameters and
+note-level accuracy (mir_eval's COnP / COnPOff on held-out singers) are in
+`crates/tune-bench/RESULTS.md` (`tune-bench transcribe-grid`).
+
 **Note edits are one op.** `editTune {clip, edit}` (`crates/engine/src/tune_edit.rs`) moves,
 resets, splits and merges notes and draws pitch, addressed by note index in the clip's current
 segmentation (`init` = the analysis' notes when the clip has none yet; `base` = a fingerprint of
@@ -870,9 +885,10 @@ button opens the pitch editor of a vocal the pattern plays over with the selecte
 
 The other way round, the pitch editor's *Copy notes* (Ctrl+C) puts the selected sung notes (all
 without a selection) on the Piano roll's note clipboard, UI only (`ui/src/lib/vocalNotes.ts`):
-source seconds go through the clip (offset, stretch, tempo) to the 1/16 grid, the key is the
-sounding pitch (edits included, pencil excepted) rounded to a semitone, velocity follows the
-level relative to the loudest copied note, overlaps the grid creates are trimmed (the voice is
+source seconds go through the clip (offset, stretch, tempo) to song steps as sung (no grid: the
+pasted notes stay selected for the Piano roll's Quantize), the key is the sounding pitch (edits
+included, pencil excepted) rounded to a semitone, velocity follows the level relative to the
+loudest copied note, a note still sounding when the next starts ends there (the voice is
 monophonic), and steps count from the bar of the first note, so Ctrl+V in any pattern keeps the
 melody's place in the bar (from the pattern's start; a second paste lands a bar after it).
 

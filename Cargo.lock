@@ -5747,6 +5747,7 @@ dependencies = [
 name = "wave-tune-bench"
 version = "0.4.0"
 dependencies = [
+ "ort",
  "serde_json",
  "wave-engine",
  "wave-rmvpe",

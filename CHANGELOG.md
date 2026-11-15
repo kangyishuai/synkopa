@@ -51,6 +51,13 @@ shown in the app after an update and is published as the release notes (see
 - Mixer strips show one name row: the insert number and its name, with the effect count beside
   it. Inserts you have not named show just their number. The docked mixer keeps only the
   controls you need while arranging; the Mix view shows the rest.
+- **Sung notes come out as the notes you sang.** The pitch editor keeps vibrato, drift, scoops
+  and slides inside their note instead of chopping them into many short ones, splits a note
+  you sing again on the same pitch, and keeps quick notes you actually hold. *Copy notes* now
+  pastes a melody into the Piano roll that resembles what was sung, with far fewer stray notes.
+  Clips whose notes you already edited keep them.
+- *Copy notes* keeps the timing you sang instead of snapping to the 1/16 grid, which moved
+  notes and dropped quick ones. The pasted notes stay selected: Quantize snaps them in one step.
 
 ## 0.9.15 — 2026-11-14
 

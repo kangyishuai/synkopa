@@ -323,7 +323,11 @@ failed case is a failure. The agent workflow (`pitch suggest` → `editTune` →
 render) is measured on real recordings by `agent-vocalset`, `agent-gtsinger`,
 `agent-medley`, `estimation` and the three-way `listen` kit; see
 [`crates/tune-bench/RESULTS.md`](../crates/tune-bench/RESULTS.md) for the commands,
-datasets and the latest results.
+datasets and the latest results. Note transcription (the pitch editor's notes and what *Copy
+notes* pastes) is scored note by note (mir_eval's COn / COnP / COnPOff) by `transcribe`
+(Annotated VocalSet; `--basic-pitch nmp.onnx` adds Spotify's Basic Pitch as a baseline) and
+`transcribe-grid` (VocalSet + GTSinger, tunes the note tracker on some singers and reports the
+held-out ones).
 
 ## Pitch editing for agents
 
@@ -379,7 +383,8 @@ Read-only. Aligns the take with another source (another singer, another key, oth
 and reports, without deciding anything:
 
 * `related` — the reference sings the same melody: the alignment is trusted **and** at least
-  half of the confidently matched notes agree within 50 ct after the interval. `aligned` alone
+  55 % of the confidently matched notes (and at least 3 of them) agree within 50 ct after the
+  interval. `aligned` alone
   means the same material in time (a harmony part aligns but is not related). Only a related
   reference is used by `suggest`.
 * `intervals` — the take's interval above the reference, best first: `semitones` (any interval,

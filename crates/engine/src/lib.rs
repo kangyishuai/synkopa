@@ -11,6 +11,7 @@ pub mod melody;
 pub mod midi;
 pub mod model;
 pub mod music;
+pub mod note_track;
 pub mod ops;
 pub mod pitch;
 pub mod plug;
