@@ -35,6 +35,7 @@ fn auto_clip(id: Id, source: Id, track: u32, len: f64) -> Clip {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     }
 }
 
@@ -176,6 +177,7 @@ fn synth_parameter_automation_closes_the_filter() {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     }];
     p.automations.push(step_down(9400, AutoTarget::Synth { chan_id: ch, param: cutoff }, 1.0, 0.0));
     p.clips.push(auto_clip(9401, 9400, 1, 8.0));

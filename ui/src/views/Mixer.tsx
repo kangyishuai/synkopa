@@ -5,7 +5,7 @@ import { fitMixH, MIX_HANDLE_H, mixHandleDrag, mixMaxH, mixSplitDrag, SPLIT } fr
 import { stripLabel } from '../lib/mixer';
 import { t as tr, tName } from '../lib/i18n';
 import { channels, routeSelectedChannels, selectedChannels } from '../state/pattern';
-import { leaveMixView } from '../state/mixView';
+import { leaveMixView, revealed } from '../state/mixView';
 import { presetInfo } from '../lib/presets';
 import * as A from '../state/actions';
 import { commit, Gesture, wheelEdit } from '../state/edit';
@@ -88,7 +88,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   onMount(() => { meterEls.set(props.m.id, [fl, fr]); hold.delete(props.m.id); });
   onCleanup(() => meterEls.delete(props.m.id));
   const audible = () => !m().muted && (m().id === 0 || !anyInsertSolo() || m().solo);
-  const route = () => { if (m().id === 0) return 'OUT'; const here = [...S.project.tracks.filter(t => t.insert === m().id).map(t => t.name), ...channels().filter(c => c.insert === m().id).map(c => c.name)]; return here.length ? [...new Set(here)].join(', ') : '—'; };
+  const route = () => { if (m().id === 0) return 'OUT'; const here = [...S.project.tracks.filter(t => t.insert === m().id).map(t => t.name), ...channels().filter(c => c.insert === m().id).map(c => c.name), ...samplesOn(m().id)]; return here.length ? [...new Set(here)].join(', ') : '—'; };
   const panT = () => ({ kind: 'insertPan' as const, id: m().id }), volT = () => ({ kind: 'insertVol' as const, id: m().id });
   const shownPan = () => autoDisplay(panT()) ?? m().pan, shownVol = () => autoDisplay(volT()) ?? m().vol;
   const pan = () => { const t = (shownPan() + 1) / 2; return { dash: Math.abs(t - 0.5) * L30 + 'px ' + C30 + 'px', off: -Math.min(t, 0.5) * L30 + 'px', angle: -135 + t * 270 }; };
@@ -208,6 +208,20 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   );
 }
 
+/** The mixer strip under a point, other than `from` (an effect drag's target), marked for the drop. */
+let fxTarget: HTMLElement | null = null;
+function fxDropAt(x: number, y: number, from: Id): Insert | null {
+  const el = (document.elementFromPoint(x, y) as HTMLElement | null)?.closest<HTMLElement>('.strip[data-ins]') ?? null;
+  const m = el ? S.project.inserts.find(i => i.id === Number(el.dataset.ins)) : undefined;
+  const hit = m && m.id !== from ? el : null;
+  if (fxTarget !== hit) { if (fxTarget) delete fxTarget.dataset.fxDrop; fxTarget = hit; if (hit) hit.dataset.fxDrop = '1'; }
+  return hit ? m! : null;
+}
+const fxDropEnd = () => { if (fxTarget) delete fxTarget.dataset.fxDrop; fxTarget = null; setU('ghost', null); };
+/** The ghost label of an effect drag over a strip ("Move to Insert 3", Ctrl: "Copy to …"). */
+const fxGhost = (x: number, y: number, m: Insert | null, copy: boolean, color: string) =>
+  setU('ghost', m ? { x: x + 12, y: y + 8, name: tr(copy ? 'c.mix.dropCopy' : 'c.mix.dropMove', { name: insName(m) }), color } : null);
+
 function FxSlot(props: { f: Fx; n: number; insId: Id }) {
   const f = () => props.f;
   const info = () => presetInfo(S.catalog, f(), S.project.bpm);
@@ -222,15 +236,25 @@ function FxSlot(props: { f: Fx; n: number; insId: Id }) {
     const i0 = ins0.fx.findIndex(x => x.id === f().id), fxId = f().id;
     let g: Gesture | null = null;
     setU('fxSel', fxId);
+    const sx = e.clientX, color = FXMETA[f().type].color;
+    let moved = false, onto: Insert | null = null, copy = false;
     track(ev => {
       const dy = ev.clientY - sy;
-      if (!g) { if (Math.abs(dy) < 4) return; g = new Gesture(tr('c.mix.fxOrder')); setU('fxDrag', fxId); dragCursor('grabbing'); }
+      if (!moved) { if (Math.hypot(ev.clientX - sx, dy) < 4) return; moved = true; setU('fxDrag', fxId); dragCursor('grabbing'); }
+      // over another insert's strip: the effect goes there on release; anywhere else it reorders its own chain
+      copy = ev.ctrlKey || ev.metaKey;
+      onto = fxDropAt(ev.clientX, ev.clientY, props.insId);
+      fxGhost(ev.clientX, ev.clientY, onto, copy, color);
+      if (onto) return;
       const ins = S.project.inserts.find(m => m.id === props.insId); if (!ins) return;
       const cur = ins.fx.findIndex(x => x.id === fxId), to = clamp(i0 + Math.round(dy / rowH), 0, ins.fx.length - 1);
-      if (cur >= 0 && to !== cur) g.update([{ op: 'moveFx', fxId, to }]);
-    }, () => {
-      if (g) { dragCursor(null); g.end(); setU('fxDrag', null); say(tr('c.mix.fxOrderDone')); }
-      else A.openPlug(fxId);
+      if (cur >= 0 && to !== cur) { g ??= new Gesture(tr('c.mix.fxOrder')); g.update([{ op: 'moveFx', fxId, to }]); }
+    }, ev => {
+      fxDropEnd();
+      if (!moved) return A.openPlug(fxId);
+      dragCursor(null); setU('fxDrag', null);
+      if (g) { g.end(); if (!onto) say(tr('c.mix.fxOrderDone')); }
+      if (onto && ev.type === 'pointerup') void A.moveFxTo([fxId], onto.id, copy);
     });
   };
   return (
@@ -267,6 +291,12 @@ const STRIP_W = 86, STRIP_MARGIN = 4;
 /** Where each strip row was scrolled (the docked row is built again after the Mix view, and the other way round). */
 const stripScroll = { dock: 0, full: 0 };
 
+/** Names of the samples whose clips play into insert `id` on their own (the clip editor's MIXER). */
+function samplesOn(id: Id): string[] {
+  const refs = new Set(S.project.clips.filter(c => c.kind === 'audio' && c.insert === id).map(c => c.ref));
+  return S.project.sources.filter(s => refs.has(s.id)).map(s => s.name);
+}
+
 /**
  * The strip row. Only strips in (or near) the visible part are built; the others are empty
  * placeholders of the same size. Out of view they look the same, and the browser no longer
@@ -286,6 +316,16 @@ function Strips(props: { full: boolean }) {
     const stop = addFrameTask(meterTask);
     onCleanup(() => { el.removeEventListener('scroll', sync); ro.disconnect(); stop(); });
   });
+  // an insert asked for elsewhere (double-click on a window's header, a track's number): scroll its strip into view
+  // (a request already shown is not repeated when the row mounts again: it keeps its own scroll)
+  let seen = revealed()?.n;
+  createEffect(() => {
+    const r = revealed(); if (!r || r.n === seen) return;
+    seen = r.n;
+    const i = S.project.inserts.findIndex(m => m.id === r.id); if (i < 0) return;
+    const left = i * STRIP_W, w = el.clientWidth;
+    if (left < el.scrollLeft || left + STRIP_W > el.scrollLeft + w) el.scrollTo({ left: Math.max(0, left - (w - STRIP_W) / 2), behavior: 'smooth' });
+  });
   const near = (i: number) => { const v = view(), m = STRIP_MARGIN * STRIP_W; return (i + 1) * STRIP_W > v.x - m && i * STRIP_W < v.x + v.w + m; };
   return (
     <div ref={el} class="strips">
@@ -295,6 +335,24 @@ function Strips(props: { full: boolean }) {
   );
 }
 
+/** Drag the effect chain's header onto a mixer strip: every effect of the insert goes there (Ctrl: copies). */
+function chainDown(e: PointerEvent, ins: Insert) {
+  if (e.button !== 0 || !ins.fx.length || (e.target as HTMLElement).closest('button')) return;
+  e.preventDefault();
+  const sx = e.clientX, sy = e.clientY, ids = ins.fx.map(f => f.id);
+  let moved = false, onto: Insert | null = null, copy = false;
+  track(ev => {
+    if (!moved && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 4) return;
+    moved = true;
+    copy = ev.ctrlKey || ev.metaKey;
+    onto = fxDropAt(ev.clientX, ev.clientY, ins.id);
+    fxGhost(ev.clientX, ev.clientY, onto, copy, ins.color);
+  }, ev => {
+    fxDropEnd();
+    if (moved && onto && ev.type === 'pointerup') void A.moveFxTo(ids, onto.id, copy);
+  }, 'grabbing');
+}
+
 /** The selected insert's effects; its small header names the insert the slots belong to. */
 function FxChain() {
   const selIns = () => S.project.inserts.find(m => m.id === U.mixSel) ?? S.project.inserts[0];
@@ -302,7 +360,7 @@ function FxChain() {
     <Show when={selIns()}>
       {ins => (
         <div class="fxchain" data-ins={ins().id}>
-          <div class="hd">
+          <div class="hd" classList={{ grab: ins().fx.length > 0 }} title={ins().fx.length ? tr('c.mix.chainDragTip') : ''} onPointerDown={e => chainDown(e, ins())}>
             <span style={{ width: '8px', height: '8px', 'border-radius': '2px', background: ins().color }} />
             <span class="ell" style={{ flex: 1, font: '600 11px var(--sans)', color: 'var(--fg-hi)' }}>{insName(ins())}</span>
             <span class="mono" style={{ 'font-size': '10px', color: 'var(--fg5)' }}>{ins().id === 0 ? tr('c.mix.toOutput') : '→ Master'}</span>

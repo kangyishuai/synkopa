@@ -201,6 +201,7 @@ pub fn import(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value> {
                         stretch: 1.0,
                         resample: false,
                         pitch: 0.0,
+                        insert: None,
                     }],
                 });
             }
@@ -382,6 +383,7 @@ fn placeholder_clip(pattern: Id) -> Clip {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     }
 }
 

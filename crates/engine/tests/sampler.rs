@@ -71,6 +71,7 @@ fn engine(name: &str, set: impl Fn(&mut SamplerState), notes: &[(f32, f32, Optio
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     };
     e.apply(&[Op::PutChannel { channel, index: None }, Op::PutPattern { pattern }, Op::PutClips { clips: vec![clip] }], false, None)
         .unwrap();
@@ -502,6 +503,7 @@ fn a_new_project_does_not_inherit_audio_from_the_previous_one() {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     };
     e.apply(&[Op::PutPattern { pattern }, Op::PutClips { clips: vec![clip] }], false, None).unwrap();
     let out = e.render(0.0, 4.0, 0.0, SR).unwrap();

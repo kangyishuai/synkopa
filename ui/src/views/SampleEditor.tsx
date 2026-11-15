@@ -1,8 +1,8 @@
 // One floating sample editor for Playlist audio clips and Channel Rack sampler channels.
 import { createEffect, createMemo, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { be } from '../api/backend';
-import { CLIP_PITCH, SAMPLER, samplerDefault, type AutoTarget, type Channel, type Clip, type Op, type SamplerState, type Source } from '../api/types';
-import { FIT_BEATS, fitClip, TOTAL } from '../lib/clipOps';
+import { CLIP_PITCH, SAMPLER, samplerDefault, type AutoTarget, type Channel, type Clip, type Id, type Op, type SamplerState, type Source } from '../api/types';
+import { FIT_BEATS, fitClip, putSoundClips, TOTAL } from '../lib/clipOps';
 import { baseName, clamp, dbg, dbText, panText } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
 import { attackFromT, attackToT, decayFromT, decayToT, envelopePoints, msText, releaseFromT, releaseToT } from '../lib/sampler';
@@ -11,9 +11,10 @@ import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/autom
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { audition, chanById, chanOp, chanSource, replaceWithFile } from '../state/pattern';
 import { getPeaks, peakRange, peaksVersion } from '../state/peaks';
-import { plain, S } from '../state/store';
+import { insName, plain, S } from '../state/store';
 import { tele } from '../state/telemetry';
 import { say, setU, U, type SampleTarget } from '../state/ui';
+import { showInsert } from '../state/mixView';
 import { track } from '../ui/drag';
 import { addFrameTask, fitCanvas, Layer } from '../ui/frameLoop';
 import { channelIcon, guessIcon, InstIcon } from '../ui/instIcons';
@@ -72,6 +73,8 @@ interface WaveProps {
 function EditorFrame(props: {
   name: string; description: string; color: string; icon: JSX.Element; wave: WaveProps;
   fileInfo: JSX.Element; fileAction?: JSX.Element; header: JSX.Element; channelId?: number;
+  /** The mixer insert this sound is heard through: a double-click on the header shows it in the mixer. */
+  insert: () => Id | null | undefined;
   toggle: (key: 'reverse' | 'norm') => void;
   pitch: JSX.Element; level: JSX.Element; fades: JSX.Element; details: JSX.Element;
 }) {
@@ -91,7 +94,8 @@ function EditorFrame(props: {
   return (
     <div class="win chanwin smpwin" data-editor data-channel-window={props.channelId}
       style={{ left: editor().x + 'px', top: editor().y + 'px', width: editor().w + 'px', 'z-index': 47 }}>
-      <div class="winhd" onPointerDown={e => moveWindow(e, editor, move)}>
+      <div class="winhd" onPointerDown={e => moveWindow(e, editor, move)} title={t('b.cw.headTip')}
+        onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(props.insert()); }}>
         <span class="chicon" style={{ color: props.color }}>{props.icon}</span>
         <span class="title ell" style={{ 'min-width': '0', flex: '0 1 auto' }} title={props.name}>{props.name}</span>
         <span class="sub ell">{props.description}</span>
@@ -286,9 +290,13 @@ function ClipSample(props: { clip: () => Clip; source: () => Source }) {
   const spb = () => 60 / S.project.bpm, stretch = () => c().stretch ?? 1;
   const durB = () => src().dur / spb() * stretch();
   const seconds = (b: number) => b * spb() / stretch();
-  const insert = () => S.project.tracks[c().track]?.insert;
+  const trackInsert = () => S.project.tracks[c().track]?.insert ?? 0;
+  // the clip's own insert (every clip of the sample shares it), else its track's
+  const insert = () => { const own = c().insert; return own != null && S.project.inserts.some(m => m.id === own) ? own : trackInsert(); };
   const busy = () => c().id in S.stretching;
-  const put = (patch: Partial<Clip>): Op => ({ op: 'putClips', clips: [{ ...plain(c()), ...patch }] });
+  // the sound (volume, pan, pitch, normalize, reverse) is the sample's: every clip of it follows (FL)
+  const siblings = () => S.project.clips.filter(x => x.kind === 'audio' && x.ref === c().ref);
+  const put = (patch: Partial<Clip>): Op => putSoundClips(siblings().map(x => plain(x)), plain(c()), patch);
   const preview = () => U.previewing ? void be().previewStop() : void be().previewClip(c().id).catch(e => say(String(e)));
   const previewPosition = () => {
     const f = tele.frame;
@@ -332,7 +340,7 @@ function ClipSample(props: { clip: () => Clip; source: () => Source }) {
     say(t('d.smp.fit.say', { len: fitLabel(b), k: (n.stretch ?? 1).toFixed(2) }) + (n.resample ? '' : t('d.smp.fit.keep')));
   };
 
-  return <EditorFrame name={src().name} description={t('d.smp.kind', { track: S.project.tracks[c().track]?.name ?? '' })}
+  return <EditorFrame name={src().name} description={t('d.smp.kind', { track: S.project.tracks[c().track]?.name ?? '' }) + (siblings().length > 1 ? ' · ' + t('d.smp.shared', { n: siblings().length }) : '')} insert={() => insert() ?? 0}
     color={src().color} icon={<InstIcon id={guessIcon(src().name) ?? 'sample'} size={14} />}
     wave={{
       source: src, color: () => src().color, normalized: () => c().norm, reversed: () => c().rev,
@@ -345,7 +353,9 @@ function ClipSample(props: { clip: () => Clip; source: () => Source }) {
     }}
     fileInfo={seconds(c().offset).toFixed(2) + '–' + seconds(c().offset + c().len).toFixed(2) + ' / ' + src().dur.toFixed(2) + ' s · ' + fileFormat(src())}
     header={<>
-      <InsertPicker value={insert() ?? 0} master ops={id => { const op = A.trackOp(c().track, { insert: id ?? 0 }); return op ? [op] : []; }}
+      <InsertPicker value={c().insert != null && S.project.inserts.some(m => m.id === c().insert) ? c().insert! : null} master
+        nullLabel={t('d.smp.likeTrack', { name: insName(S.project.inserts.find(m => m.id === trackInsert()) ?? S.project.inserts[0]) })}
+        ops={insert => [put({ insert })]}
         label={t('d.smp.routing')} wheelKey={id + 'route'} title={t('d.smp.mixer.tip', { track: S.project.tracks[c().track]?.name ?? '' })} />
       <button class="smallbtn" title={t('d.smp.pitchEd.tip')} onClick={() => { const cid = c().id; A.closeEditor(); A.openPitchEditor(cid); }}>
         {t('d.smp.pitchEd')}{c().tune ? ' •' : ''}
@@ -440,7 +450,7 @@ function ChannelSample(props: { channel: () => SampleChannel }) {
       op={v => put({ [key]: Math.round(min + v * (max - min)) })} />;
   };
 
-  return <EditorFrame name={c().name} description={t('b.cw.kSampler')} channelId={c().id}
+  return <EditorFrame name={c().name} description={t('b.cw.kSampler')} channelId={c().id} insert={() => chanHeardInsert(c()) ?? 0}
     color={c().color} icon={<InstIcon id={channelIcon(c())} size={14} />}
     wave={{
       source: src, color: () => c().color, normalized: () => s().norm, reversed: () => s().reverse, region,

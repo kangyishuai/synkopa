@@ -255,6 +255,23 @@ describe('formatting & eq', () => {
   });
 });
 
+describe('song end', () => {
+  const clip = (start: number, len: number) => ({ start, len }) as never;
+  it('is the bar the last clip ends in, at least one bar', () => {
+    expect(songEnd({ clips: [] })).toBe(4);
+    expect(songEnd({ clips: [clip(0, 16)] })).toBe(16);
+    expect(songEnd({ clips: [clip(0, 13)] })).toBe(16);
+  });
+  it('does not add a bar for an audio file a hair longer than its bars', () => {
+    expect(songEnd({ clips: [clip(0, 16.05)] })).toBe(16);
+    expect(songEnd({ clips: [clip(0, 16.2)] })).toBe(16);
+    expect(songEnd({ clips: [clip(0, 16.5)] })).toBe(20);
+  });
+  it('keeps the bar of a clip that starts in it, however short', () => {
+    expect(songEnd({ clips: [clip(0, 16), clip(16, 0.1)] })).toBe(20);
+  });
+});
+
 describe('export range', () => {
   it('uses song by default and loop when asked', () => {
     const p = sketchProject(cat);

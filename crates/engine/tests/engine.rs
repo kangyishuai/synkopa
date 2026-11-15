@@ -394,6 +394,7 @@ fn automation_moves_volume_and_effect_params() {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     });
     let e = Engine::new(p, Arc::new(NoPlugins));
     let out = e.render(0.0, 4.0, 0.0, 48000).unwrap();
@@ -655,6 +656,7 @@ fn an_arrangement_can_run_past_the_old_128_bar_limit() {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     });
     let e = Engine::new(p, Arc::new(NoPlugins));
     let (from, to) = Engine::export_range(&e.project(), false);
@@ -696,6 +698,7 @@ fn a_loop_does_not_play_the_downbeat_after_its_end() {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     }];
     // at 44.1 kHz 4 beats are not a whole number of samples: the block that reaches the loop
     // end runs past it by a fraction of a sample
@@ -746,6 +749,7 @@ fn wrapped_mix_and_stem_keep_exactly_one_pass_with_the_echo_at_its_start() {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     }];
     for mixer in &mut p.inserts {
         mixer.fx.clear();
@@ -864,4 +868,116 @@ fn an_offline_render_reports_its_progress_block_by_block() {
     });
     assert!(matches!(r, Err(EngineError::Cancelled)));
     assert_eq!(calls, 10);
+}
+
+#[test]
+fn song_end_ignores_a_tiny_overshoot_into_the_next_bar() {
+    let mut p = Project::sketch();
+    let base = p.clips[0].clone();
+    p.clips = vec![Clip { start: 0.0, len: 16.05, ..base.clone() }];
+    assert_eq!(p.song_end(), 16.0, "a file a hair longer than 4 bars must not add a bar");
+    p.clips[0].len = 16.5;
+    assert_eq!(p.song_end(), 20.0);
+    p.clips = vec![Clip { start: 0.0, len: 16.0, ..base.clone() }, Clip { id: base.id + 1, start: 16.0, len: 0.1, ..base }];
+    assert_eq!(p.song_end(), 20.0, "a clip starting in a bar keeps that bar");
+}
+
+/// One imported audio clip at beat 0, on a track of `Project::routed` (track n → insert n).
+fn lone_audio_clip() -> (Arc<Engine>, Clip) {
+    let dir = std::env::temp_dir().join(format!("wave-route-{}-{:?}", std::process::id(), std::thread::current().id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let wav = dir.join("tone.wav");
+    let tone: Vec<f32> = (0..24000).flat_map(|i| [(i as f32 * 0.0626).sin() * 0.5; 2]).collect();
+    wave_engine::sources::write_wav(&wav, &tone, 48000).unwrap();
+    let e = Engine::new(Project::routed(), Arc::new(NoPlugins));
+    let (_, clips) = e.import_audio(std::slice::from_ref(&wav), Some((1, 0.0))).unwrap();
+    let c = e.project().clips.iter().find(|c| c.id == clips[0]).unwrap().clone();
+    (e, c)
+}
+
+#[test]
+fn an_audio_clip_plays_into_its_own_insert_past_its_track() {
+    let (e, c) = lone_audio_clip();
+    let p = e.project();
+    let track_ins = p.tracks[c.track as usize].insert;
+    let other = p.inserts.iter().find(|m| m.id != 0 && m.id != track_ins).expect("a second insert").clone();
+    let heard = rms(&e.render(0.0, c.len, 0.0, 48000).unwrap());
+    assert!(heard > 1e-3, "the clip must sound ({heard})");
+    // routed to a muted insert: the clip is gone, though its track's insert is untouched
+    e.apply(&[Op::PutInsert { insert: Insert { muted: true, ..other.clone() } }], false, None).unwrap();
+    e.apply(&[Op::PutClips { clips: vec![Clip { insert: Some(other.id), ..c.clone() }] }], false, None).unwrap();
+    let routed = rms(&e.render(0.0, c.len, 0.0, 48000).unwrap());
+    assert!(routed < heard * 1e-3, "the clip still played through its track's insert ({routed} vs {heard})");
+    // the track's mute still applies to a routed clip
+    e.apply(&[Op::PutInsert { insert: Insert { muted: false, ..other.clone() } }], false, None).unwrap();
+    assert!(rms(&e.render(0.0, c.len, 0.0, 48000).unwrap()) > 1e-3);
+    let t = e.project().tracks[c.track as usize].clone();
+    e.apply(&[Op::PutTrack { track: Track { muted: true, ..t } }], false, None).unwrap();
+    assert!(rms(&e.render(0.0, c.len, 0.0, 48000).unwrap()) < 1e-6, "a muted track silences its routed clip");
+    assert_eq!(e.project().clip_insert(&e.project().clips[0]), other.id);
+}
+
+#[test]
+fn a_clip_insert_must_exist_and_goes_back_to_the_track_when_removed() {
+    let (e, c) = lone_audio_clip();
+    assert!(e.apply(&[Op::PutClips { clips: vec![Clip { insert: Some(987_654), ..c.clone() }] }], false, None).is_err());
+    let other = e.project().inserts.iter().find(|m| m.id != 0).unwrap().id;
+    e.apply(&[Op::PutClips { clips: vec![Clip { insert: Some(other), ..c.clone() }] }], false, None).unwrap();
+    e.apply(&[Op::RemoveInsert { id: other }], false, None).unwrap();
+    assert_eq!(e.project().clips[0].insert, None);
+}
+
+#[test]
+fn an_effect_moves_to_another_insert_in_one_undo_step() {
+    let e = Engine::new(Project::sketch(), Arc::new(NoPlugins));
+    let p = e.project();
+    let from = p.inserts.iter().find(|m| m.id != 0 && !m.fx.is_empty()).expect("an insert with effects").clone();
+    let to = p.inserts.iter().find(|m| m.id != 0 && m.id != from.id).unwrap().id;
+    let fx = from.fx[0].clone();
+    e.apply(&[Op::RemoveFx { fx_id: fx.id }, Op::PutFx { insert_id: to, fx: fx.clone(), index: None }], false, None).unwrap();
+    let p = e.project();
+    assert!(p.insert(from.id).unwrap().fx.iter().all(|f| f.id != fx.id));
+    assert_eq!(p.insert(to).unwrap().fx.last().map(|f| f.id), Some(fx.id));
+    assert!(rms(&e.render(0.0, 4.0, 0.0, 48000).unwrap()) > 1e-3, "the project still plays");
+    assert!(e.undo());
+    assert!(e.project().insert(from.id).unwrap().fx.iter().any(|f| f.id == fx.id));
+}
+
+#[test]
+fn export_in_place_renders_the_selection_onto_a_new_track() {
+    let (e, c) = lone_audio_clip();
+    let never = std::sync::atomic::AtomicBool::new(false);
+    let tracks = e.project().tracks.len();
+    let r = e.export_in_place(&[c.id], 48000, &never, &mut |_| {}).unwrap();
+    let p = e.project();
+    assert_eq!(p.tracks.len(), tracks + 1);
+    assert_eq!(r.track, c.track + 1, "the new track goes right below the selection");
+    assert_eq!(p.tracks[r.track as usize].insert, 0, "it plays into the master");
+    let made = p.clips.iter().find(|x| x.id == r.clip_id).unwrap();
+    assert_eq!((made.start, made.len), (c.start, c.len));
+    assert!(p.clips.iter().find(|x| x.id == c.id).unwrap().muted, "the original is muted");
+    // what plays now is the rendered copy: about as loud as the original was
+    let heard = rms(&e.render(c.start, c.start + c.len, 0.0, 48000).unwrap());
+    assert!(heard > 1e-2, "the rendered clip must sound ({heard})");
+    assert!(std::path::Path::new(&p.sources.iter().find(|s| s.id == r.source_id).unwrap().path).exists(), "the audio is saved");
+    // one undo step takes it all back
+    assert!(e.undo());
+    let p = e.project();
+    assert_eq!(p.tracks.len(), tracks);
+    assert!(!p.clips.iter().find(|x| x.id == c.id).unwrap().muted);
+}
+
+#[test]
+fn export_in_place_refuses_an_empty_or_silent_selection() {
+    let (e, c) = lone_audio_clip();
+    let never = std::sync::atomic::AtomicBool::new(false);
+    assert!(e.export_in_place(&[], 48000, &never, &mut |_| {}).is_err());
+    let t = e.project().tracks[c.track as usize].clone();
+    let ins = e.project().insert(t.insert).unwrap().clone();
+    e.apply(&[Op::PutInsert { insert: Insert { muted: true, ..ins } }], false, None).unwrap();
+    let rev = e.revision();
+    assert!(e.export_in_place(&[c.id], 48000, &never, &mut |_| {}).is_err(), "a muted insert renders silent");
+    assert_eq!(e.revision(), rev, "nothing changed");
+    let cancel = std::sync::atomic::AtomicBool::new(true);
+    assert!(matches!(e.export_in_place(&[c.id], 48000, &cancel, &mut |_| {}), Err(EngineError::Cancelled)));
 }

@@ -39,6 +39,8 @@ export interface Backend {
   redo(): Promise<StateDto>;
   transportPlay(fromBeat: number): Promise<void>;
   transportStop(): Promise<void>;
+  /** A second Stop (panic): cut every tail still ringing — voices, effect tails, the preview. Not an edit. */
+  transportSilence(): Promise<void>;
   transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor'>>): Promise<TransportDto>;
   subscribeTelemetry(onFrame: (buf: ArrayBuffer) => void): Promise<void>;
   watchFx(ids: Id[]): Promise<void>;
@@ -74,6 +76,10 @@ export interface Backend {
    *  insert (no track or channel routed to it, no effects; a new one when none is free), named after the copy.
    *  One undo step; other clips of the source are untouched. Rejects other clip kinds and mixed sources/tracks. */
   makeUnique(clipIds: Id[]): Promise<{ sourceId: Id; track: number; insertId: Id }>;
+  /** FL's *Export in place*: the clips rendered (through their inserts and effects, not the master's) over the span
+   *  they cover into one audio clip on a new track right below them, routed to the master; the originals are muted.
+   *  One undo step. Rejects a selection that renders silent; `exportCancel` stops it (`cancelled`). */
+  exportInPlace(clipIds: Id[]): Promise<{ sourceId: Id; clipId: Id; track: number } | { cancelled: true }>;
   /** Points sources at other files (decoded first), one undo step. Rejects when no file decodes. */
   relinkSources(items: { sourceId: Id; path: string }[]): Promise<Relinked[]>;
   /** Finds the missing sources' files in `folder` (and below) by name; relinks the unambiguous ones of the remembered length. */
@@ -114,6 +120,8 @@ export interface Backend {
   melodyReference(clipId: Id, channel: Id, span?: [number, number] | null): Promise<{ melody: Melody; fit: number }>;
   previewFile(path: string): Promise<void>;
   previewStop(): Promise<void>;
+  /** Play a project source alone (Browser ▸ Project ▸ Audio), from its loaded audio. */
+  previewSource(id: Id): Promise<void>;
   /** Play one note of a channel now (not an edit). `key` MIDI (default: the channel's root), `vel` 0..1, `pattern`: the one being edited (routing). */
   noteAudition(args: { ch: Id; key?: number; vel?: number; pattern?: Id }): Promise<void>;
   /** Computer keyboard as a piano: key down (`on`) / up on a channel. */
@@ -255,6 +263,7 @@ export function tauriBackend(): Backend {
     redo: () => invoke('redo'),
     transportPlay: fromBeat => invoke('transport_play', { fromBeat }),
     transportStop: () => invoke('transport_stop'),
+    transportSilence: () => invoke('transport_silence'),
     transportSet: patch => invoke('transport_set', patch),
     async subscribeTelemetry(onFrame) {
       const ch = new Channel<ArrayBuffer>();
@@ -282,6 +291,7 @@ export function tauriBackend(): Backend {
     bakeRider: a => invoke('bake_rider', { clipId: a.clipId, params: a.params }),
     trimClip: clipId => invoke('trim_clip', { clipId }),
     makeUnique: clipIds => invoke('make_unique', { clipIds }),
+    exportInPlace: clipIds => invoke('export_in_place', { clipIds }),
     relinkSources: async items => (await invoke<{ relinked: Relinked[] }>('relink_sources', { args: { items } })).relinked,
     relinkSearch: async folder => (await invoke<{ search: RelinkSearch }>('relink_search', { args: { folder } })).search,
     async pickFolder(start) {
@@ -316,6 +326,7 @@ export function tauriBackend(): Backend {
     melodyReference: (clipId, channel, span) => invoke('melody_reference', { clipId, channel, span: span ?? null }),
     previewFile: path => invoke('preview_file', { path }),
     previewStop: () => invoke('preview_stop'),
+    previewSource: id => invoke('preview_source', { id }),
     typingNote: a => invoke('typing_note', { ch: a.ch, key: a.key, vel: a.vel ?? null, on: a.on }),
     noteAudition: a => invoke('note_audition', { ch: a.ch, key: a.key ?? null, vel: a.vel ?? null, pattern: a.pattern ?? null }),
     patternPlay: (pattern, o) => invoke('pattern_play', { pattern, from: o?.from ?? null, range: o?.range ? [o.range.a, o.range.b] : null }),

@@ -39,6 +39,7 @@ fn main() {
             stretch: 1.0,
             resample: false,
             pitch: 0.0,
+            insert: None,
         })
         .collect();
     let e = Engine::new(p, Arc::new(NoPlugins));

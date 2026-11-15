@@ -65,6 +65,8 @@ EDIT  (all edits are one undo step each; --if-revision N refuses to act if the p
   relink --source ID --path FILE           point a source at another file (one undo step)
   make-unique --clip ID[,ID...]            give audio clips (one sample, one track) their own copy of the
                                            sample on a new track below, routed to a free mixer insert
+  export-in-place --clip ID[,ID...]        render clips (with their mixer effects) to one audio clip on a new
+                                           track below them; the originals are muted (one undo step)
 
 PATTERNS & CHANNELS  (steps: x = on, 1-9 = velocity 10-90 %, . = off; spaces and | are ignored)
   channels                                 Channel Rack: ids, instrument/sample, volume, pan, insert
@@ -809,6 +811,15 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                 .map(|x| x.trim().parse::<u64>().map_err(|_| u(format!("--clip takes clip ids separated by commas, got {x}"))))
                 .collect::<Result<Vec<_>, _>>()?;
             send(cx, a, "make_unique", json!({ "clipIds": ids }))
+        }
+        "export-in-place" => {
+            let ids = a
+                .need("clip")
+                .map_err(u)?
+                .split(',')
+                .map(|x| x.trim().parse::<u64>().map_err(|_| u(format!("--clip takes clip ids separated by commas, got {x}"))))
+                .collect::<Result<Vec<_>, _>>()?;
+            send(cx, a, "export_in_place", json!({ "clipIds": ids }))
         }
         "takes" => send(cx, a, "takes", json!({"track": a.num("track").map_err(u)?.ok_or_else(|| u("missing --track".into()))? as u64})),
         "comp" => {

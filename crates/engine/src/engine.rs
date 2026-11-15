@@ -1017,6 +1017,7 @@ impl Engine {
                     stretch: 1.0,
                     resample: false,
                     pitch: 0.0,
+                    insert: None,
                 });
                 clip_ids.push(cid);
             }
@@ -1531,7 +1532,7 @@ impl Engine {
         }
         let vocal_insert = {
             let c = self.core.lock();
-            c.project.tracks.get(clip.track as usize).map(|t| t.insert)
+            Some(c.project.clip_insert(&clip))
         };
         let key = match beat_clip {
             Some(b) => self.music_analysis(Some(b), None)?.key,
@@ -1825,6 +1826,22 @@ impl Engine {
         send(&mut c, Cmd::Preview(None));
     }
 
+    /// Plays a project source alone (Browser ▸ Project ▸ Audio), from its loaded audio: no
+    /// file I/O, and a recorded take with no file of its own yet plays too.
+    pub fn preview_source(&self, id: Id) -> Result<(), EngineError> {
+        let mut c = self.core.lock();
+        let audio = c.sources.get(id).cloned().ok_or(EngineError::Msg("audio not loaded".into()))?;
+        let end = audio.frames as f64;
+        send(&mut c, Cmd::Preview(Some(Box::new(Preview { audio, pos: 0.0, start: 0.0, end, gain: 0.8, fade_in: 0.0, fade_out: 0.0 }))));
+        Ok(())
+    }
+
+    /// Panic: cut everything still ringing after a stop (see [`Cmd::Silence`]). Not an edit.
+    pub fn silence(&self) {
+        let mut c = self.core.lock();
+        send(&mut c, Cmd::Silence);
+    }
+
     /// Plays one note of a channel right away (step clicks, the piano-roll keyboard, Ctrl+click
     /// on a channel). `pattern`: the pattern being edited, so a channel that follows its clip's
     /// track is heard through that track. Not an edit.
@@ -2106,11 +2123,9 @@ impl Engine {
             .iter()
             .filter(|m| m.id != 0 && !m.muted)
             .filter(|m| {
-                let on_track = project
-                    .tracks
-                    .iter()
-                    .enumerate()
-                    .any(|(i, t)| t.insert == m.id && !t.muted && project.clips.iter().any(|c| c.track as usize == i && !c.muted));
+                let on_track = project.tracks.iter().enumerate().any(|(i, t)| {
+                    !t.muted && project.clips.iter().any(|c| c.track as usize == i && !c.muted && project.clip_insert(c) == m.id)
+                });
                 let on_channel = project.channels.iter().any(|c| c.insert == Some(m.id) && !c.mute);
                 on_track || on_channel
             })
@@ -2160,6 +2175,25 @@ impl Engine {
         cancel: &AtomicBool,
         progress: &mut dyn FnMut(RenderProgress),
     ) -> Result<Vec<f32>, EngineError> {
+        let scope = move |p: Project| match stem {
+            Some(id) => stem_project(p, id),
+            None => p,
+        };
+        self.render_scoped(&scope, from, to, tail, sample_rate, cancel, progress)
+    }
+
+    /// Renders what `scope` makes of the current project (a stem, the selected clips alone …).
+    #[allow(clippy::too_many_arguments)]
+    fn render_scoped(
+        &self,
+        scope: &dyn Fn(Project) -> Project,
+        from: f64,
+        to: f64,
+        tail: RenderTail,
+        sample_rate: u32,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(RenderProgress),
+    ) -> Result<Vec<f32>, EngineError> {
         if !from.is_finite() || !to.is_finite() || to <= from {
             return Err(EngineError::Msg("render range must be finite and `to` must be after `from`".into()));
         }
@@ -2191,10 +2225,7 @@ impl Engine {
             audio.extend(sample_audio(&c.sources, &c.project.channels));
             (c.project.clone(), map, stretches, audio, c.keys.clone())
         };
-        let project = match stem {
-            Some(id) => stem_project(project, id),
-            None => project,
-        };
+        let project = scope(project);
         // time-stretches nobody played yet are rendered here, without holding the project
         let mut rendered: HashMap<crate::sources::StretchKey, (Arc<Audio>, f64)> = HashMap::new();
         let stretch_total = stretches.len();
@@ -2799,6 +2830,7 @@ impl Engine {
             stretch: 1.0,
             resample: false,
             pitch: 0.0,
+            insert: None,
         };
         if let Err(e) = self.apply_locked(c, &[Op::PutPattern { pattern }, Op::PutClips { clips: vec![clip] }], false, None) {
             log::error!("could not place the MIDI take: {e}");
@@ -2889,6 +2921,176 @@ impl Engine {
         self.changed(c);
         Ok(id)
     }
+}
+
+impl Engine {
+    /// FL's *Export in place* (consolidate): renders the selected clips — through their mixer
+    /// inserts and effects, without the master's — over the span they cover, saves the audio
+    /// with the project's media and puts it as one audio clip on a new track right below the
+    /// selection, routed to the master; the originals are muted. One undo step. Automation
+    /// still applies; other clips are left out. No effect tail: the clip is exactly the span.
+    pub fn export_in_place(
+        &self,
+        clip_ids: &[Id],
+        sample_rate: u32,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(RenderProgress),
+    ) -> Result<InPlace, EngineError> {
+        let err = |m: &str| EngineError::Msg(m.into());
+        let (picked, from, to) = {
+            let c = self.core.lock();
+            let picked: Vec<Clip> =
+                c.project.clips.iter().filter(|x| clip_ids.contains(&x.id) && x.kind != ClipKind::Auto).cloned().collect();
+            if picked.is_empty() {
+                return Err(err("select the clips to export in place (automation clips alone make no sound)"));
+            }
+            let from = picked.iter().map(|x| x.start).fold(f64::INFINITY, f64::min);
+            let to = picked.iter().map(|x| x.start + x.len).fold(f64::NEG_INFINITY, f64::max);
+            (picked, from, to)
+        };
+        let ids: HashSet<Id> = picked.iter().map(|x| x.id).collect();
+        let tracks: HashSet<u32> = picked.iter().map(|x| x.track).collect();
+        let scope = |mut p: Project| {
+            // only the selection sounds (automation keeps moving its targets); what the user
+            // muted or soloed elsewhere does not decide what an explicit selection renders
+            p.clips.retain(|x| ids.contains(&x.id) || x.kind == ClipKind::Auto);
+            for x in p.clips.iter_mut() {
+                if ids.contains(&x.id) {
+                    x.muted = false;
+                }
+            }
+            for (i, t) in p.tracks.iter_mut().enumerate() {
+                t.solo = false;
+                if tracks.contains(&(i as u32)) {
+                    t.muted = false;
+                }
+            }
+            for ch in p.channels.iter_mut() {
+                ch.solo = false;
+            }
+            // the result plays into the master: rendering the master's chain too would apply it twice
+            for m in p.inserts.iter_mut() {
+                m.solo = false;
+                if m.id == 0 {
+                    m.fx.clear();
+                    m.vol = crate::model::VOL_UNITY;
+                    m.pan = 0.0;
+                    m.width = 1.0;
+                    m.muted = false;
+                }
+            }
+            p
+        };
+        let data = self.render_scoped(&scope, from, to, RenderTail::Seconds(0.0), sample_rate, cancel, progress)?;
+        let audio = Audio::from_stereo(data.clone(), sample_rate, 2);
+        if audio.peak() < 1e-6 {
+            return Err(err("the selection renders silent: nothing to export"));
+        }
+        let mut c = self.core.lock();
+        let first = picked.iter().min_by(|a, b| a.track.cmp(&b.track).then(a.start.total_cmp(&b.start))).unwrap();
+        let low = picked.iter().map(|x| x.track).max().unwrap();
+        let name = match &picked[..] {
+            [one] => format!("{} (in place)", clip_name(&c.project, one)),
+            _ => format!("{} + {} (in place)", clip_name(&c.project, first), picked.len() - 1),
+        };
+        let color = clip_color(&c.project, first);
+        let path = fresh_path(&audio_dir(&c), &sanitize(&name));
+        write_wav(&path, &data, sample_rate)?;
+        let before = c.project.clone();
+        let source_id = c.project.alloc_id();
+        c.project.sources.push(Source {
+            id: source_id,
+            name: name.clone(),
+            color: color.clone(),
+            path: path.display().to_string(),
+            dur: audio.seconds(),
+            sr: sample_rate,
+            ch: 2,
+            peak_db: crate::dsp::gain_to_db(audio.peak()),
+        });
+        c.sources.insert(source_id, Arc::new(audio));
+        // the project may have changed while rendering: the track goes under where the selection is now
+        let at = (low + 1).min(c.project.tracks.len() as u32);
+        let h = c.project.tracks.get(low as usize).map_or(60.0, |t| t.h);
+        let track_id = c.project.alloc_id();
+        c.project.tracks.insert(
+            at as usize,
+            Track {
+                id: track_id,
+                name: name.clone(),
+                color: color.clone(),
+                muted: false,
+                solo: false,
+                arm: false,
+                vol: VOL_UNITY,
+                h,
+                insert: 0,
+                icon: None,
+            },
+        );
+        for x in c.project.clips.iter_mut() {
+            if x.track >= at {
+                x.track += 1;
+            }
+            if ids.contains(&x.id) {
+                x.muted = true;
+            }
+        }
+        let clip_id = c.project.alloc_id();
+        c.project.clips.push(Clip {
+            id: clip_id,
+            track: at,
+            start: from,
+            len: to - from,
+            offset: 0.0,
+            kind: ClipKind::Audio,
+            source: source_id,
+            muted: false,
+            gain: 0.0,
+            fade_in: 0.0,
+            fade_out: 0.0,
+            pan: 0.0,
+            norm: false,
+            rev: false,
+            tune: None,
+            stretch: 1.0,
+            resample: false,
+            pitch: 0.0,
+            insert: None,
+        });
+        push_undo(&mut c, before);
+        c.revision += 1;
+        self.sync(&mut c, Dirty { timeline: true, mixer: true, ..Default::default() });
+        self.changed(c);
+        Ok(InPlace { source_id, clip_id, track: at })
+    }
+}
+
+/// What [`Engine::export_in_place`] made: the new source, its clip and the track it is on.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InPlace {
+    pub source_id: Id,
+    pub clip_id: Id,
+    pub track: u32,
+}
+
+/// A clip's name as the playlist shows it: its sample's or its pattern's.
+fn clip_name(p: &Project, c: &Clip) -> String {
+    match c.kind {
+        ClipKind::Pat => p.patterns.iter().find(|x| x.id == c.source).map(|x| x.name.clone()),
+        ClipKind::Comp => p.comp(c.source).map(|x| x.name.clone()),
+        _ => p.sources.iter().find(|x| x.id == c.source).map(|x| x.name.clone()),
+    }
+    .unwrap_or_else(|| "Render".into())
+}
+
+fn clip_color(p: &Project, c: &Clip) -> String {
+    match c.kind {
+        ClipKind::Pat => p.patterns.iter().find(|x| x.id == c.source).map(|x| x.color.clone()),
+        _ => p.sources.iter().find(|x| x.id == c.source).map(|x| x.color.clone()),
+    }
+    .unwrap_or_else(|| "#47b8a8".into())
 }
 
 /// Loaded audio of every take source of `comps`.
@@ -3472,6 +3674,7 @@ pub(crate) fn build_timeline(
             pan: c.pan,
             fade_in: c.fade_in,
             fade_out: c.fade_out,
+            insert: if c.kind == ClipKind::Audio { c.insert.and_then(|id| p.inserts.iter().position(|m| m.id == id)) } else { None },
             src,
             gain0: c.gain,
             pan0: c.pan,

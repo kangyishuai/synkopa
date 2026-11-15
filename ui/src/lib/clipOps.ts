@@ -138,3 +138,34 @@ export function fitClip(c: Clip, beats: number): Clip | null {
   const r = (x: number) => Math.round(x * 1e9) / 1e9;
   return { ...c, stretch: r(Math.min(STRETCH_MAX, Math.max(STRETCH_MIN, ns))), offset: r(c.offset * k), len: beats };
 }
+
+/**
+ * What every audio clip of one source shares, as FL's audio clips share their channel: volume,
+ * pan, pitch, normalize, reverse and the mixer insert. Editing one clip's sound edits them all; the region, the
+ * fades, the stretch and pitch-editor notes stay the clip's own ("Make unique" splits a clip off).
+ */
+export const SHARED_SOUND = ['gain', 'pan', 'pitch', 'norm', 'rev', 'insert'] as const;
+type SoundKey = typeof SHARED_SOUND[number];
+
+/** The shared sound of `ref`'s audio clips (from the first one), for a new clip of it; empty when it has none yet. */
+export function sharedSound(clips: readonly Clip[], ref: number): Partial<Pick<Clip, SoundKey>> {
+  const like = clips.find(c => c.kind === 'audio' && c.ref === ref);
+  if (!like) return {};
+  const out: Partial<Pick<Clip, SoundKey>> = {};
+  for (const k of SHARED_SOUND) if (like[k] !== undefined) (out as Record<string, unknown>)[k] = like[k];
+  return out;
+}
+
+/**
+ * `edited` with `patch`, and every other audio clip of the same source with the shared-sound part
+ * of it (one op, one undo step). A comp or a pattern clip only changes itself.
+ */
+export function putSoundClips(clips: readonly Clip[], edited: Clip, patch: Partial<Clip>): Op {
+  const self = { ...edited, ...patch };
+  if (edited.kind !== 'audio') return { op: 'putClips', clips: [self] };
+  const shared: Partial<Clip> = {};
+  for (const k of SHARED_SOUND) if (k in patch) (shared as Record<string, unknown>)[k] = patch[k];
+  if (!Object.keys(shared).length) return { op: 'putClips', clips: [self] };
+  const others = clips.filter(c => c.id !== edited.id && c.kind === 'audio' && c.ref === edited.ref && SHARED_SOUND.some(k => k in shared && (c[k] ?? null) !== (shared[k] ?? null)));
+  return { op: 'putClips', clips: [self, ...others.map(c => ({ ...c, ...shared }))] };
+}

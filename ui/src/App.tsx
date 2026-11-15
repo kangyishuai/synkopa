@@ -12,7 +12,7 @@ import { findFx, S } from './state/store';
 import { swapTake } from './state/comp';
 import { closeMenu, say, setU, U } from './state/ui';
 import { ContextMenu } from './ui/Menu';
-import { importAt } from './views/Browser';
+import { osDragEnd, osDragOver, osDrop } from './views/Browser';
 import { FxWindow } from './views/FxWindow';
 import { Mixer, MixView } from './views/Mixer';
 import { leaveMixView, toggleMixView } from './state/mixView';
@@ -92,6 +92,8 @@ function onKey(e: KeyboardEvent) {
     return;
   }
   if (m && !e.shiftKey && !e.altKey && e.code === 'KeyT') { e.preventDefault(); return setTypingOn(!typingOn()); }
+  // FL's "Stop sound" (panic): stop, and cut every tail still ringing
+  if (m && !e.shiftKey && !e.altKey && e.code === 'KeyH') { e.preventDefault(); return void (U.playing || U.patPlaying ? A.stop().then(() => A.silence()) : A.silence()); }
   if (typingDown(e, typingTarget)) return;
   if (e.key === 'Escape') {
     if (U.menu) return closeMenu();
@@ -146,6 +148,8 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'F9') { e.preventDefault(); return toggleMixView(); }
   // FL: route the selected Channel Rack channels to the selected mixer insert (Shift: one per insert from it on)
   if (m && !e.altKey && e.code === 'KeyL') { e.preventDefault(); return routeSelectedChannels(U.mixSel, e.shiftKey); }
+  // FL's export in place (consolidate): the selected clips rendered onto a new track below
+  if (m && e.altKey && !e.shiftKey && e.code === 'KeyE') { e.preventDefault(); return void A.exportInPlace(); }
   if (m && k === 'z') { e.preventDefault(); return void (e.shiftKey ? A.redo() : A.undo()); }
   if (m && k === 'y') { e.preventDefault(); return void A.redo(); }
   if (m && k === 'n') { e.preventDefault(); return void A.projectNew(); }
@@ -213,9 +217,10 @@ export function App() {
     let offDrop: (() => void) | null = null;
     be().onOsDrop(ev => {
       if (U.openingProject) return;
-      if (ev.type === 'over') { if (!U.dragOver) setU('dragOver', true); }
-      else if (ev.type === 'leave') setU('dragOver', false);
-      else { setU('dragOver', false); if (ev.paths.length) void importAt(ev.paths, ev.x, ev.y, U.alt); }
+      // over the Channel Rack the row it lands on is marked; anywhere else the Playlist's drop hint shows
+      if (ev.type === 'over') { const rack = osDragOver(ev.x, ev.y); if (U.dragOver === rack) setU('dragOver', !rack); }
+      else if (ev.type === 'leave') { osDragEnd(); setU('dragOver', false); }
+      else { setU('dragOver', false); if (ev.paths.length) osDrop(ev.paths, ev.x, ev.y, U.alt); else osDragEnd(); }
     }).then(u => { offDrop = u; });
     onCleanup(() => {
       window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', reclaimFocus, true); window.removeEventListener('keyup', onKeyUp); window.removeEventListener('blur', onBlur);

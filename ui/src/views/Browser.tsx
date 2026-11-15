@@ -13,7 +13,7 @@ import { openMenu, say, setU, U } from '../state/ui';
 import { dblCheck, track } from '../ui/drag';
 import { fitCanvas } from '../ui/frameLoop';
 import { dropClipAt, gridPoint } from './Playlist';
-import { addSamplerFiles, chanById, channels, newPattern, openPattern, replaceWithFile } from '../state/pattern';
+import { addSampler, addSamplerFiles, chanById, channels, newPattern, openPattern, replaceWithFile, replaceWithSource, showPatternWindow, type SampleFile } from '../state/pattern';
 import { libGroup, STD_KIT } from '../state/library';
 import { FACTORY_FILES } from '../lib/factory';
 import { groupFiles, groupOpen, matches, searchTerms, stepIndex } from '../lib/libraryView';
@@ -40,12 +40,28 @@ function dragGhost(e: PointerEvent, name: string, color: string, onClick: () => 
   }, 'grabbing');
 }
 
-function pick(kind: ClipKind, ref: Id, name: string, color: string, e: PointerEvent) {
+/**
+ * Press on a Project-tab item: it becomes the playlist brush; a click (no drag) runs `onClick`.
+ * Dragged, a pattern lands in the Playlist; audio lands there or, over the Channel Rack, becomes a sampler.
+ */
+function pick(kind: ClipKind, ref: Id, name: string, color: string, e: PointerEvent, onClick: () => void = () => {}) {
   if (e.button !== 0) return;
   e.preventDefault();
   setU('cur', { kind, ref });
   say(t('d.br.picked', { name }));
-  dragGhost(e, name, color, () => {}, (x, y, alt) => { dropClipAt(x, y, kind, ref, alt); });
+  const src = kind === 'audio' ? S.project.sources.find(s => s.id === ref) : undefined;
+  if (src) return dragGhost(e, name, color, onClick, (x, y, alt) => dropSource(src, x, y, alt), sampleOver);
+  dragGhost(e, name, color, onClick, (x, y, alt) => { dropClipAt(x, y, kind, ref, alt); });
+}
+
+/** The preview key of a project source (library previews use the file path). */
+const srcKey = (id: Id) => 'src:' + id;
+/** Double-click on a project source: hear it alone; again while it plays stops it. */
+function previewSource(s: Source) {
+  if (U.previewing && U.previewPath === srcKey(s.id)) { void be().previewStop(); setU('previewPath', null); return; }
+  setU('previewPath', srcKey(s.id));
+  be().previewSource(s.id).catch(e => { setU('previewPath', null); say(t('d.br.preverr', { err: String(e) })); });
+  say(t('d.br.prev', { name: s.name }));
 }
 
 export async function importFiles(paths: string[], at?: { track: number; beat: number }) {
@@ -102,14 +118,14 @@ function ProjectTab() {
     <div class="scroll">
       <div class="bhead">
         <span>{t('d.br.patterns')}</span>
-        <button class="linkbtn" title={t('d.br.newpat.tip')} onClick={newPattern}>{t('d.br.new')}</button>
+        <button class="linkbtn" title={t('d.br.newpat.tip')} onClick={() => { newPattern(); showPatternWindow(); }}>{t('d.br.new')}</button>
       </div>
       <div class="plist">
         <For each={S.project.patterns}>
           {p => (
             <div class="pitem" classList={{ on: U.cur?.kind === 'pat' && U.cur.ref === p.id }} title={t('d.br.pat.tip')} style={{ '--c': p.color }}
               onContextMenu={e => { e.preventDefault(); patternItemMenu(p, e.clientX, e.clientY); }}
-              onPointerDown={e => { if (e.button === 0 && dblCheck('pitem' + p.id)) { openPattern(p.id); return; } pick('pat', p.id, p.name, p.color, e); }}>
+              onPointerDown={e => pick('pat', p.id, p.name, p.color, e, () => openPattern(p.id))}>
               <Show when={patternIcon(p, chanMap())} fallback={<span style={{ width: '8px', height: '8px', 'border-radius': '2px', flex: 'none', background: p.color }} />}>
                 {id => <span class="picon" style={{ color: p.color }}><InstIcon id={id()} size={12} /></span>}
               </Show>
@@ -126,8 +142,11 @@ function ProjectTab() {
       <div style={{ display: 'flex', 'flex-direction': 'column', padding: '4px 0' }}>
         <For each={S.project.sources}>
           {s => (
-            <div class="sitem" classList={{ on: U.cur?.kind === 'audio' && U.cur.ref === s.id }} title={t('d.br.src.tip')}
-              onPointerDown={e => pick('audio', s.id, s.name, s.color, e)}>
+            <div class="sitem" classList={{ on: U.cur?.kind === 'audio' && U.cur.ref === s.id, playing: U.previewing && U.previewPath === srcKey(s.id) }} title={t('d.br.src.tip')}
+              onPointerDown={e => {
+                if (e.button === 0 && dblCheck('sitem' + s.id)) { e.preventDefault(); return previewSource(s); }
+                pick('audio', s.id, s.name, s.color, e);
+              }}>
               <div class="row" style={{ gap: '8px' }}>
                 {/* the icon its clips show in the Playlist (guessed from the name), else a sample's */}
                 <span class="picon" style={{ color: s.color }}><InstIcon id={guessIcon(s.name) ?? 'sample'} size={12} /></span>
@@ -249,9 +268,13 @@ function markRow(row?: HTMLElement, kind?: 'replace' | 'before' | 'after') {
   marked = row;
   if (row && kind) row.dataset.sampleDrop = kind;
 }
-function fileOver(x: number, y: number): string | null {
+/**
+ * What a sample dragged to `x, y` would do (marking the Channel Rack row it would land on): the
+ * ghost's label, or null when the point is not the rack (the Playlist / the project take it).
+ */
+function sampleOver(x: number, y: number): string | null {
   const d = fileTarget(x, y);
-  if ('row' in d) markRow(d.row, d.kind);
+  if ('row' in d && d.row) markRow(d.row, d.kind);
   else markRow();
   switch (d.kind) {
     case 'replace': return t('d.br.dropReplace', { name: d.channel.name });
@@ -261,17 +284,54 @@ function fileOver(x: number, y: number): string | null {
     case 'import': return null;
   }
 }
-function dropFile(f: LibFile, x: number, y: number, alt: boolean) {
+/** Where a channel dropped before / after `d.channel` goes, looked up when it lands (the rack may change while files load). */
+const dropIndex = (d: { kind: 'before' | 'after'; channel: Channel }) => () => {
+  const index = channels().findIndex(c => c.id === d.channel.id);
+  return index < 0 ? undefined : index + (d.kind === 'after' ? 1 : 0);
+};
+/**
+ * Drop audio files (library files, or files dragged in from the system) at a point: onto the
+ * Channel Rack they become sampler channels (FL) — a row's edge inserts there, its middle replaces
+ * the sample (the other files follow it as new channels); elsewhere they go to the Playlist / the project.
+ */
+function dropFiles(files: SampleFile[], x: number, y: number, alt: boolean) {
   const d = fileTarget(x, y);
-  if (d.kind === 'replace') return void replaceWithFile(d.channel, f);
-  if (d.kind === 'before' || d.kind === 'after') {
-    return void addSamplerFiles([f], () => {
-      const index = channels().findIndex(c => c.id === d.channel.id);
-      return index < 0 ? undefined : index + (d.kind === 'after' ? 1 : 0);
+  const audio = files.filter(f => !/\.midi?$/i.test(f.path));
+  // a MIDI file is never a sample: the import dialog handles it (and whatever came with it) as before
+  if (d.kind === 'import' || audio.length < files.length) return void importAt(files.map(f => f.path), x, y, alt);
+  if (d.kind === 'replace') {
+    const [first, ...rest] = audio;
+    void replaceWithFile(d.channel, first).then(() => {
+      if (rest.length) return addSamplerFiles(rest, dropIndex({ kind: 'after', channel: d.channel }));
     });
+    return;
   }
-  if (d.kind === 'append') return void addSamplerFiles([f]);
-  void importAt([f.path], x, y, alt);
+  if (d.kind === 'before' || d.kind === 'after') return void addSamplerFiles(audio, dropIndex(d));
+  void addSamplerFiles(audio);
+}
+/** Drop a project source (Browser ▸ Project ▸ Audio) at a point: a sampler on the rack, else an audio clip in the Playlist. */
+function dropSource(src: Source, x: number, y: number, alt: boolean) {
+  const d = fileTarget(x, y);
+  if (d.kind === 'replace') return replaceWithSource(d.channel, src.id);
+  if (d.kind === 'before' || d.kind === 'after') return addSampler(src.id, undefined, dropIndex(d)());
+  if (d.kind === 'append') return addSampler(src.id);
+  dropClipAt(x, y, 'audio', src.id, alt);
+}
+
+/**
+ * Files dragged in from the system (Explorer, a web browser): while they hover, the rack row they
+ * would land on is marked and a label says what the drop does; over anything else the Playlist's
+ * drop hint shows. Returns whether the rack is the target.
+ */
+export function osDragOver(x: number, y: number): boolean {
+  const label = sampleOver(x, y);
+  setU('ghost', label ? { x: x + 12, y: y + 8, name: label, color: '#47b8a8' } : null);
+  return label != null;
+}
+export function osDragEnd() { markRow(); setU('ghost', null); }
+export function osDrop(paths: string[], x: number, y: number, alt: boolean) {
+  osDragEnd();
+  dropFiles(paths.map(path => ({ path })), x, y, alt);
 }
 
 const Chev = (props: { open: boolean }) => (
@@ -289,7 +349,7 @@ function FileRow(props: { f: LibFile; sub: boolean }) {
       onPointerDown={e => {
         if (e.button !== 0) return;
         e.preventDefault(); setLib('sel', f.path); listEl?.focus({ preventScroll: true });
-        dragGhost(e, f.name, color ?? '#47b8a8', () => previewFile(f), (x, y, alt) => dropFile(f, x, y, alt), fileOver);
+        dragGhost(e, f.name, color ?? '#47b8a8', () => previewFile(f), (x, y, alt) => dropFiles([f], x, y, alt), sampleOver);
       }}>
       <span class="fico" style={{ color: color ?? 'var(--fg4)' }}><Glyph g={libFileGlyph(f)} size={11} /></span>
       <span class="ell nm">{f.name.replace(/\.[^.]+$/, '')}</span>

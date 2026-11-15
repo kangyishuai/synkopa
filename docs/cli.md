@@ -156,6 +156,7 @@ wave midi import song.mid --parts 0,2 --tempo --beat 16   # a new pattern on the
 wave midi import lead.mid --parts 1 --pattern 3 --ch 1004 --replace   # one part into a channel
 wave midi export --out song.mid [--pattern 3]         # the song or one pattern, with tempo
 wave make-unique --clip 5012                           # own copy of the sample on a new track (same routing)
+wave export-in-place --clip 5012,5013                 # render them (with mixer effects) to one clip on a new track below
 wave apply --file edit.json --label "Busier hats"
 wave undo
 ```

@@ -411,6 +411,25 @@ async fn flatten_comp(app: St<'_>, clip_id: u64) -> R<Value> {
     Ok(json!({ "sourceId": id }))
 }
 
+/// FL's *Export in place*: the selected clips rendered to one audio clip on a new track below
+/// them (originals muted, one undo step). Off the IPC thread; `export_cancel` stops it.
+#[tauri::command]
+async fn export_in_place(app: St<'_>, clip_ids: Vec<u64>) -> R<Value> {
+    app.export_cancel.store(false, Ordering::Relaxed);
+    let a = app.inner().clone();
+    let r = tauri::async_runtime::spawn_blocking(move || {
+        keys::wait(&a);
+        a.engine.export_in_place(&clip_ids, actions::IN_PLACE_RATE, &a.export_cancel, &mut |_| {})
+    })
+    .await
+    .map_err(es)?;
+    match r {
+        Ok(v) => Ok(json!(v)),
+        Err(wave_engine::EngineError::Cancelled) => Ok(json!({ "cancelled": true })),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
 #[tauri::command]
 async fn comp_audition(app: St<'_>, comp_id: u64, take_id: Option<u64>) -> R<()> {
     app.engine.audition(comp_id, take_id).map_err(es)
@@ -427,6 +446,18 @@ async fn preview_clip(app: St<'_>, clip_id: u64, from: Option<f64>) -> R<()> {
 async fn preview_file(app: St<'_>, path: String) -> R<()> {
     let e = app.engine.clone();
     tauri::async_runtime::spawn_blocking(move || e.preview_file(&PathBuf::from(path))).await.map_err(es)?.map_err(es)
+}
+
+#[tauri::command]
+async fn preview_source(app: St<'_>, id: u64) -> R<()> {
+    app.engine.preview_source(id).map_err(es)
+}
+
+/// A second Stop: cut every tail still ringing (voices, effect tails, the preview).
+#[tauri::command]
+async fn transport_silence(app: St<'_>) -> R<()> {
+    app.engine.silence();
+    Ok(())
 }
 
 #[tauri::command]
@@ -1094,6 +1125,7 @@ pub fn run(project_arg: Option<&str>) {
             fx_catalog,
             transport_play,
             transport_stop,
+            transport_silence,
             transport_set,
             telemetry_subscribe,
             watch_fx,
@@ -1117,9 +1149,11 @@ pub fn run(project_arg: Option<&str>) {
             midi,
             fx_chain,
             flatten_comp,
+            export_in_place,
             comp_audition,
             preview_clip,
             preview_file,
+            preview_source,
             preview_stop,
             note_audition,
             typing_note,

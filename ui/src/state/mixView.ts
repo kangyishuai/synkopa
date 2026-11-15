@@ -2,8 +2,12 @@
 // panels, the docked mixer and the floating Channel Rack / Piano roll are hidden (kept mounted,
 // so their scroll and zoom survive), effect windows still float above. Leaving it gives back the
 // arrange layout as it was on the way in (`takeArrange` / `restoreArrange`).
+import { createSignal } from 'solid-js';
+import type { Id } from '../api/types';
+import { t } from '../lib/i18n';
 import { restoreArrange, takeArrange, type Arrange } from '../lib/mixer';
-import { setU, U } from './ui';
+import { insName, S } from './store';
+import { say, setU, U } from './ui';
 
 let saved: Arrange | null = null, savedPlugs = new Set<number>();
 
@@ -33,3 +37,20 @@ export function leaveMixView(): boolean {
 }
 
 export function toggleMixView() { if (!leaveMixView()) enterMixView(); }
+
+/** The insert the mixer was last asked to show (`n` changes on every request, so the same insert scrolls into view again). */
+const [revealed, setRevealed] = createSignal<{ id: Id; n: number } | null>(null);
+export { revealed };
+/**
+ * Double-click on something that plays through a mixer insert (a sample or channel window's
+ * header, a track's number): the mixer shows that insert — expanded when it was collapsed, the
+ * strip selected and scrolled into view, its effects in the chain panel (FL).
+ */
+export function showInsert(id: Id | null | undefined) {
+  const m = id == null ? undefined : S.project.inserts.find(x => x.id === id);
+  if (!m) return;
+  setU({ mixSel: m.id, fxSel: m.fx[0]?.id ?? null });
+  if (!U.mixView && U.mixMin) setU('mixMin', false);
+  setRevealed({ id: m.id, n: (revealed()?.n ?? 0) + 1 });
+  say(t('c.mix.shown', { name: insName(m) }));
+}

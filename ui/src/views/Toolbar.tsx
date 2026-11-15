@@ -212,6 +212,16 @@ export function Toolbar() {
           <Icon d="M4 7h12v12H4z M8 3h12v12" size={14} /><span class="cnt mono">{wins()}</span>
         </button>
       </Show>
+      {/* FL's window buttons: what is open is lit; a click brings a closed (or buried) window back */}
+      <button class="tbtn icon" classList={{ on: U.pickOpen }} onClick={() => setU('pickOpen', !U.pickOpen)} title={t('a.tb.browserTip')} aria-label={t('a.mn.browser')} aria-pressed={U.pickOpen}>
+        <Icon d="M3 5h18v14H3z M9 5v14 M5 9h2 M5 12h2 M5 15h2" size={14} />
+      </button>
+      <button class="tbtn icon" classList={{ on: !!U.rackWin }} onClick={toggleRackShown} title={t('a.tb.rackTip')} aria-label={t('a.mn.rack')} aria-pressed={!!U.rackWin}>
+        <Icon d="M3 5h4v4H3z M10 5h4v4h-4z M17 5h4v4h-4z M3 15h4v4H3z M10 15h4v4h-4z M17 15h4v4h-4z" size={14} />
+      </button>
+      <button class="tbtn icon" classList={{ on: !!U.rollWin }} onClick={toggleRollShown} title={t('a.tb.rollTip')} aria-label={t('a.mn.roll')} aria-pressed={!!U.rollWin}>
+        <Icon d="M3 4h18v16H3z M3 9h18 M3 14h18 M7 6.5h5 M13 11.5h6 M5 16.5h7" size={14} />
+      </button>
       <button class="tbtn icon" classList={{ on: U.mixView }} onClick={toggleMixView} title={t(U.mixView ? 'a.tb.mixViewBackTip' : 'a.tb.mixerTip')} aria-label={t('a.mn.mixer')} aria-pressed={U.mixView}>
         <Icon d="M5 21v-7M5 10V3M12 21v-9M12 8V3M19 21v-5M19 12V3M2 14h6M9 8h6M16 16h6" size={14} />
       </button>

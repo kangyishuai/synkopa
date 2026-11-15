@@ -7,7 +7,7 @@ import { STRETCH_MAX, STRETCH_MIN, VOL_UNITY, type Automation, type AutoPoint, t
 import { boundaries, boundaryXfade, moveBoundary, setBoundaryXfade, takeEnd, toComp, toTimeline, unusedTakes, usedBeats, writeRange } from '../lib/comp';
 import * as CA from '../state/comp';
 import { compById, LANE_H, takeRow, type TakeRow } from '../state/comp';
-import { clampMove, moveClips, resizeClip, resizeClips, stretchClip, stretchClips, TOTAL } from '../lib/clipOps';
+import { clampMove, moveClips, resizeClip, resizeClips, stretchClip, stretchClips, sharedSound, TOTAL } from '../lib/clipOps';
 import { clamp, fmtPos, volText } from '../lib/format';
 import { snapFloor, snapRes, snapRound } from '../lib/snap';
 import * as A from '../state/actions';
@@ -16,6 +16,7 @@ import { peaksVersion } from '../state/peaks';
 import { allocId, anyTrackSolo, arrVersion, clipSrcLen, onArrangementChange, plain, S, srcLenBeats, srcOf } from '../state/store';
 import { curBeat, recState, tele } from '../state/telemetry';
 import { closeMenu, openMenu, openRename, say, setU, U, type MenuItem } from '../state/ui';
+import { showInsert } from '../state/mixView';
 import { dblCheck, dragCursor, edgeScroller, panDrag, track } from '../ui/drag';
 import { fitSpan, zoomScroll, zoomToRange } from '../lib/viewNav';
 import { barsText } from '../lib/pattern';
@@ -71,7 +72,7 @@ export function dropClipAt(clientX: number, clientY: number, kind: Clip['kind'],
   const p = gridPoint(clientX, clientY);
   if (!p.inside || p.track < 0) return false;
   const len = srcLenBeats(kind, ref), start = clamp(snapFloor(p.beat, unit(alt)), 0, TOTAL - Math.min(len, TOTAL));
-  const nc: Clip = { id: allocId(), track: p.track, start, len: Math.min(len, TOTAL - start), offset: 0, kind, ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false };
+  const nc: Clip = { id: allocId(), track: p.track, start, len: Math.min(len, TOTAL - start), offset: 0, kind, ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false, ...(kind === 'audio' ? sharedSound(S.project.clips, ref) : {}) };
   commit([{ op: 'putClips', clips: [nc] }], tl('a.pl.insertClip'));
   setU('sel', [nc.id]);
   return true;
@@ -626,7 +627,7 @@ export function Playlist() {
     const cur = U.cur; if (!cur || !srcOf({ kind: cur.kind, ref: cur.ref } as Clip)) return;
     const len = srcLenBeats(cur.kind, cur.ref);
     const start = clamp(snapFloor(p.beat, unit(e.altKey)), 0, TOTAL - Math.min(len, TOTAL));
-    const nc: Clip = { id: allocId(), track: p.track, start, len: Math.min(len, TOTAL - start), offset: 0, kind: cur.kind, ref: cur.ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false };
+    const nc: Clip = { id: allocId(), track: p.track, start, len: Math.min(len, TOTAL - start), offset: 0, kind: cur.kind, ref: cur.ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false, ...(cur.kind === 'audio' ? sharedSound(S.project.clips, cur.ref) : {}) };
     const g = new Gesture(tool === 'paint' ? tl('a.pl.paintClips') : tl('a.pl.insertClip'));
     g.update([{ op: 'putClips', clips: [nc] }]);
     setU('sel', [nc.id]);
@@ -1105,6 +1106,7 @@ export function Playlist() {
         ] : []),
       ]),
       { t: 'sec', label: tl('a.pl.secMix') },
+      { t: 'item', label: tl('a.pl.inPlace'), kbd: 'Ctrl+Alt+E', title: tl('a.pl.inPlaceTip'), act: () => void A.exportInPlace(c) },
       { t: 'item', label: tl('a.pl.mixerChannel'), act: () => openRouteMenu(c.track, x, y) },
       { t: 'item', label: tl('a.pl.selAllSource'), act: all },
       { t: 'sep' },
@@ -1343,8 +1345,10 @@ function LaneHeader(props: { t: Track; i: number }) {
       <div class="stripe" style={{ background: t().color }} />
       <div class="body">
         <div class="row" style={{ gap: '6px', 'min-width': 0 }}>
-          <Show when={trackIcon(t())} fallback={<span class="num">{props.i + 1}</span>}>
-            <span class="laneicon" style={{ color: t().color }} title={tl('a.pl.trackTip', { n: props.i + 1 })}><InstIcon id={trackIcon(t())} size={13} /></span>
+          {/* FL: double-click on a track's icon shows the mixer insert it plays into */}
+          <Show when={trackIcon(t())}>
+            <span class="laneicon" style={{ color: t().color }} title={tl('a.pl.trackTip', { n: props.i + 1 }) + ' · ' + tl('a.pl.numTip')}
+              onDblClick={() => showInsert(t().insert ?? 0)}><InstIcon id={trackIcon(t())} size={13} /></span>
           </Show>
           <span class="nm" style={{ color: audible() ? 'var(--fg-hi)' : 'var(--fg4)' }} title={tl('a.pl.nameTip')}
             onDblClick={e => openRename(e.clientX, e.clientY, t().name, v => A.setTrack(props.i, { name: v }, tl('a.pl.trackName')))}>{t().name}</span>
@@ -1357,7 +1361,8 @@ function LaneHeader(props: { t: Track; i: number }) {
             )}</Show>
             {/* tracks play into the master unless the user sends one to a mixer channel (lane menu); only then is it shown */}
             <Show when={routeIdx() > 0}>
-              <button class="mini route" title={tl('a.pl.routeTip', { out: 'Insert ' + routeIdx() })} onPointerDown={stop} onClick={e => openRouteMenu(props.i, e.clientX, e.clientY)}>{'Ins ' + routeIdx()}</button>
+              <button class="mini route" title={tl('a.pl.routeTip', { out: 'Insert ' + routeIdx() })} onPointerDown={stop} onClick={e => openRouteMenu(props.i, e.clientX, e.clientY)}
+                onDblClick={() => { closeMenu(); showInsert(t().insert ?? 0); }}>{'Ins ' + routeIdx()}</button>
             </Show>
             <button class="mini m" classList={{ on: t().muted }} title={tl('a.pl.muteTip')} onPointerDown={stop} onClick={() => A.toggleTrackMute(props.i)}>M</button>
             <button class="mini s" classList={{ on: t().solo }} title={tl('a.pl.soloTip')} onPointerDown={stop} onClick={e => A.toggleTrackSolo(props.i, e.ctrlKey || e.metaKey)}>S</button>

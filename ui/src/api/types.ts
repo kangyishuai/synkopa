@@ -175,6 +175,9 @@ export interface Clip {
   /** Audio clips: transposition in semitones (cents as the fraction), ±`CLIP_PITCH`; the length stays.
    *  Rendered offline with the stretch, in the background (absent = 0). */
   pitch?: number;
+  /** Audio clips: the mixer insert this clip plays into, past its track (the editor sets it for every
+   *  clip of the sample, like FL's audio clip channel). Absent/null = the track's insert. */
+  insert?: Id | null;
 }
 /** Range of `Clip.stretch`. */
 export const STRETCH_MIN = 0.25;

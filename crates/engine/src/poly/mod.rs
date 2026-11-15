@@ -349,6 +349,16 @@ impl SynthInst {
         }
     }
 
+    /// Panic (a second Stop): no voice and no tail of the built-in effects is heard any more.
+    /// The engine ramps its output away, so cutting here does not click.
+    pub fn silence(&mut self) {
+        self.stop_all();
+        for v in self.voices.iter_mut() {
+            v.on = false;
+        }
+        self.fx.reset();
+    }
+
     fn glide_samples(&self) -> f32 {
         self.cur[ix::V_GLIDE] * 0.001 * self.sr
     }
@@ -693,6 +703,10 @@ impl SynthBank {
 
     pub fn stop_all(&mut self) {
         self.insts.iter_mut().for_each(|s| s.stop_all());
+    }
+
+    pub fn silence(&mut self) {
+        self.insts.iter_mut().for_each(|s| s.silence());
     }
 
     /// Adds every instance's output into where its notes were played (a track buffer or an

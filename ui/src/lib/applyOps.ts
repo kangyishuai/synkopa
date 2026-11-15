@@ -24,6 +24,10 @@ export function applyOp(p: Project, op: Op): void {
         const pt = c.pitch ?? 0;
         if (!(Number.isFinite(pt) && Math.abs(pt) <= CLIP_PITCH + 1e-4)) throw new OpError(`clip ${c.id}: pitch must be within ±${CLIP_PITCH} semitones`);
         if (c.kind !== 'audio' && pt !== 0) throw new OpError(`clip ${c.id}: only audio clips can be transposed`);
+        if (c.insert != null) {
+          if (c.kind !== 'audio') throw new OpError(`clip ${c.id}: only audio clips have their own mixer insert`);
+          if (!p.inserts.some(m => m.id === c.insert)) throw new OpError(`no insert with id ${c.insert}`);
+        }
         const known = c.kind === 'pat' ? p.patterns.some(x => x.id === c.ref) : c.kind === 'auto' ? (p.automations ?? []).some(x => x.id === c.ref) : c.kind === 'comp' ? (p.comps ?? []).some(x => x.id === c.ref) : p.sources.some(x => x.id === c.ref);
         if (!known) throw new OpError(`no clip source with id ${c.ref}`);
         const r = c.tune?.reference;
@@ -81,6 +85,8 @@ export function applyOp(p: Project, op: Op): void {
       if (!p.inserts.some(m => m.id === op.id)) throw new OpError(`no insert with id ${op.id}`);
       p.inserts = p.inserts.filter(m => m.id !== op.id);
       for (const t of p.tracks) if (t.insert === op.id) t.insert = 0;
+      // a clip routed there plays through its track again
+      for (const c of p.clips) if (c.insert === op.id) c.insert = null;
       return;
     }
     case 'putFx': {

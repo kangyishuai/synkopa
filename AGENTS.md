@@ -10,7 +10,7 @@ Do not ship placeholders, dead or misleading controls, disconnected mock UI, or
 happy-path-only behavior. Every visible element must earn the space it consumes
 and help the user understand or operate the product.
 
-## Substantial Changes Require Research and Approval
+## Substantial Changes Require Research
 
 A substantial change includes any new user workflow or feature, DSP behavior,
 public API or data-model change, cross-boundary integration, production
@@ -21,15 +21,16 @@ Before implementing a substantial change:
 1. Inspect the current implementation, relevant specs, tests, and architectural
    constraints. Trace the complete path the change would affect.
 2. Research how strong products solve the underlying problem today.
-3. Present the research in chat with sources, a recommended direction,
-   alternatives, tradeoffs, edge cases, and the proposed acceptance criteria.
-4. Wait for explicit user approval of the direction and scope.
-5. After approval, implement the accepted scope autonomously. Ask again only if
-   new evidence creates a materially different decision or expands the scope.
+3. Decide on the recommended direction and acceptance criteria, then implement
+   it autonomously. Do not stop to ask for approval of a direction the research
+   settles.
+4. Ask the user (with the question tool) only when a genuinely hard decision
+   remains after research: the options trade off things only the user can
+   weigh, or the choice is costly to reverse.
 
-The agent may challenge the user's initial solution and proactively suggest a
-better one. Clearly separate the requested scope from optional improvements,
-and never implement an unapproved proactive addition.
+The agent may challenge the user's initial solution and implement a better one
+when the research supports it. Keep optional additions beyond the request out
+of the change; mention them in the final report instead.
 
 Small, isolated corrections such as typos, obvious styling defects, or narrow
 regression fixes may proceed after inspecting local context, without ceremonial

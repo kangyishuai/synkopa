@@ -247,6 +247,9 @@ impl WavEncoding {
 /// How many slices the live waveform of an export has (`ExportStatus::wave`).
 pub const WAVE_SLICES: usize = 240;
 
+/// Sample rate of the audio *Export in place* writes.
+pub const IN_PLACE_RATE: u32 = 48_000;
+
 /// What an export is doing right now, for the progress readout (`export-progress`).
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct ExportStatus {
@@ -1319,7 +1322,7 @@ pub fn control(app: &dyn Host, cmd: &str, a: &Value, if_revision: Option<u64>) -
         }
         "context" => Ok(context(app, arg(a, "full").and_then(Value::as_bool).unwrap_or(false))),
         "catalog" => Ok(
-            json!({ "effects": catalog::catalog(), "commands": ["status","context","catalog","schema","apply","undo","redo","play","stop","render","import","add_fx","set_param","load_preset","save","open","export_project_zip","pitch_analyze","pitch_target","pitch_inspect","pitch_compare","pitch_suggest","pitch_edit","pitch_render","melody_channels","melody_reference","tune_ref","f0_model","music_analyze","auto_vocal_plan","bake_rider","midi_inspect","midi_import","midi_export","fx_chains","fx_chain_save","fx_chain_load","fx_chain_rename","fx_chain_delete","missing","relink","set_project","make_unique","takes","comp","flatten_comp","comp_audition","channels","pattern","pattern_play","pattern_loop","note_audition","plugin_scan","plugin_add","plugin_params","plugin_set_param","vst3_scan","vst3_add","vst3_params","vst3_set_param"] }),
+            json!({ "effects": catalog::catalog(), "commands": ["status","context","catalog","schema","apply","undo","redo","play","stop","render","import","add_fx","set_param","load_preset","save","open","export_project_zip","pitch_analyze","pitch_target","pitch_inspect","pitch_compare","pitch_suggest","pitch_edit","pitch_render","melody_channels","melody_reference","tune_ref","f0_model","music_analyze","auto_vocal_plan","bake_rider","midi_inspect","midi_import","midi_export","fx_chains","fx_chain_save","fx_chain_load","fx_chain_rename","fx_chain_delete","missing","relink","set_project","make_unique","export_in_place","takes","comp","flatten_comp","comp_audition","channels","pattern","pattern_play","pattern_loop","note_audition","plugin_scan","plugin_add","plugin_params","plugin_set_param","vst3_scan","vst3_add","vst3_params","vst3_set_param"] }),
         ),
         "schema" => Ok(schema()),
         "apply" => {
@@ -1406,6 +1409,18 @@ pub fn control(app: &dyn Host, cmd: &str, a: &Value, if_revision: Option<u64>) -
                 .collect();
             let r = e.make_unique_audio(&ids).map_err(|x| x.to_string())?;
             Ok(json!({ "sourceId": r.source_id, "track": r.track, "insertId": r.insert_id, "revision": e.revision() }))
+        }
+        "export_in_place" => {
+            let ids: Vec<u64> = arg(a, "clipIds")
+                .and_then(Value::as_array)
+                .ok_or("`clipIds` (array of clip ids) is required")?
+                .iter()
+                .filter_map(as_index)
+                .collect();
+            let r = e
+                .export_in_place(&ids, IN_PLACE_RATE, &std::sync::atomic::AtomicBool::new(false), &mut |_| {})
+                .map_err(|x| x.to_string())?;
+            Ok(json!({ "sourceId": r.source_id, "clipId": r.clip_id, "track": r.track, "revision": e.revision() }))
         }
         "flatten_comp" => {
             let clip = comp_clip(&e.project(), a)?;

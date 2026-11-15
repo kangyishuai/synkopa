@@ -9,9 +9,15 @@ export function exportRange(project: Project, useLoop: boolean): { from: number;
   return { from: 0, to: songEnd(project) };
 }
 
-/** End of the last clip, rounded up to a bar; at least one bar. */
-export function songEnd(project: Project): number {
-  const end = Math.max(4, ...project.clips.map(c => c.start + c.len));
+/** How far (beats) a clip may run past a bar line before the song gets that extra bar (model.rs `SONG_END_SLACK`). */
+export const SONG_END_SLACK = 0.25;
+/**
+ * The bar the last clip ends in; at least one bar (model.rs `song_end`). A clip running into the
+ * next bar by less than a 16th does not add it; a clip that starts in a bar always keeps it.
+ */
+export function songEnd(project: Pick<Project, 'clips'>): number {
+  let end = 4;
+  for (const c of project.clips) end = Math.max(end, c.start + c.len - SONG_END_SLACK, c.start + 1e-6);
   return Math.ceil(end / 4) * 4;
 }
 

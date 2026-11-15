@@ -21,6 +21,8 @@ pub const VOL_UNITY: f32 = 0.7937;
 /// Beats shown on the playlist. The arrangement may not go past this: 512 bars of 4/4,
 /// 11:46 at 174 BPM, 17 minutes at 120. Nothing is allocated per beat, so the limit
 /// only bounds the playlist's scroll width (≈200k px at the deepest zoom).
+/// How far (beats) a clip may run past a bar line before the song gets that extra bar: a 16th.
+pub const SONG_END_SLACK: f64 = 0.25;
 pub const TOTAL_BEATS: f64 = 2048.0;
 
 pub fn fader_gain(t: f32) -> f32 {
@@ -933,6 +935,11 @@ pub struct Clip {
     /// way; the length stays. Rendered offline with the stretch, like it.
     #[serde(default, skip_serializing_if = "is_zero_f32")]
     pub pitch: f32,
+    /// Audio clips: the mixer insert this clip plays into, past its track (FL: an audio
+    /// clip's own mixer track; the editor sets it for every clip of the sample). `None` =
+    /// the track's insert. The track still mutes it and scales it with its fader.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub insert: Option<Id>,
 }
 
 fn is_zero_f32(x: &f32) -> bool {
@@ -1422,8 +1429,20 @@ impl Project {
     }
 
     /// End of the last clip, rounded up to a bar; at least one bar.
+    /// Where the song ends (SONG playback wraps there, a song export stops there): the bar the
+    /// last clip ends in. A clip running into the next bar by less than [`SONG_END_SLACK`] (an
+    /// audio file a hair longer than its bars: encoder padding, a click of tail) does not add
+    /// that bar, so the playhead goes back to the start as soon as the music is over. A clip
+    /// that *starts* in a bar always keeps that bar.
+    /// The mixer insert a clip is heard on: its own (audio clips), else its track's.
+    pub fn clip_insert(&self, c: &Clip) -> Id {
+        c.insert
+            .filter(|id| self.inserts.iter().any(|m| m.id == *id))
+            .unwrap_or_else(|| self.tracks.get(c.track as usize).map_or(0, |t| t.insert))
+    }
+
     pub fn song_end(&self) -> f64 {
-        let end = self.clips.iter().map(|c| c.start + c.len).fold(4.0, f64::max);
+        let end = self.clips.iter().fold(4.0f64, |m, c| m.max(c.start + c.len - SONG_END_SLACK).max(c.start + 1e-6));
         (end / 4.0).ceil() * 4.0
     }
 

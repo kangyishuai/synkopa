@@ -60,22 +60,34 @@ createRoot(() => {
   // PAT mode keeps looping the current pattern when it changes (FL)
   createEffect(on(() => curPat()?.id, id => { if (id != null && U.patPlaying && previewId !== id) void togglePreview(id); }, { defer: true }));
 });
+/**
+ * After the user switched patterns: a pattern that changed with no pattern window open would be
+ * invisible (and a closed rack is hard to find), so the Channel Rack shows it. An open Piano roll
+ * or rack already follows the current pattern; the Mix view is left alone.
+ */
+export function showPatternWindow() {
+  if (!U.rackWin && !U.rollWin && !U.mixView) openRack();
+}
 /** Numpad + / −: the next / previous pattern (wraps). */
 export function stepPattern(d: number) {
   const ps = S.project.patterns; if (!ps.length) return;
   const i = Math.max(0, ps.findIndex(p => p.id === curPat()?.id));
   setCurPattern(ps[mod(i + d, ps.length)].id);
+  showPatternWindow();
 }
 /** Numpad 1–9: the n-th pattern (1-based). */
 export function pickPatternNum(n: number) {
   const pt = S.project.patterns[n - 1];
-  if (pt) setCurPattern(pt.id); else say(t('b.st.noPatN', { n }));
+  if (!pt) { say(t('b.st.noPatN', { n })); return; }
+  setCurPattern(pt.id);
+  showPatternWindow();
 }
 /** F4: the first empty pattern after the current one, or a new one (FL "next empty pattern"). */
 export function nextEmptyPattern() {
   const ps = S.project.patterns, i = ps.findIndex(p => p.id === curPat()?.id);
   const empty = [...ps.slice(i + 1), ...ps.slice(0, Math.max(0, i))].find(p => !p.notes.length);
   if (empty) setCurPattern(empty.id); else newPattern();
+  showPatternWindow();
 }
 
 // ---------------------------------------------------------------- windows
@@ -446,6 +458,8 @@ export function replaceChannel(c: Channel, pick: InstrumentPick) {
   commit([{ op: 'putChannel', channel: { ...fresh, ...keep } }], t('b.st.replaceCh'));
   say(t('b.st.replacedCh', { from: c.name, to: fresh.name }));
 }
+/** An audio file to make a sampler of: a library file (which may know its root key) or a path dropped from disk. */
+export type SampleFile = Pick<LibFile, 'path'> & { root?: number };
 /** Imports files and waits until their sources are in the store (the import's state event may still be in flight). */
 async function importSources(paths: string[]): Promise<Id[]> {
   const r = await be().importAudio({ paths });
@@ -456,18 +470,24 @@ async function importSources(paths: string[]): Promise<Id[]> {
  * Make `c` a sampler of a file: a library file, or the first one picked in the file dialog.
  * A sampler keeps its own settings (envelope, cut group …): only the sample changes.
  */
-export async function replaceWithFile(c: Channel, file?: LibFile) {
+export async function replaceWithFile(c: Channel, file?: SampleFile) {
   try {
     const path = file?.path ?? (await be().pickAudioFiles())?.[0];
     if (!path) return;
     const [id] = await importSources([path]);
     if (id == null) return;
-    const live = chanById(c.id) ?? c, src = S.project.sources.find(s => s.id === id);
-    if (live.kind === 'sample' && src) {
-      commit([chanOp(live, { source: id, name: src.name, root: file?.root ?? live.root } as Partial<Channel>)], t('b.cw.changeSample'));
-      say(t('b.st.replacedCh', { from: live.name, to: src.name }));
-    } else replaceChannel(live, { kind: 'sample', source: id, root: file?.root });
+    replaceWithSource(c, id, file?.root);
   } catch (e) { say(t('b.st.samplerErr', { err: String(e) })); }
+}
+/** Make `c` a sampler of project source `id` (`root`: the file's own pitch, if known). A sampler keeps its settings. */
+export function replaceWithSource(c: Channel, id: Id, root?: number) {
+  const live = chanById(c.id) ?? c, src = S.project.sources.find(s => s.id === id);
+  if (!src) return;
+  if (live.kind === 'sample') {
+    if (live.source === id) return;
+    commit([chanOp(live, { source: id, name: src.name, root: root ?? live.root } as Partial<Channel>)], t('b.cw.changeSample'));
+    say(t('b.st.replacedCh', { from: live.name, to: src.name }));
+  } else replaceChannel(live, { kind: 'sample', source: id, root });
 }
 
 /** A new channel playing a scanned VST3 instrument (the engine loads it; a failure shows on the channel). */
@@ -497,9 +517,9 @@ export function addSampler(sourceId: Id, root?: number, index?: number) {
  * root key), or with nothing given the files picked in the dialog. Resolve the insertion index
  * after import so it follows its anchor if the rack order changes while loading the files.
  */
-export async function addSamplerFiles(files?: LibFile[] | null, index?: () => number | undefined) {
+export async function addSamplerFiles(files?: SampleFile[] | null, index?: () => number | undefined) {
   try {
-    const list: { path: string; root?: number }[] | undefined = files ?? (await be().pickAudioFiles())?.map(path => ({ path }));
+    const list: SampleFile[] | undefined = files ?? (await be().pickAudioFiles())?.map(path => ({ path }));
     if (!list?.length) return;
     const ids = await importSources(list.map(f => f.path));
     const at = index?.();

@@ -458,6 +458,8 @@ pub struct ClipRt {
     pub pan: f32,
     pub fade_in: f32,
     pub fade_out: f32,
+    /// Audio clips routed past their track: the insert index they play into.
+    pub insert: Option<usize>,
     pub src: ClipSrc,
     /// `gain` (dB) and `pan` as the previous block played them: an automated change glides
     /// across the block instead of stepping (a zipper at every block edge).
@@ -641,6 +643,9 @@ pub enum Cmd {
         rec_loop: bool,
     },
     Stop,
+    /// Panic (a second Stop): everything still ringing is cut — voices, the built-in effects'
+    /// tails, latency lines, the preview — with a short ramp so the cut does not click.
+    Silence,
     Flags {
         metro: bool,
         monitor: bool,
@@ -1085,6 +1090,7 @@ impl Rt {
                     }
                 }
                 Cmd::Stop => self.stop(false),
+                Cmd::Silence => self.silence(),
                 Cmd::Flags { metro, monitor } => {
                     self.metro = metro;
                     self.monitor = monitor;
@@ -1290,7 +1296,35 @@ impl Rt {
         if at_end {
             self.shared.stopped_at_end.store(true, Relaxed);
         }
-        // tails of instruments keep ringing; effect tails too
+        // tails of instruments keep ringing; effect tails too (a second Stop: `silence`)
+    }
+
+    /// See [`Cmd::Silence`]. Allocation-free: buffers are zeroed in place, the preview goes to
+    /// the garbage queue. Hosted plugins get note-offs (their own effect tails are theirs).
+    fn silence(&mut self) {
+        self.voices.clear();
+        self.synths.silence();
+        self.plugs.stop_all();
+        if let Some(old) = self.preview.take() {
+            fset(&self.shared.preview_pos, -1.0);
+            self.trash(Garbage::Preview(old));
+        }
+        for ins in self.graph.inserts.iter_mut() {
+            for slot in ins.fx.iter_mut() {
+                if let Some(p) = slot.proc.as_mut() {
+                    p.reset();
+                }
+                slot.dly_l.fill(0.0);
+                slot.dly_r.fill(0.0);
+            }
+            ins.pdc_l.fill(0.0);
+            ins.pdc_r.fill(0.0);
+        }
+        // what was heard last ramps to zero instead of stopping dead
+        if self.last.0.abs() > 1e-6 || self.last.1.abs() > 1e-6 {
+            self.dc = self.last;
+            self.dc_pos = 0;
+        }
     }
 
     fn end_take(&mut self, stop: bool, fallback_skip: usize, pdc: usize) {
@@ -1790,10 +1824,28 @@ impl Rt {
                         tl_r[at + i0 + k] += br[k] * env * pr;
                     }
                 }
-                ClipSrc::Audio(a) => {
-                    let Some((tl_l, tl_r)) = self.graph.track_bufs.get_mut(c.track) else { continue };
-                    crate::clipmix::mix_audio_clip(c, a, b0, bps, spb, &mut tl_l[at..at + n], &mut tl_r[at..at + n]);
-                }
+                ClipSrc::Audio(a) => match c.insert {
+                    None => {
+                        let Some((tl_l, tl_r)) = self.graph.track_bufs.get_mut(c.track) else { continue };
+                        crate::clipmix::mix_audio_clip(c, a, b0, bps, spb, &mut tl_l[at..at + n], &mut tl_r[at..at + n]);
+                    }
+                    // its own insert: past the track's insert, still muted and scaled by the track (as a routed channel)
+                    Some(k) => {
+                        let gain = match self.graph.tracks.get(c.track) {
+                            Some(t) if t.on => t.gain,
+                            _ => continue,
+                        };
+                        let Some(ins) = self.graph.inserts.get_mut(k) else { continue };
+                        let (bl, br) = (&mut self.comp_l[..n], &mut self.comp_r[..n]);
+                        bl.fill(0.0);
+                        br.fill(0.0);
+                        crate::clipmix::mix_audio_clip(c, a, b0, bps, spb, bl, br);
+                        for i in 0..n {
+                            ins.l[at + i] += bl[i] * gain;
+                            ins.r[at + i] += br[i] * gain;
+                        }
+                    }
+                },
             }
         }
     }

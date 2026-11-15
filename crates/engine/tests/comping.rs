@@ -92,6 +92,7 @@ fn comp_clip(start: f64) -> Clip {
         stretch: 1.0,
         resample: false,
         pitch: 0.0,
+        insert: None,
     }
 }
 

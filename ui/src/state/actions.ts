@@ -43,11 +43,21 @@ export async function play(from = U.start) {
 }
 /** `rewind` also moves the start marker (and the stopped playhead) to the beginning of the song. */
 export async function stop(rewind = false) {
+  // Stop while nothing plays (the second press) also cuts what still rings: reverb and delay tails, held notes, a preview
+  const again = !U.playing && !U.patPlaying;
   if (U.patPlaying) void stopPreview();
   setU('playing', false);
   if (rewind) setU('start', 0);
   try { await be().transportStop(); setTransport({ playing: false }); } catch (e) { console.warn(e); }
+  if (again) return silence(rewind);
   say(rewind ? t('d.act.stop.rew') : 'Stop');
+}
+/** Ctrl+H / the second Stop (FL's "Stop sound"): silence every tail still ringing. Not an edit. */
+export async function silence(rewound = false) {
+  if (U.patPlaying) await stopPreview();
+  try { await be().transportSilence(); } catch (e) { console.warn(e); }
+  if (U.previewPath != null) setU('previewPath', null);
+  say(t(rewound ? 'd.act.silence.rew' : 'd.act.silence'));
 }
 /** Space: stop whatever plays; else PAT mode loops the current pattern, SONG mode plays the song
  * (recording always runs the song). */
@@ -369,6 +379,26 @@ async function makeUniqueAudio(clip: Clip) {
     void resync();
   }
 }
+/**
+ * FL's *Export in place*: the selected clips (or `clip` alone when it is not selected) rendered
+ * into one audio clip on a new track right below them; the originals are muted. One undo step.
+ */
+export async function exportInPlace(clip?: Clip) {
+  const ids = clip && !U.sel.includes(clip.id) ? [clip.id] : S.project.clips.filter(c => U.sel.includes(c.id) && c.kind !== 'auto').map(c => c.id);
+  if (!ids.length) { say(t('d.act.inPlaceNone')); return; }
+  endWheelGestures();
+  say(t('d.act.inPlaceBusy', { n: ids.length }));
+  try {
+    const r = await enqueue(() => be().exportInPlace(ids));
+    if ('cancelled' in r) { say(t('d.act.inPlaceCancelled')); return; }
+    await resync();
+    setU({ sel: [r.clipId], cur: { kind: 'audio', ref: r.sourceId } });
+    say(t('d.act.inPlaceDone', { name: S.project.sources.find(s => s.id === r.sourceId)?.name ?? '' }));
+  } catch (e) {
+    say(t('d.act.inPlaceFail', { err: String(e) }));
+    void resync();
+  }
+}
 export function setSrcProp(clip: Clip, patch: { name?: string; color?: string }) {
   if (clip.kind === 'auto') {
     const a = S.project.automations?.find(x => x.id === clip.ref); if (a) commit([{ op: 'putAutomation', automation: { ...plain(a), ...patch } }], t('d.act.op.auto'));
@@ -470,6 +500,29 @@ export function addPlugin(insId: Id, info: PluginInfo): boolean {
   openPlug(f.id);
   say(t('d.act.added', { name: info.name }));
   return true;
+}
+/**
+ * Effects dragged onto another mixer insert (FL): moved to the end of its chain — the running
+ * instance, its automation and an open window go with it — or, with `copy`, copied there (a hosted
+ * plugin with its current sound). One undo step.
+ */
+export async function moveFxTo(fxIds: Id[], toIns: Id, copy: boolean) {
+  const target = S.project.inserts.find(m => m.id === toIns); if (!target) return;
+  const list = fxIds.map(id => findFx(id)).filter((x): x is NonNullable<typeof x> => !!x && (copy || x.m.id !== toIns));
+  if (!list.length) return;
+  const ops: Op[] = [];
+  for (const { f } of list) {
+    if (!copy) { ops.push({ op: 'removeFx', fxId: f.id }, { op: 'putFx', insertId: toIns, fx: plain(f) }); continue; }
+    let fx: Fx = { ...plain(f), id: allocId() };
+    if (fx.type === 'plugin' && fx.plugin && !S.fxErrors[f.id]) {
+      try { fx = { ...fx, plugin: { ...fx.plugin, state: await be().pluginState(f.id) } }; } catch (e) { console.warn(e); }
+    }
+    ops.push({ op: 'putFx', insertId: toIns, fx });
+  }
+  const one = list.length === 1 ? fxName(list[0].f) : t('d.act.fxN', { n: list.length });
+  commit(ops, t(copy ? 'd.act.op.copyfx' : 'd.act.op.movefx'));
+  setU({ mixSel: toIns, fxSel: copy ? (ops[ops.length - 1] as { fx: Fx }).fx.id : list[list.length - 1].f.id });
+  say(t(copy ? 'd.act.fxCopied' : 'd.act.fxMoved', { name: one, to: insName(target) }));
 }
 export function removeFx(fxId: Id) {
   closePlug(fxId);

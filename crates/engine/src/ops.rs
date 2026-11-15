@@ -233,6 +233,14 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
                         crate::model::STRETCH_MAX
                     )));
                 }
+                if let Some(ins) = c.insert {
+                    if c.kind != ClipKind::Audio {
+                        return Err(OpError::Invalid(format!("clip {}: only audio clips have their own mixer insert", c.id)));
+                    }
+                    if p.insert(ins).is_none() {
+                        return Err(OpError::Missing { what: "insert", id: ins });
+                    }
+                }
                 if c.kind != ClipKind::Audio && (c.stretch != 1.0 || c.resample) {
                     return Err(OpError::Invalid(format!("clip {}: only audio clips can be stretched", c.id)));
                 }
@@ -352,6 +360,12 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
             for t in &mut p.tracks {
                 if t.insert == *id {
                     t.insert = 0;
+                }
+            }
+            // a clip routed there plays through its track again
+            for c in &mut p.clips {
+                if c.insert == Some(*id) {
+                    c.insert = None;
                 }
             }
             d.mixer = true;

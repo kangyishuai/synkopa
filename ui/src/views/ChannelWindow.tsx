@@ -10,6 +10,7 @@ import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/autom
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { audition, chanById, chanOp } from '../state/pattern';
 import { say, U } from '../state/ui';
+import { showInsert } from '../state/mixView';
 import { channelIcon, InstIcon } from '../ui/instIcons';
 import { Knob } from '../ui/Knob';
 import { PianoKeys } from '../ui/PianoKeys';
@@ -88,7 +89,8 @@ function Body(props: { w: Win; c: Channel }) {
   const plugin = () => { const x = c(); return x.kind === 'plugin' ? x.plugin : undefined; };
   return (
     <div class="win chanwin" data-channel-window={c().id} style={{ left: props.w.x + 'px', top: props.w.y + 'px', width: props.w.w + 'px', 'z-index': 47 }}>
-      <div class="winhd" onPointerDown={e => moveWindow(e, () => props.w, setPos)}>
+      <div class="winhd" onPointerDown={e => moveWindow(e, () => props.w, setPos)} title={t('b.cw.headTip')}
+        onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(chanHeardInsert(c()) ?? 0); }}>
         <span class="chicon" style={{ color: c().color }}><InstIcon id={channelIcon(c())} size={14} /></span>
         <span class="title">{c().name}</span>
         <span class="sub">{t(c().kind === 'synth' ? 'b.cw.kSynth' : c().kind === 'plugin' ? 'b.cw.kPlugin' : 'b.cw.kKeys')}</span>

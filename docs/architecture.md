@@ -432,6 +432,7 @@ client: take them from `project.nextId` and increase locally (the engine bumps
 | `undo` / `redo` | – | `StateDto` |
 | `transport_play` | `{fromBeat}` | – |
 | `transport_stop` | – | – |
+| `transport_silence` | – | – — the second Stop / Ctrl+H (FL's "Stop sound"): cuts voices, the built-in effects' tails and latency lines and the preview through a 3 ms ramp (`Cmd::Silence`); hosted plugins only get note-offs |
 | `transport_set` | `{metro?, countIn?, rec?, monitor?}` | `TransportDto` |
 | `telemetry_subscribe` | `{channel}` (Tauri `Channel<ArrayBuffer>`) | – |
 | `watch_fx` | `{ids: number[]}` | – (effects whose windows are open; ≤ 8) |
@@ -459,12 +460,13 @@ client: take them from `project.nextId` and increase locally (the engine bumps
 | `fx_chain` | `{cmd: "fx_chain_load", args: {insert, name, mode?: "replace"\|"append"}}` | `{revision, fxIds, replaced, failed: [{fxId, name, error}]}` — one undo step, fresh ids; an insert with effects needs `mode`; a VST3 that will not load keeps its slot and state |
 | `fx_chain` | `{cmd: "fx_chain_rename", args: {name, to}}` / `{cmd: "fx_chain_delete", args: {name}}` | `{name}` / `{deleted}` |
 | `make_unique` | `{clipIds}` | `{sourceId, track, insertId}` — FL's "Make unique" for audio clips (one source, one track): a copy of the source entry (same file and decoded audio, name "Name #n"), a new track right below that plays where the old track does (the master unless the user routed it; no insert is claimed), the clips move there. One undo step |
+| `export_in_place` | `{clipIds}` | `{sourceId, clipId, track}` or `{cancelled}` — FL's *Export in place*: the clips rendered over their span (through their inserts and effects, not the master's; no tail) into a WAV with the project's media, as one audio clip on a new track right below them routed to the master; the originals are muted. One undo step; a silent render is an error. `export_cancel` stops it |
 | `flatten_comp` | `{clipId}` | `{sourceId}` — renders a comp clip to a new file; the clip becomes an `audio` clip, the takes go (one undo step) |
 | `comp_audition` | `{compId, takeId?}` | – ; plays one whole take instead of the comp (`null` = the comp). Live only: not saved, not undone, ignored by renders |
 | `note_audition` | `{ch, key?, vel?, pattern?}` | – ; plays one note of a channel now (step clicks, piano-roll keys). `pattern`: the edited pattern, so a track-routed channel is heard through that pattern's track. Not an edit |
 | `pattern_play` | `{pattern, from?, range?}` (`null` stops) | – ; loops one pattern on its own from `from` beats, within `range` `[a, b]` beats (none = the whole pattern). Starting it stops the song, starting the song stops it (FL's PAT / SONG). Position in telemetry `patBeat` |
 | `pattern_loop` | `{range}` | – ; changes the playing pattern loop's range without restarting it (`null` = the whole pattern) |
-| `preview_clip` / `preview_file` / `preview_stop` | `{clipId, from?}` / `{path}` / – | – — `from` (seconds of the source): the take alone with its pitch edits at the source's speed from there to the clip's end (the pitch editor's Solo); rejects when nothing is left |
+| `preview_clip` / `preview_file` / `preview_source` / `preview_stop` | `{clipId, from?}` / `{path}` / `{id}` / – | – — `from` (seconds of the source): the take alone with its pitch edits at the source's speed from there to the clip's end (the pitch editor's Solo); rejects when nothing is left |
 | `audio_hosts` | – | `[{id, name}]` (ids like `"wasapi"`, `"asio"`, `"alsa"`) |
 | `audio_devices` | `{host}` | `{outputs: string[], inputs: string[]}`. ASIO lists registered drivers as outputs, with a shared input. |
 | `audio_get_config` / `audio_set_config` | `– / AudioConfig` | `AudioStatus` (a config without `recOffsetMs` keeps the saved one; changing only `recOffsetMs` does not restart the device) |
@@ -927,3 +929,21 @@ The app updates itself from GitHub Releases (public repository: no token). See
   once at the first start of a new version, for every version since `seenVersion`. A fresh
   install shows nothing; it can be reopened from Settings → General → Updates.
 * The updater is app-shell behaviour, not a project action, so it has no `wave` CLI command.
+
+### Audio clips share their sample's sound; per-sample routing
+
+Like FL's audio clip channel, every audio clip of one source shares its *sound*: volume, pan, pitch,
+normalize, reverse and the mixer insert (`ui/src/lib/clipOps.ts` `SHARED_SOUND`). The clip editor
+writes an edit to all of them in one `putClips` op, and a new clip of the source starts with it.
+The region, the fades, the stretch and pitch-editor notes stay each clip's own; *Make unique* splits a
+clip off with its own copy of the source. `Clip.insert` (audio clips only) routes the clip past its
+track's insert, like a routed channel: the track still mutes it and scales it with its fader
+(`rt.rs` mixes it straight into that insert's input). Removing the insert sends the clip back to its
+track. `Project::clip_insert` resolves where a clip is heard.
+
+### Song end
+
+SONG playback wraps, and a song export stops, at the bar the last clip ends in
+(`Project::song_end`, `ui/src/lib/export.ts` `songEnd`). A clip running into the next bar by less
+than a 16th (`SONG_END_SLACK`: an audio file a hair longer than its bars) does not add that bar; a
+clip that starts in a bar always keeps it.

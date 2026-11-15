@@ -43,7 +43,7 @@ pub mod tune_render;
 pub mod vocal;
 
 pub use engine::{
-    Engine, EngineError, MadeUnique, NoPlugins, PluginFactory, Relink, RelinkSearch, Relinked, RenderProgress, RenderTail, StateDto,
-    TransportDto,
+    Engine, EngineError, InPlace, MadeUnique, NoPlugins, PluginFactory, Relink, RelinkSearch, Relinked, RenderProgress, RenderTail,
+    StateDto, TransportDto,
 };
 pub use rt::Rt;

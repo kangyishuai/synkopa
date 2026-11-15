@@ -14,6 +14,7 @@ const MOCK_REVERB_MIX = 37.2;
 import { applyAll } from '../lib/applyOps';
 import { landTakes, takeEnd } from '../lib/comp';
 import { satDriveDb } from '../lib/saturator';
+import { songEnd } from '../lib/export';
 import { eqCurve } from '../lib/eq';
 import { clamp, dbg } from '../lib/format';
 import { t } from '../lib/i18n';
@@ -231,7 +232,7 @@ export class MockBackend implements Backend {
 
   // ---------- transport ----------
   private spb() { return 60 / this.p.bpm; }
-  private songEnd() { return Math.ceil(Math.max(4, ...this.p.clips.map(c => c.start + c.len)) / 4) * 4; }
+  private songEnd() { return songEnd(this.p); }
   /** Playhead without loop wrapping (beats since start, negative during count-in). */
   private rawBeat(): number { return this.playFrom + (performance.now() - this.playT0) / 1000 / this.spb(); }
   private beatNow(): number {
@@ -263,6 +264,8 @@ export class MockBackend implements Backend {
     this.tr = { ...this.tr, playing: false };
     this.changedTransport();
   }
+  /** Like the engine's Silence: the preview stops (the mock renders no tails to cut). */
+  async transportSilence() { this.preview = null; }
   async transportSet(patch: Partial<TransportDto>) {
     const wasRec = this.tr.rec;
     this.tr = { ...this.tr, ...patch };
@@ -1112,6 +1115,28 @@ export class MockBackend implements Backend {
     this.pushUndo(prev); this.changed();
     return { sourceId: id, track: at, insertId };
   }
+  /** engine.rs `export_in_place`: one audio clip over the selection's span on a new track below it, routed to the master. */
+  async exportInPlace(clipIds: Id[]) {
+    await delay(30);
+    const cs = this.p.clips.filter(c => clipIds.includes(c.id) && c.kind !== 'auto');
+    if (!cs.length) throw new Error('select the clips to export in place (automation clips alone make no sound)');
+    const from = Math.min(...cs.map(c => c.start)), to = Math.max(...cs.map(c => c.start + c.len));
+    const first = [...cs].sort((a, b) => a.track - b.track || a.start - b.start)[0];
+    const low = Math.max(...cs.map(c => c.track));
+    const srcName = (c: Clip) => (c.kind === 'pat' ? this.p.patterns.find(x => x.id === c.ref)?.name : this.p.sources.find(x => x.id === c.ref)?.name) ?? 'Render';
+    const color = (first.kind === 'pat' ? this.p.patterns.find(x => x.id === first.ref)?.color : this.p.sources.find(x => x.id === first.ref)?.color) ?? '#47b8a8';
+    const name = cs.length === 1 ? srcName(first) + ' (in place)' : srcName(first) + ' + ' + (cs.length - 1) + ' (in place)';
+    const prev = structuredClone(this.p), sourceId = this.p.nextId++;
+    const src: MockSource = { id: sourceId, name, color, path: 'C:\\Users\\michal\\Music\\' + name + '.wav', dur: (to - from) * this.spb(), sr: 48000, ch: 2, peakDb: -3, seed: hash(name) };
+    this.srcMeta.set(sourceId, src); this.p.sources.push(strip(src));
+    const at = Math.min(low + 1, this.p.tracks.length);
+    this.p.tracks.splice(at, 0, { id: this.p.nextId++, name, color, muted: false, solo: false, arm: false, vol: 0.7937, h: this.p.tracks[low]?.h ?? 60, insert: 0 });
+    for (const c of this.p.clips) { if (c.track >= at) c.track++; if (clipIds.includes(c.id) && c.kind !== 'auto') c.muted = true; }
+    const clipId = this.p.nextId++;
+    this.p.clips.push(mkClip(clipId, at, from, to - from, 'audio', sourceId));
+    this.pushUndo(prev); this.changed();
+    return { sourceId, clipId, track: at };
+  }
   async previewClip(clipId: Id, from?: number) {
     const c = this.p.clips.find(x => x.id === clipId); if (!c) return;
     // like the engine: positions in seconds of the source (a stretched clip plays `stretch` times longer)
@@ -1123,6 +1148,11 @@ export class MockBackend implements Backend {
   }
   async previewFile(path: string) { this.preview = { t0: performance.now(), dur: 0.6 + (hash(path) % 400) / 100, off: 0 }; }
   async previewStop() { this.preview = null; }
+  async previewSource(id: Id) {
+    const src = this.p.sources.find(s => s.id === id);
+    if (!src) throw new Error('audio not loaded');
+    this.preview = { t0: performance.now(), dur: src.dur, off: 0 };
+  }
   /** Insert of the track of the pattern's first clip (rt.rs `PatRt.home`). */
   private patHome(id: Id): Id | null {
     const c = this.p.clips.filter(x => x.kind === 'pat' && x.ref === id).sort((a, b) => a.start - b.start)[0];
