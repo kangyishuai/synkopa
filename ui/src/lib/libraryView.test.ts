@@ -38,7 +38,7 @@ describe('library search', () => {
 describe('library groups', () => {
   it('keeps the order of the list and counts every file', () => {
     const groups = groupFiles(std);
-    expect(groups.map(g => g.name)).toEqual(['Kicks', 'Snares', 'Claps', 'Hats', 'Cymbals', 'Toms', 'Percussion', 'Tonal', 'Orchestra', 'FX']);
+    expect(groups.map(g => g.name)).toEqual(['Kicks', 'Snares', 'Claps', 'Hats', 'Cymbals', 'Toms', 'Percussion', 'Tonal', 'Orchestra', 'FX', 'Loops']);
     expect(groups.reduce((n, g) => n + g.total, 0)).toBe(std.length);
   });
   it('draws a bounded number of rows of a huge folder and says how many there are', () => {

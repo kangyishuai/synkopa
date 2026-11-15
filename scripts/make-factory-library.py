@@ -1,20 +1,27 @@
 #!/usr/bin/env python3
 """Builds the factory sample library that ships inside the app.
 
-Every pick is a CC0 recording at a pinned commit: either a file of a kit in
-assets-manifest.json (`<kit id>/<file>`) or a path in one of SOURCES (`vcsl:<path>` …), whose
-SHA-256 is pinned under `factory` in the same manifest. The script downloads what it needs
+Every pick is a recording free to redistribute (CC0, or the Unlicense for the steel drum),
+pinned: a file of a kit in assets-manifest.json (`<kit id>/<file>`), a path in one of the
+repositories of SOURCES at a pinned commit (`vcsl:<path>` …), or a Freesound sound by its id
+(`fs:<id>`, its public high-quality preview, see FREESOUND), whose SHA-256 is pinned under
+`factory` in the same manifest. The script downloads what it needs
 into a cache and refuses a file that does not match its pin. For every pick it trims
 silence before the hit and the dead tail, fades the end, normalises the peak to -1 dBFS and
-writes 16-bit FLAC. A pick can also be a list of layers, each tuned to a key and mixed (the
+writes 16-bit FLAC. A loop (option `loop`) is instead cut to a whole number of bars at its
+tempo, from its first sample and without fades, so it repeats in time, and stored as Ogg
+Vorbis: the Freesound loops are lossy previews already, and FLAC would make them five times
+bigger for nothing. A pick can also be a list of layers, each tuned to a key and mixed (the
 orchestra hits). It also writes the table the engine embeds
-(crates/engine/src/factory_files.rs).
+(crates/engine/src/factory_files.rs) and the credits of the files by other authors than
+Versilian and the TR-808 set (THIRD_PARTY_NOTICES.md, between the `factory-credits` marks).
 
     python3 scripts/make-factory-library.py            # rebuild
     python3 scripts/make-factory-library.py --pin      # after adding picks: record their hashes
 
 A file whose audio did not change is left as it is, so a rebuild with another ffmpeg does not
-rewrite the whole folder. Needs ffmpeg, curl and numpy.
+rewrite the whole folder (an Ogg file is rewritten only when its source or options changed:
+its tag names them). Needs ffmpeg (with libvorbis), curl and numpy.
 """
 import argparse, hashlib, json, os, subprocess, sys, urllib.parse
 import numpy as np
@@ -24,11 +31,51 @@ OUT = os.path.join(ROOT, "crates", "engine", "library")
 MANIFEST = os.path.join(ROOT, "assets-manifest.json")
 SR = 44100
 
-# CC0 repositories picks are taken from directly (the manifest's kits pin their own).
+# Repositories picks are taken from directly (the manifest's kits pin their own): repo, commit,
+# licence, and for the credits who made the recordings (None: credited in the notices' text).
 SOURCES = {
-    "808": ("tidalcycles/sounds-tr808-fischer", "85fbecf1bec32553395625ea659e2a56dfd7c0e1"),
-    "vcsl": ("sgossner/VCSL", "c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e"),
-    "vsco": ("sgossner/VSCO-2-CE", "440300901dfe9275fd84e0b7763af1f8443ae62e"),
+    "808": ("tidalcycles/sounds-tr808-fischer", "85fbecf1bec32553395625ea659e2a56dfd7c0e1", "CC0-1.0", None),
+    "vcsl": ("sgossner/VCSL", "c1ea7bcc3c7309650ab0da9d15c9cd1fbc4a4c7e", "CC0-1.0", None),
+    "vsco": ("sgossner/VSCO-2-CE", "440300901dfe9275fd84e0b7763af1f8443ae62e", "CC0-1.0", None),
+    "stargate": ("stargatedaw/stargate-sample-pack", "dbfd6ec52d4ed53b60bdbea5fc6adf295127c027", "CC0-1.0", "Kevin B. (Fugue State Audio), Stargate DAW sample pack"),
+    "mck": ("MckAudio/MckSamplePacks", "5db40e8fe26785c256845a5bb38921b2654a887f", "CC0-1.0", "MckAudio, recorded from a Roland TR-8"),
+    "omi": ("Yale-OMI/sample-pack-vol-1", "9ad3da067dff97aa4bd8588a97ee0419b02c0acc", "CC0-1.0", "Yale Open Music Initiative, Sample Pack Vol. 1"),
+    "steeldrum": ("sfzinstruments/jlearman.SteelDrum", "dc15a36ad69a43b0d240fcbd0cc78fbc61b2b47e", "Unlicense", "Jeff Learman, SteelDrum"),
+}
+LICENSE_URL = {"CC0-1.0": "https://creativecommons.org/publicdomain/zero/1.0/", "Unlicense": "https://unlicense.org/"}
+# Freesound sounds released under CC0 (each one's page shows the licence): id -> (high-quality
+# preview, uploader, title). The preview is public, the original needs a login; its SHA-256 is
+# pinned in the manifest like any other source file.
+FREESOUND = {
+    "514880": ("https://cdn.freesound.org/previews/514/514880_3173681-hq.mp3", "tkky", "Sorrow State zay 808.wav"),
+    "729532": ("https://cdn.freesound.org/previews/729/729532_15200476-hq.mp3", "James_KuKu", "XXX - C"),
+    "501761": ("https://cdn.freesound.org/previews/501/501761_4600366-hq.mp3", "kbeezy88", "MPC_808_F1.aif"),
+    "353396": ("https://cdn.freesound.org/previews/353/353396_6397561-hq.mp3", "TechGeekMusic", "Kick - Proper Bottom.wav"),
+    "190942": ("https://cdn.freesound.org/previews/190/190942_2661752-hq.mp3", "Elektronikz", "808 Kick (wav format)"),
+    "240893": ("https://cdn.freesound.org/previews/240/240893_4206277-hq.mp3", "OllieOllie", "trappy kick"),
+    "517297": ("https://cdn.freesound.org/previews/517/517297_10137963-hq.mp3", "muffin3k", "Trap Snare 2"),
+    "355065": ("https://cdn.freesound.org/previews/355/355065_1973065-hq.mp3", "eryps", "Clap Snare"),
+    "75037": ("https://cdn.freesound.org/previews/75/75037_1151436-hq.mp3", "CBeeching", "Hat_04.wav"),
+    "91791": ("https://cdn.freesound.org/previews/91/91791_1491361-hq.mp3", "zinzan_101", "short open.aif"),
+    "816813": ("https://cdn.freesound.org/previews/816/816813_5511175-hq.mp3", "tboneaudio", "HellCat Hi Hats"),
+    "132418": ("https://cdn.freesound.org/previews/132/132418_2412414-hq.mp3", "Sajmund", "Rimshot (sweet)"),
+    "219266": ("https://cdn.freesound.org/previews/219/219266_170215-hq.mp3", "radiopassiveboy", "Tambourine_Single_Hit_1.wav"),
+    "199823": ("https://cdn.freesound.org/previews/199/199823_3485902-hq.mp3", "connermusician", "Egg Shaker - 1 Throw"),
+    "332604": ("https://cdn.freesound.org/previews/332/332604_167075-hq.mp3", "vckhaze", "Single Finger Snap"),
+    "177242": ("https://cdn.freesound.org/previews/177/177242_3277771-hq.mp3", "a deleted account", "Cinematic Impact"),
+    "428073": ("https://cdn.freesound.org/previews/428/428073_4067257-hq.mp3", "newagesoup", "Sub Drop Smooth.wav"),
+    "561207": ("https://cdn.freesound.org/previews/561/561207_10825267-hq.mp3", "Rizzard", "Riser"),
+    "240745": ("https://cdn.freesound.org/previews/240/240745_3215867-hq.mp3", "majoranman", "Choir One-Shot"),
+    "574346": ("https://cdn.freesound.org/previews/574/574346_11532701-hq.mp3", "deadrobotmusic", "SOS Dark Piano Loop [148bpm] [C Minor]"),
+    "428292": ("https://cdn.freesound.org/previews/428/428292_1117259-hq.mp3", "Djeuphoria", "DSV1_SuspensfulRhodes02_C#_70bpm.wav"),
+    "663687": ("https://cdn.freesound.org/previews/663/663687_9959691-hq.mp3", "Orboram", "Soft Piano Loop 160BPM"),
+    "491285": ("https://cdn.freesound.org/previews/491/491285_4882128-hq.mp3", "Xinematix", "Emotional Piano 005 (Am-80)"),
+    "484645": ("https://cdn.freesound.org/previews/484/484645_10392137-hq.mp3", "Loop_Cult", "LCCPTL_140_Synth_Am_ThinPluck.wav"),
+    "697731": ("https://cdn.freesound.org/previews/697/697731_9839964-hq.mp3", "harrisonlace", "guitar_loop_heatwave_129_F#min.wav"),
+    "474961": ("https://cdn.freesound.org/previews/474/474961_10100847-hq.mp3", "skratan", "guitar [fmin 148 bpm].wav"),
+    "521664": ("https://cdn.freesound.org/previews/521/521664_10327019-hq.mp3", "urmom123543", "Blade runner pads (Free)"),
+    "713120": ("https://cdn.freesound.org/previews/713/713120_14632469-hq.mp3", "DYEKHO", "Arabic Flute 04 130BPM"),
+    "852268": ("https://cdn.freesound.org/previews/852/852268_12574855-hq.mp3", "holizna", "Trap Melody Loop #5 Ebmin 165 BPM"),
 }
 I = "vcsl:Idiophones/Struck Idiophones/"
 M = "vcsl:Membranophones/Struck Membranophones/"
@@ -93,9 +140,16 @@ PIZZ = [
 
 # (output file, display name, group, source, max seconds, root key[, options])
 # root key None = measured (`pitch`). Options: tune (resample so the note is exactly on the
-# root key given), soft (keep a quiet start: swells), drive (dB into a tanh saturator).
+# root key given), soft (keep a quiet start: swells), drive (dB into a tanh saturator),
+# loop ((bpm, bars): a loop of that many bars, see the module comment; max seconds unused).
 T = {"tune": True}
 SOFT = {"soft": True}
+SG = "stargate:stargate-sample-pack/fugue-state-audio/drums/"
+TR8 = "mck:TR8/"
+
+
+def loop(bpm, bars):
+    return {"loop": (bpm, bars)}
 PICKS = [
     ("kick-808.flac", "808 Kick", "Kicks", "808-kit/kick-tone50-decay50.wav", 1.2, 60),
     ("kick-808-short.flac", "808 Kick Short", "Kicks", "808-kit/kick-tone00-decay25.wav", 0.5, 60),
@@ -109,6 +163,9 @@ PICKS = [
     ("kick-808-deep.flac", "808 Kick Deep", "Kicks", "808:bd8/BD0075.WAV", 1.5, 60),
     ("kick-808-punch.flac", "808 Kick Punch", "Kicks", "808:bd8/BD7550.WAV", 1.2, 60),
     ("kick-808-click.flac", "808 Kick Click", "Kicks", "808:bd8/BD1000.WAV", 0.25, 60),
+    ("kick-trap.flac", "Trap Kick", "Kicks", "fs:353396", 0.8, 60),
+    ("kick-trap-knock.flac", "Trap Kick Knock", "Kicks", "fs:190942", 1.0, 60),
+    ("kick-trap-boom.flac", "Trap Kick Boom", "Kicks", "fs:240893", 1.6, 60),
     ("snare-808.flac", "808 Snare", "Snares", "808-kit/snare-tone50-snap75.wav", 0.5, 60),
     ("snare-808-bright.flac", "808 Snare Bright", "Snares", "808-kit/snare-tone100-snap75.wav", 0.5, 60),
     ("snare-808-dark.flac", "808 Snare Dark", "Snares", "808-kit/snare-tone00-snap75.wav", 0.5, 60),
@@ -127,12 +184,18 @@ PICKS = [
     ("crossstick-studio.flac", "Studio Cross Stick", "Snares", M + "Snare Drum, Modern 3/Snare4_Xstick_v2_rr1_Mid.wav", 0.6, 60),
     ("snare-rope.flac", "Rope Snare", "Snares", M + "Snare Drum, Rope Tension/Hi/RopeSnare_hi_sn_Main_vl4_rr1.wav", 1.2, 60),
     ("snare-field.flac", "Field Drum", "Snares", M + "Snare Drum, Rope Tension/Low/RopeSnare_low_sn_Main_vl3_rr1.wav", 1.4, 60),
+    ("snare-trap.flac", "Trap Snare", "Snares", "fs:517297", 0.5, 60),
+    ("snare-tr8.flac", "TR-8 Snare", "Snares", TR8 + "SD/001_808_Snare_Drum_1.wav", 0.6, 60),
+    ("rimshot-tight.flac", "Rimshot Tight", "Snares", "fs:132418", 1.1, 60),
     ("clap-808.flac", "808 Clap", "Claps", "808-kit/clap.wav", 1.0, 60),
     ("clap-hand.flac", "Hand Clap", "Claps", "percussion-fx/clap-v4.wav", 0.45, 60),
     ("clap-hand-soft.flac", "Hand Clap Soft", "Claps", "percussion-fx/clap-v3.wav", 0.6, 60),
     ("clap-group.flac", "Group Clap", "Claps", I + "Claps/Clap_rr1.wav", 0.7, 60),
     ("clap-group-2.flac", "Group Clap 2", "Claps", I + "Claps/Clap_rr4.wav", 0.7, 60),
     ("whip.flac", "Whip Crack", "Claps", I + "Slapstick/slapstick_rr1.wav", 0.6, 60),
+    ("clap-snare.flac", "Clap Snare", "Claps", "fs:355065", 0.7, 60),
+    ("clap-tr8.flac", "TR-8 Clap", "Claps", TR8 + "PERC/017_808_Hand_Clap.wav", 0.8, 60),
+    ("finger-snap.flac", "Finger Snap", "Claps", "fs:332604", 0.4, 60),
     ("hat-808-closed.flac", "808 Closed Hat", "Hats", "808-kit/hat-closed.wav", 0.25, 60),
     ("hat-808-open.flac", "808 Open Hat", "Hats", "808-kit/hat-open-decay75.wav", 0.75, 60),
     ("hat-808-pedal.flac", "808 Pedal Hat", "Hats", "808-kit/hat-open-decay00.wav", 0.25, 60),
@@ -144,6 +207,12 @@ PICKS = [
     ("hat-studio-soft.flac", "Studio Closed Hat Soft", "Hats", I + "Hi-Hat Cymbal/HiHat_HitC_v2_rr1_Mid.wav", 0.5, 60),
     ("hat-studio-loose.flac", "Studio Loose Hat", "Hats", I + "Hi-Hat Cymbal/HiHat_HitLoose_rr1_Mid.wav", 1.2, 60),
     ("hat-studio-openclose.flac", "Studio Hat Open-Close", "Hats", I + "Hi-Hat Cymbal/HiHat_HitOC_rr5_Mid.wav", 1.2, 60),
+    ("hat-trap-tick.flac", "Trap Hat Tick", "Hats", "fs:75037", 0.3, 60),
+    ("hat-x0x.flac", "x0x Hat", "Hats", SG + "hihats/x0xproc2-hatclsd.wav", 0.2, 60),
+    ("hat-tr8-closed.flac", "TR-8 Closed Hat", "Hats", TR8 + "HATS/004_808_Closed_HiHat_Short.wav", 0.3, 60),
+    ("hat-tr8-open.flac", "TR-8 Open Hat", "Hats", TR8 + "HATS/001_808_Open_HiHat.wav", 1.0, 60),
+    ("hat-open-choked.flac", "Open Hat Choked", "Hats", "fs:91791", 0.4, 60),
+    ("hat-open-zildjian.flac", "Open Hat Zildjian", "Hats", "fs:816813", 1.6, 60),
     ("cymbal-808.flac", "808 Cymbal", "Cymbals", "808-kit/cymbal-tone50-decay50.wav", 2.5, 60),
     ("crash-studio.flac", "Studio Crash", "Cymbals", "studio-drums/crash-v3.wav", 5.0, 60),
     ("ride-studio.flac", "Studio Ride", "Cymbals", "studio-drums/ride-v3.wav", 3.0, 60),
@@ -196,6 +265,8 @@ PICKS = [
     ("log-drum-low.flac", "Log Drum Low", "Percussion", I + "Slit Drum/LogDrumLo_MedM_v3_rr1_Sum.wav", 1.0, 60),
     ("anvil.flac", "Anvil", "Percussion", I + "Anvil/Anvil_Hit1_v3_rr1_Mid.wav", 1.5, 60),
     ("brake-drum.flac", "Brake Drum", "Percussion", I + "Brake Drum/BrakeDrum1_Hammer_v3_rr1_Mid.wav", 2.0, 60),
+    ("tambourine-hit.flac", "Tambourine Hit", "Percussion", "fs:219266", 1.2, 60),
+    ("egg-shaker.flac", "Egg Shaker", "Percussion", "fs:199823", 0.5, 60),
     # tonal: the root key is measured (see `pitch`) so the piano plays them in tune
     ("bass-808.flac", "808 Bass", "Tonal", "808-bass/bass-tone100-decay100.wav", 3.0, None),
     ("bass-808-short.flac", "808 Bass Short", "Tonal", "808-bass/bass-tone75-decay75.wav", 1.2, None),
@@ -218,6 +289,13 @@ PICKS = [
     ("fm-clav.flac", "FM Clav", "Tonal", "vcsl:Electrophones/TX81Z/Clavisynth/Clavisynth_C2_vl3.wav", 2.0, 48, T),
     ("pipe-organ.flac", "Pipe Organ", "Tonal", "vcsl:Aerophones/Edge-blown Aerophones/Pipe Organ/Loud/Rode_Man3Open_C3.wav", 3.0, 60, T),
     ("tenor-sax.flac", "Tenor Sax Staccato", "Tonal", "vcsl:Aerophones/Reed Aerophones/Tenor Saxophone/Staccato/BrettTenor_Staccato_Main_C3_vl2_rr4.wav", 1.5, 60, T),
+    ("bass-808-sorrow.flac", "808 Bass Sorrow", "Tonal", "fs:514880", 3.0, None),
+    ("bass-808-sub.flac", "808 Bass Sub", "Tonal", "fs:729532", 2.5, None),
+    ("bass-808-mpc.flac", "808 Bass MPC", "Tonal", "fs:501761", 1.0, None),
+    ("bass-808-sine.flac", "808 Bass Sine", "Tonal", SG + "kicks/sdbkit-sub-a.wav", 2.0, None),
+    ("bass-808-tr8.flac", "808 Bass TR-8", "Tonal", TR8 + "BD/008_808_Bass_Drum_Long_2.wav", 5.0, None),
+    ("choir-shot.flac", "Choir Shot", "Tonal", "fs:240745", 2.0, 68, T),
+    ("steel-drum.flac", "Steel Drum", "Tonal", "steeldrum:flac/SteelDrum_072__C5_3-2.flac", 2.5, 72, T),
     # orchestra: single notes are tuned, the stabs and hits are layers on C
     ("orch-hit.flac", "Orchestra Hit", "Orchestra", hit(None), 2.5, 60),
     ("orch-hit-minor.flac", "Orchestra Hit Minor", "Orchestra", hit(3), 2.5, 60),
@@ -248,6 +326,21 @@ PICKS = [
     ("wind-chimes-up.flac", "Wind Chimes Up", "FX", I + "Mark Trees/Legacy/windchimes_asc1.wav", 4.0, 60, SOFT),
     ("bell-tree.flac", "Bell Tree", "FX", I + "Bell Tree/Stroke/BellTree_Stroke_1_Mid.wav", 3.0, 60, SOFT),
     ("zap.flac", "Zap", "FX", "vsco:Percussion/zap1_v1.wav", 1.5, 60),
+    ("cinematic-impact.flac", "Cinematic Impact", "FX", "fs:177242", 8.0, 60),
+    ("sub-drop.flac", "Sub Drop", "FX", "fs:428073", 4.0, 60),
+    ("downlifter-dark.flac", "Dark Downlifter", "FX", "omi:OMI_FX/OMI_fx_downlifter_melodic.wav", 6.0, 60),
+    ("riser-drone.flac", "Drone Riser", "FX", "fs:561207", 2.5, 60, SOFT),
+    # loops: tempo and key are in the name (the library has no fields for them)
+    ("loop-keys-sinister-148-cmin.ogg", "Keys Sinister 148 Cm", "Loops", "fs:574346", 0, 60, loop(148, 16)),
+    ("loop-rhodes-suspense-70-csharpmin.ogg", "Rhodes Suspense 70 C#m", "Loops", "fs:428292", 0, 60, loop(70, 4)),
+    ("loop-rhodes-dream-160.ogg", "Rhodes Dream 160", "Loops", "fs:663687", 0, 60, loop(160, 8)),
+    ("loop-piano-emotional-80-amin.ogg", "Piano Emotional 80 Am", "Loops", "fs:491285", 0, 60, loop(80, 4)),
+    ("loop-piano-arp-165-ebmin.ogg", "Piano Arp 165 Ebm", "Loops", "fs:852268", 0, 60, loop(165, 16)),
+    ("loop-pluck-eerie-140-amin.ogg", "Pluck Eerie 140 Am", "Loops", "fs:484645", 0, 60, loop(140, 4)),
+    ("loop-guitar-acoustic-129-fsharpmin.ogg", "Guitar Acoustic 129 F#m", "Loops", "fs:697731", 0, 60, loop(129, 4)),
+    ("loop-guitar-nylon-148-fmin.ogg", "Guitar Nylon 148 Fm", "Loops", "fs:474961", 0, 60, loop(148, 8)),
+    ("loop-pad-cinematic-110-ebmin.ogg", "Pad Cinematic 110 Ebm", "Loops", "fs:521664", 0, 60, loop(110, 4)),
+    ("loop-flute-eastern-130-cmin.ogg", "Flute Eastern 130 Cm", "Loops", "fs:713120", 0, 60, loop(130, 8)),
 ]
 
 
@@ -268,8 +361,11 @@ class Fetch:
     def path(self, src):
         if ":" in src:
             key, rel = src.split(":", 1)
-            repo, commit = SOURCES[key]
-            url = f"https://raw.githubusercontent.com/{repo}/{commit}/{urllib.parse.quote(rel)}"
+            if key == "fs":
+                url = FREESOUND[rel][0]
+            else:
+                repo, commit = SOURCES[key][:2]
+                url = f"https://raw.githubusercontent.com/{repo}/{commit}/{urllib.parse.quote(rel)}"
             e = self.pins.get((key, rel))
             if e is None and not self.pin:
                 sys.exit(f"{src} is not pinned in assets-manifest.json; run with --pin")
@@ -295,7 +391,10 @@ class Fetch:
     def write_pins(self):
         """The `factory` section: the repositories and exactly the files the picks use."""
         self.m["factory"] = {
-            "sources": {k: {"repo": f"https://github.com/{r}", "commit": c, "license": "CC0-1.0"} for k, (r, c) in SOURCES.items()},
+            "sources": {
+                **{k: {"repo": f"https://github.com/{r}", "commit": c, "license": lic} for k, (r, c, lic, _) in SOURCES.items()},
+                "fs": {"site": "https://freesound.org", "license": "CC0-1.0", "files": "high-quality previews of CC0 sounds"},
+            },
             "files": [self.used[k] for k in sorted(self.used)],
         }
         with open(MANIFEST, "w", newline="\n") as f:
@@ -433,6 +532,67 @@ def decoded(path):
     return subprocess.run(["ffmpeg", "-v", "error", "-i", path, "-f", "s16le", "-"], capture_output=True, check=True).stdout
 
 
+def cut_loop(x, bpm, bars):
+    """The first `bars` bars of 4/4 at `bpm`, unfaded: the source starts on the downbeat (the
+    decoder drops the MP3 encoder's padding), so the cut repeats in time."""
+    n = int(round(bars * 4 * 60 / bpm * SR))
+    if len(x) < n - int(0.01 * SR):
+        sys.exit(f"loop is {len(x) / SR:.3f} s, {bars} bars at {bpm} BPM need {n / SR:.3f} s")
+    x = np.concatenate([x, np.zeros((max(0, n - len(x)), 2))])[:n].copy()
+    return x * (10 ** (-1 / 20) / np.abs(x).max())
+
+
+def write_ogg(dst, y, mono, tag):
+    """Ogg Vorbis (quality 6, about 190 kbit/s stereo) peaking at -1 dBFS once decoded: lossy
+    coding moves the peak, so the gain is corrected from a decode and the file written again.
+    `tag` (stored as a comment) names the source and cut, so an unchanged file is kept."""
+    if os.path.isfile(dst):
+        have = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream_tags=wave_src", "-of", "csv=p=0", dst], capture_output=True, text=True).stdout.strip()
+        if have == tag:
+            return False
+    ch = "1" if mono else "2"
+    for _ in range(3):
+        pcm = np.clip(y, -1, 1).astype("<f4").tobytes()
+        subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "f32le", "-ar", str(SR), "-ac", ch, "-i", "-", "-c:a", "libvorbis", "-q:a", "6",
+                        "-map_metadata", "-1", "-metadata:s:a", f"WAVE_SRC={tag}", "-bitexact", dst], input=pcm, check=True)
+        peak = np.abs(np.frombuffer(decoded(dst), dtype="<i2")).max() / 32768
+        err = 20 * np.log10(peak) + 1
+        if abs(err) < 0.03:
+            break
+        y = y * 10 ** (-err / 20)
+    return True
+
+
+def credits(picks):
+    """Markdown list of the files by other authors than the notices' text names."""
+    lines = []
+    for out, name, group, src, *_ in picks:
+        if isinstance(src, list) or ":" not in src:
+            continue
+        key, rel = src.split(":", 1)
+        if key == "fs":
+            url, who, title = FREESOUND[rel]
+            page = f"https://freesound.org/s/{rel}/"
+            lines.append(f"* `{out}`: \"{title}\" by {who} on [Freesound]({page}), "
+                         f"[CC0-1.0]({LICENSE_URL['CC0-1.0']}) (from its high-quality preview)")
+        elif SOURCES[key][3]:
+            repo, commit, lic, who = SOURCES[key]
+            lines.append(f"* `{out}`: `{rel.rsplit('/', 1)[-1]}` by {who} "
+                         f"([source](https://github.com/{repo}/blob/{commit}/{urllib.parse.quote(rel)})), [{lic}]({LICENSE_URL[lic]})")
+    return "\n".join(lines)
+
+
+def write_credits(picks):
+    path = os.path.join(ROOT, "THIRD_PARTY_NOTICES.md")
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    a, b = "<!-- factory-credits:begin -->", "<!-- factory-credits:end -->"
+    head, rest = text.split(a, 1)
+    _, tail = rest.split(b, 1)
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(f"{head}{a}\n{credits(picks)}\n{b}{tail}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cache", default=os.path.join(ROOT, "target", "factory-sources"), help="where downloaded source files are kept")
@@ -456,8 +616,19 @@ def main():
                 root = int(round(pitch(x)))
         if "drive" in opt:
             x = np.tanh(x / np.abs(x).max() * 10 ** (opt["drive"] / 20))
-        y, mono = prepare(x, max_s, opt.get("soft", False))
         dst = os.path.join(OUT, out)
+        if "loop" in opt:
+            assert out.endswith(".ogg"), out
+            y = cut_loop(x, *opt["loop"])
+            mono = np.abs(y[:, 0] - y[:, 1]).max() < 1e-4
+            y = y[:, :1] if mono else y
+            if not write_ogg(dst, y, mono, f"{src} {opt['loop'][0]} {opt['loop'][1]}"):
+                kept += 1
+            total += os.path.getsize(dst)
+            rows.append((out, name, group, root, str(pitched).lower(), len(y) / SR, 1 if mono else 2))
+            print(f"{out:28} {len(y) / SR:5.2f} s  {'mono' if mono else 'stereo':6} loop       {os.path.getsize(dst) // 1024:4} K")
+            continue
+        y, mono = prepare(x, max_s, opt.get("soft", False))
         pcm = (np.clip(y, -1, 1) * 32767).round().astype("<i2").tobytes()
         if os.path.isfile(dst) and decoded(dst) == pcm:
             kept += 1
@@ -470,6 +641,7 @@ def main():
         os.remove(os.path.join(OUT, f))
     if a.pin:
         fetch.write_pins()
+    write_credits(PICKS)
     with open(os.path.join(ROOT, "crates", "engine", "src", "factory_files.rs"), "w", newline="\n") as f:
         f.write("// Generated by scripts/make-factory-library.py; do not edit by hand.\n\n")
         f.write("use super::FactoryFile;\n\n")

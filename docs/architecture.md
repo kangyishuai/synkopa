@@ -222,11 +222,17 @@ clip that hides N − 1 clips entirely (`lib/overlaps.ts`). Clicking such a clip
 the status line. The overlay is recomputed with the fades on clip edits and tile moves,
 never per frame.
 
-**The standard library** (`crates/engine/src/factory.rs`). 148 CC0 one-shots in ten groups
-(kicks, snares, claps, hats, cymbals, toms, percussion, tonal, orchestra, FX) are embedded in
-the engine (`crates/engine/library`, 14 MB of FLAC). `scripts/make-factory-library.py` builds
-them: it downloads each pick at a pinned commit (the kits in `assets-manifest.json`, and the
-files listed under `factory` there, each with its SHA-256), trims, fades and normalises it,
+**The standard library** (`crates/engine/src/factory.rs`). 176 one-shots in ten groups
+(kicks, snares, claps, hats, cymbals, toms, percussion, tonal, orchestra, FX) and 10 melodic
+loops (group `Loops`) are embedded in the engine (`crates/engine/library`, 18.7 MB: FLAC
+one-shots, Ogg Vorbis loops). All are CC0 but one (the Unlicense); `THIRD_PARTY_NOTICES.md`
+credits each file from other authors than Versilian and the TR-808 set, and a test checks that
+list against the table. A loop is cut to whole 4/4 bars at the tempo its name gives
+(`loop-<name>-<bpm>[-<key>].ogg`, the key also in its display name); the library has no tempo
+field, so the user stretches it to the project tempo like any other audio.
+`scripts/make-factory-library.py` builds them: it downloads each pick at a pinned commit or URL
+(the kits in `assets-manifest.json`, and the files listed under `factory` there, each with its
+SHA-256: repository files, and Freesound sounds by their public preview), trims, fades and normalises it,
 tunes the pitched ones onto their root key (`pitched` in the table: the browser shows that
 key) and mixes the orchestra hits and stabs from tuned layers. A file whose audio did not
 change is not rewritten, and existing files keep their names: projects name them by path.
