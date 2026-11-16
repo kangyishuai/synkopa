@@ -4,6 +4,23 @@ What changed in each release of WAVE. The newest version comes first; its sectio
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Changed
+- **The Channel Rack and the Piano roll share one window frame.** Each title bar ends with the
+  same buttons in the same order: dock or float, maximize (Piano roll), close. The Piano roll's
+  maximize was only a double-click on its title bar; it now has a button too.
+- **Esc closes the window in front**, whichever kind it is. Before, the sample editor and the
+  channel settings closed first even behind a Channel Rack or Piano roll you were working in.
+- **F5 (or a click on the Playlist) tucks away every floating window**, the sample editor, the
+  channel settings and the pitch editor included; F5 again brings them all back.
+- **The Mixer is a window like the Channel Rack and the Piano roll.** It has the same title bar:
+  float it as a window or dock it back at the bottom, maximize it over the whole workspace
+  (or double-click its title bar), and × hides it. **F9 shows and hides the Mixer**, as in FL
+  Studio; floating behind other windows, F9 brings it to the front first. Esc hides it when it
+  is the window in front. The View menu has *Dock Mixer at the bottom* and *Maximize mixer*.
+  The separate Mix view with its Back button is gone: maximize does the same.
+
 ## 0.9.18 — 2026-11-16
 
 ### Added

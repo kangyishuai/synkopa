@@ -221,10 +221,9 @@ a { color: var(--blue); }
 .mixhandle:hover, .mixhandle:focus-visible { background: var(--blue); }
 .mixhandle:hover .grip, .mixhandle:focus-visible .grip { background: var(--on-accent, #fff); }
 .mixview { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--mixer-bg); }
-.mvbar { height: 30px; flex: none; display: flex; align-items: center; gap: 14px; padding: 0 8px; background: var(--bg5); border-bottom: 1px solid var(--bg0); min-width: 0; }
-.mvback { height: 22px; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 5px; border: 0; border-radius: 4px; background: var(--line); color: var(--fg-hi); font: 500 11px var(--sans); cursor: pointer; flex: none; }
-.mvback:hover { background: var(--line2); }
-.mvback .kbd { font-size: 9px; color: var(--fg4); }
+.mixhd { flex: none; }
+.mixhd .mvhint, .mixwin .mvhint { margin-left: 10px; }
+.mixer.floating { flex: 1; min-height: 0; }
 .mvhint { flex: 1; min-width: 0; font: 400 11px var(--sans); color: var(--fg4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mixer.full { flex: 1; min-height: 0; }
 .winlayer.mv > .patwin { visibility: hidden; }
@@ -415,6 +414,9 @@ select option { background: var(--bg4); color: var(--fg); }
 .winlayer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
 .winlayer > .win { pointer-events: auto; }
 .winlayer.hidden { display: none; }
+/* no box of its own: the editors keep their own z-index against the window layer */
+.outerwins { display: contents; }
+.outerwins.hidden { display: none; }
 .fxwin .winhd .pwr { width: 12px; height: 12px; flex: none; padding: 0; border: 0; border-radius: 50%; background: var(--green); cursor: pointer; box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent); }
 .fxwin .winhd .pwr.off { background: var(--line2); box-shadow: none; }
 .bypasstag { font: 600 9px var(--mono); color: var(--amber); letter-spacing: .08em; }
