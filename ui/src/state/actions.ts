@@ -630,7 +630,14 @@ export function openSampleEditor(target: SampleTarget, position?: { x: number; y
   const w = Math.min(U.editor?.w ?? 620, window.innerWidth - 20);
   const x = U.editor?.x ?? position?.x ?? (window.innerWidth - w) / 2;
   const y = U.editor?.y ?? position?.y ?? 64;
-  setU('editor', { ...target, x: clamp(x, 0, window.innerWidth - w), y, w });
+  const z = U.zTop + 1;
+  setU({ zTop: z, editor: { ...target, x: clamp(x, 0, window.innerWidth - w), y, w, z } });
+}
+/** The sample editor over the plugin / pattern windows (it is used last). */
+export function editorFront() {
+  if (!U.editor || (U.editor.z ?? 0) === U.zTop) return;
+  const z = U.zTop + 1;
+  setU('zTop', z); setU('editor', ed => ed && { ...ed, z });
 }
 /** Writes a new file with only the part the clip plays; the clip plays it (one undo step). */
 export async function trimClip(id: Id) {

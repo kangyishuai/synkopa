@@ -28,6 +28,9 @@ shown in the app after an update and is published as the release notes (see
   needs GTK or Qt keep WAVE's parameter list.
 
 ### Fixed
+- **The sample editor no longer sticks over plugin windows.** Clicking an effect or plugin window
+  now brings it in front of the sample editor (and the channel settings window); clicking the
+  editor brings it back on top.
 - DISTRHO-based plugins (Vitalium and others) can now talk between their engine and their
   interface: knobs and displays stay in step.
 

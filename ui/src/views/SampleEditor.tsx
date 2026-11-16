@@ -23,6 +23,7 @@ import { Knob } from '../ui/Knob';
 import { PianoKeys } from '../ui/PianoKeys';
 import { rgba, T, theme } from '../ui/theme';
 import { chanHeardInsert, ChannelLevelKnobs, ChannelRootKnob } from './ChannelWindow';
+import { outerZ } from '../state/winOrder';
 import { moveWindow } from './FxWindow';
 import { PitchCorrectButton } from './PitchCorrectButton';
 
@@ -93,7 +94,8 @@ function EditorFrame(props: {
 
   return (
     <div class="win chanwin smpwin" data-editor data-channel-window={props.channelId}
-      style={{ left: editor().x + 'px', top: editor().y + 'px', width: editor().w + 'px', 'z-index': 47 }}>
+      style={{ left: editor().x + 'px', top: editor().y + 'px', width: editor().w + 'px', 'z-index': outerZ(editor().z) }}
+      onPointerDown={A.editorFront}>
       <div class="winhd" onPointerDown={e => moveWindow(e, editor, move)} title={t('b.cw.headTip')}
         onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(props.insert()); }}>
         <span class="chicon" style={{ color: props.color }}>{props.icon}</span>

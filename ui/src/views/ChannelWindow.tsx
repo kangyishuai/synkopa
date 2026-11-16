@@ -1,7 +1,7 @@
 // Channel settings window (FL "Channel settings"): click a Channel Rack name to see what makes
 // the sound — the synth, WAVE Keys or a hosted VST3 instrument (its editor and parameters) — plus level,
 // pan, root key, mixer routing and a keyboard to play it.
-import { createEffect, createSignal, Show } from 'solid-js';
+import { createEffect, Show } from 'solid-js';
 import { VOL_UNITY, type AutoTarget, type Channel, type Id } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
@@ -9,7 +9,8 @@ import { noteName } from '../lib/pitch';
 import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/automation';
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { audition, chanById, chanOp } from '../state/pattern';
-import { say, U } from '../state/ui';
+import { outerZ, setWin, win, type Win } from '../state/winOrder';
+import { say, setU, U } from '../state/ui';
 import { showInsert } from '../state/mixView';
 import { channelIcon, InstIcon } from '../ui/instIcons';
 import { Knob } from '../ui/Knob';
@@ -31,8 +32,12 @@ export function chanHeardInsert(c: Channel): Id | null {
   return first ? S.project.tracks[first.track]?.insert ?? null : null;
 }
 
-type Win = { id: Id; x: number; y: number; w: number };
-const [win, setWin] = createSignal<Win | null>(null);
+/** The channel window over the plugin / pattern windows (it is used last). */
+function chanFront() {
+  const w = win(); if (!w || w.z === U.zTop) return;
+  const z = U.zTop + 1;
+  setU('zTop', z); setWin({ ...w, z });
+}
 export function chanWin() {
   const ed = U.editor;
   return ed?.kind === 'channel' ? { id: ed.id, x: ed.x, y: ed.y, w: ed.w } : win();
@@ -63,7 +68,9 @@ export function toggleChannelWindow(id: Id, settings = false) {
     return;
   }
   if (U.editor?.kind === 'channel') closeEditor();
-  setWin({ id, x: w?.x ?? x, y: w?.y ?? y, w: width });
+  const z = U.zTop + 1;
+  setU('zTop', z);
+  setWin({ id, x: w?.x ?? x, y: w?.y ?? y, w: width, z });
 }
 export function closeChannelWindow() {
   if (U.editor?.kind === 'channel') closeEditor();
@@ -95,7 +102,8 @@ function Body(props: { w: Win; c: Channel }) {
   const setPos = (x: number, y: number) => setWin(v => v && { ...v, x, y });
   const plugin = () => { const x = c(); return x.kind === 'plugin' ? x.plugin : undefined; };
   return (
-    <div class="win chanwin" data-channel-window={c().id} style={{ left: props.w.x + 'px', top: props.w.y + 'px', width: props.w.w + 'px', 'z-index': 47 }}>
+    <div class="win chanwin" data-channel-window={c().id} style={{ left: props.w.x + 'px', top: props.w.y + 'px', width: props.w.w + 'px', 'z-index': outerZ(props.w.z) }}
+      onPointerDown={chanFront}>
       <div class="winhd" onPointerDown={e => moveWindow(e, () => props.w, setPos)} title={t('b.cw.headTip')}
         onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(chanHeardInsert(c()) ?? 0); }}>
         <span class="chicon" style={{ color: c().color }}><InstIcon id={channelIcon(c())} size={14} /></span>
