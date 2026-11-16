@@ -502,7 +502,7 @@ client: take them from `project.nextId` and increase locally (the engine bumps
 | `transport_play` | `{fromBeat}` | – |
 | `transport_stop` | – | – |
 | `transport_silence` | – | – — the second Stop / Ctrl+H (FL's "Stop sound"): cuts voices, the built-in effects' tails and latency lines and the preview through a 3 ms ramp (`Cmd::Silence`); hosted plugins only get note-offs |
-| `transport_set` | `{metro?, countIn?, rec?, monitor?}` | `TransportDto` |
+| `transport_set` | `{metro?, countIn?, rec?, monitor?, startBeat?, recAudio?, recNotes?, recQuantize?}` | `TransportDto` |
 | `telemetry_subscribe` | `{channel}` (Tauri `Channel<ArrayBuffer>`) | – |
 | `watch_fx` | `{ids: number[]}` | – (effects whose windows are open; ≤ 8) |
 | `fx_catalog` | – | `{types:{[type]:{name, params:[{id,label,min,max,def,unit,log}]}}, presets:{[type]:[{name, params?, bands?, beats?}]}}` |
@@ -641,10 +641,40 @@ f64 patBeat         // beats into the pattern the loop preview plays; −1 = sto
 | `delay` | see `docs/delay.md`: `[0]`/`[1]` read heads L/R ms, `[2]` loop dBFS, `[3]` drive reduction dB, `[4]` LFO, `[5]` model, `[6]` wet dBFS, `[7]` set time ms. Zero latency |
 | `warp` | see `docs/warp.md`: `[0]` bar position (−1 stopped), `[1]`/`[2]` playing slots, `[3]`/`[4]` queued slots, `[5]` offset beats, `[6]` speed, `[7]` gain, `[9]` hold state, `[10]` buffered s. 2 samples latency, compensated by PDC; maps arrive through `Processor::swap_data` (`Cmd::FxData`) |
 
+## Where a recording goes
+
+As in FL Studio, nothing has to be armed (`Engine::rec_target`, mirrored in
+`ui/src/lib/recTarget.ts`): a recording goes to the **first track with nothing on
+it from the start beat on** (to the loop end when recording loops), and when no
+track has room a new track is added below the others. The take lands on that
+track, where it was drawn while recording. A track added this way
+(`Core::rec_added`) is removed again when nothing landed on it, and is dropped
+from the undo snapshots that hold it empty, so undoing the take removes the track
+too. "Record into this track" in a track's menu (the `arm` flag, shown as a red
+dot in its header) overrides this: recordings then go there, as more takes over
+what it holds.
+
+The **recording filter** (right-click on Record; `TransportDto.recAudio` /
+`recNotes`, at least one on, kept per computer by the UI) chooses what a
+recording captures: the input's audio as takes, keyboard notes as a pattern.
+With both on, a take during which the keyboard played keeps only the notes. The
+input device opens only when Audio is on (or monitoring). Notes come from a MIDI
+keyboard or from the computer keyboard as piano (`Engine::typing_note` feeds the
+same recorder, each note on the channel it played); `recQuantize` (beats, 0 = as
+played) moves recorded note starts to the grid and keeps their lengths
+(`midi::quantize`). In **PAT mode** with Notes on and a MIDI keyboard connected
+or the computer keyboard on, Record + Play loops the current pattern
+and adds what is played to it (`Engine::begin_pat_take`; notes are counted on
+across loop passes and folded back into the loop by `midi::fold_loop`; one undo
+step when the loop stops, Record turns off or another pattern starts). Any other
+recording runs the song (the UI switches to SONG so the lit mode says so).
+Monitoring goes through the armed track, else the track being recorded on, else
+the input is heard dry on the master.
+
 ## Take lanes and comping
 
 Recording with a loop set cycles over it and makes **one take per pass**;
-recording over an existing clip adds a take instead of overwriting it. The
+recording over an existing clip of the armed track adds a take instead of overwriting it. The
 takes and the comp built from them are a project-level take group:
 
 ```jsonc
@@ -773,7 +803,7 @@ Projects without `comps` open unchanged (`#[serde(default)]`).
   non-master insert to the slowest one (`pdc`), so one long look-ahead effect
   (the vocal Rider, ≈ 1.6 s on Long) delays all playback. Live input must not
   wait for it: **low-latency monitoring** is on whenever monitoring is on, a
-  track is armed, the device delivers input and the track's insert is not the
+  track is armed or being recorded on, the device delivers input and the track's insert is not the
   master. That insert then (a) skips its effects with latency (look-ahead
   Rider, tuner, denoiser, limiter, de-esser: bypassed for monitoring only, the
   take itself is always the raw input), (b) runs its PDC delay of `pdc` frames
@@ -806,8 +836,8 @@ Projects without `comps` open unchanged (`#[serde(default)]`).
   while sound plays ramps the last output to zero over 3 ms while the new
   music fades in. Not while recording (a take's `skip` assumes the delayed
   start) and not offline (renders drop the latency themselves).
-* **Punch-in**: turning `rec` on while playing (with an armed track) starts a
-  take at the playhead (`Cmd::PunchIn`; the audio thread reports the exact beat
+* **Punch-in**: turning `rec` on while playing starts a take at the playhead, on
+  the armed track or the first one with room from there (`Cmd::PunchIn`; the audio thread reports the exact beat
   in `Shared::rec_start`); with a loop set it records in passes like loop
   recording. Turning `rec` off punches out and keeps playing.
 * The device records **one input channel** (`AudioConfig.inputChannel`,

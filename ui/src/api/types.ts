@@ -399,6 +399,10 @@ export type Op =
 
 export interface TransportDto {
   playing: boolean; rec: boolean; monitor: boolean; metro: boolean; countIn: boolean; startBeat: number;
+  /** The recording filter (right-click on Record): the input's audio becomes takes; keyboard notes a pattern. One stays on. */
+  recAudio: boolean; recNotes: boolean;
+  /** Input quantize of recorded notes: starts snap to multiples of this many beats (0 = as played). */
+  recQuantize: number;
 }
 
 export interface StateDto {

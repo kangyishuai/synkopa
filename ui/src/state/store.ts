@@ -33,7 +33,7 @@ const emptyProject = (): Project => ({ version: 2, bpm: 128, tracks: [], inserts
 
 export const [S, setS] = createStore<EngineState>({
   ready: false, project: emptyProject(), revision: 0, canUndo: false, canRedo: false,
-  transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0 },
+  transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0 },
   path: null, dirty: false, catalog: null, audition: {}, stretching: {}, missing: {}, fxErrors: {},
 });
 

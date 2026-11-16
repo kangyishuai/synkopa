@@ -45,7 +45,28 @@ shown in the app after an update and is published as the release notes (see
 - **Dragging a clip shows it moving a frame sooner.** The Playlist draws clips with the
   low-latency canvas where the system supports it.
 
+### Changed
+- **Recording works like FL Studio: nothing to arm.** Press R and Space: the recording goes to the
+  first track that has room from the playhead on, or to a new track when every track is in use
+  (undo removes that track with the take). The record button on every track is gone; a track's
+  menu still has **Record into this track** for recording more takes over what it holds. While
+  Record is on, the toolbar shows where the recording will go.
+- **Right-click Record to choose what it records: Audio, Notes or both.** In PAT mode, with Notes
+  ticked and a MIDI keyboard connected, Record + Space loops the current pattern and adds what you
+  play to it, one undo step per recording. Other recordings run the song, and the PAT/SONG switch
+  changes to SONG so it shows what plays. With only Notes ticked, the microphone stays closed.
+- **Record notes from the computer keyboard** (Ctrl+T, also in the Record menu), with no MIDI
+  keyboard needed, and **quantize recorded notes** to 1/16, 1/8 or 1/4 (Record menu → Quantize
+  notes). Starts snap to the grid and lengths stay as played.
+- **After a recording, a notice says what landed where**, for example "Recorded Take 3 on Pad",
+  with **Delete**, and **Show takes** when the recording added takes.
+
 ### Fixed
+- **The metronome clicks in PAT mode.** It was silent while a pattern looped and seemed to start
+  only after switching modes.
+- **PAT/SONG always shows what plays.** In SONG mode with an empty playlist, Space played the
+  pattern while SONG stayed lit. The switch now changes to PAT, and a notice offers **Add to
+  playlist**, which puts the pattern at bar 1. A quick switch between modes no longer flips back.
 - **The sample editor no longer sticks over plugin windows.** Clicking an effect or plugin window
   now brings it in front of the sample editor (and the channel settings window); clicking the
   editor brings it back on top.

@@ -19,6 +19,7 @@ import { allocId, plain, plainNotes, S } from './store';
 import { curBeat, tele } from './telemetry';
 import { loopSpan, type BeatRange } from '../lib/patLoop';
 import { say, setU, U } from './ui';
+import { markPlayCmd } from './telemetry';
 import { leaveMixView } from './mixView';
 import { planRoute, rangeSelect, toggleSelect } from '../lib/mixer';
 
@@ -580,11 +581,14 @@ export async function togglePreview(id: Id) {
   try {
     if (U.patPlaying && previewId === id) { await stopPreview(); say(t('b.st.prevStopped')); return; }
     previewId = id;
+    markPlayCmd();
     if (U.playing) setU('playing', false);
     // queued behind pending edits: a pattern made a moment ago must reach the engine first
     const pt = patById(id);
     await enqueue(() => be().patternPlay(id, { from: pt ? patFrom(pt) : 0, range: patLoopOf(id) }));
+    markPlayCmd();
     setU('patPlaying', true);
+    if (S.transport.rec && S.transport.recNotes && patMode()) return say(t('d.act.recPatNow', { name: patById(id)?.name ?? '' }));
     say(t('b.st.prevSay', { mode: t(patMode() ? 'b.st.modePatWord' : 'b.st.modePrevWord'), name: patById(id)?.name ?? t('b.st.patternWord'), hint: patMode() ? '' : t('b.st.prevHint') }));
   } catch (e) { say(t('b.st.prevErr', { err: String(e) })); }
 }
@@ -615,7 +619,8 @@ export function setPatStart(id: Id, beat: number) {
   }
 }
 export async function stopPreview() {
-  try { await enqueue(() => be().patternPlay(null)); setU('patPlaying', false); } catch (e) { console.warn(e); }
+  markPlayCmd();
+  try { await enqueue(() => be().patternPlay(null)); markPlayCmd(); setU('patPlaying', false); } catch (e) { console.warn(e); }
 }
 
 /**

@@ -13,6 +13,8 @@ import { FACTORY_FILES, FACTORY_KIT, factoryFile, LIB_SCHEME, libPath } from '..
 const MOCK_REVERB_MIX = 37.2;
 import { applyAll } from '../lib/applyOps';
 import { landTakes, takeEnd } from '../lib/comp';
+import { dropEmptyTrack, recTarget } from '../lib/recTarget';
+import { newTrack } from '../lib/clipOps';
 import { satDriveDb } from '../lib/saturator';
 import { songEnd } from '../lib/export';
 import { eqCurve } from '../lib/eq';
@@ -117,7 +119,7 @@ export class MockBackend implements Backend {
   private undoStack: Project[] = [];
   private redoStack: Project[] = [];
   private gesture: Project | null = null;
-  private tr: TransportDto = { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0 };
+  private tr: TransportDto = { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0 };
   private listeners = new Map<string, Set<(p: unknown) => void>>();
   private teleCb: ((b: ArrayBuffer) => void) | null = null;
   private watched: Id[] = [];
@@ -268,6 +270,9 @@ export class MockBackend implements Backend {
   async transportSilence() { this.preview = null; }
   async transportSet(patch: Partial<TransportDto>) {
     const wasRec = this.tr.rec;
+    // like the engine: the recording filter keeps one kind on
+    const ra = patch.recAudio ?? this.tr.recAudio, rn = patch.recNotes ?? this.tr.recNotes;
+    if (!ra && !rn) patch = { ...patch, recAudio: this.tr.recAudio, recNotes: this.tr.recNotes };
     this.tr = { ...this.tr, ...patch };
     if (wasRec && !this.tr.rec) this.finishRec();
     if (!wasRec && this.tr.rec && this.tr.playing) this.startRec(this.beatNow());
@@ -276,12 +281,29 @@ export class MockBackend implements Backend {
   }
   private changedTransport() { this.emit('state', this.dto()); }
   private startRec(clipStart: number) {
-    // like the engine: without an armed track nothing is recorded
-    const t = this.p.tracks.findIndex(x => x.arm);
-    if (t < 0) return;
+    // the mock has no MIDI keyboard: with Audio unticked nothing is recorded
+    if (!this.tr.recAudio) return;
+    // like the engine: the armed track, else the first one with room, else a new track
     const lp = this.p.loop;
     const lap: [number, number] | null = lp && lp.b > lp.a && clipStart >= lp.a && clipStart < lp.b ? [lp.a, lp.b] : null;
+    let t = recTarget(this.p, clipStart, lap ? lap[1] : Infinity);
+    if (t === 'new') {
+      t = this.p.tracks.length;
+      const id = this.p.nextId++;
+      this.p.tracks.push(newTrack(id, t));
+      this.recAdded = id;
+      this.changed();
+    }
     this.rec = { track: t, clipStart: Math.max(0, clipStart), t0: 0, peaks: [], sent: 0, lap, pass: 0 };
+  }
+  /** The track a recording added for want of room (the engine's `rec_added`). */
+  private recAdded: Id | null = null;
+  /** After a take: a track added for it that stayed empty goes, also from the undo snapshots. */
+  private settleRecTrack() {
+    const id = this.recAdded; this.recAdded = null;
+    if (id == null) return;
+    for (const snap of this.undoStack) dropEmptyTrack(snap, id);
+    if (dropEmptyTrack(this.p, id)) this.changed();
   }
   /** Peak-pair index where each pass after the first begins (100 pairs per second). */
   private passMarks(r: NonNullable<MockBackend['rec']>, total: number): number[] {
@@ -302,7 +324,7 @@ export class MockBackend implements Backend {
       if (n < (cutShort ? 100 * spb : 10)) continue; // a pass cut off right after the wrap is not a take
       passes.push([Float32Array.from(r.peaks.slice(bounds[k] * 2, bounds[k + 1] * 2)), k === 0 ? r.clipStart : r.lap![0]]);
     }
-    if (!passes.length) return;
+    if (!passes.length) return this.settleRecTrack();
     const prev = structuredClone(this.p);
     const landed: [Id, number, number][] = [];
     for (const [pk, start] of passes) {
@@ -315,6 +337,7 @@ export class MockBackend implements Backend {
     }
     landTakes(this.p, r.track, landed, () => this.p.nextId++);
     this.pushUndo(prev); this.changed();
+    this.settleRecTrack();
   }
   private recPeaks = new Map<Id, Float32Array>();
 

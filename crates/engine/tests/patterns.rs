@@ -508,3 +508,35 @@ fn pattern_loop_starts_where_asked_and_stays_in_its_range() {
     run_rt(&mut rt, 256);
     assert_eq!(sh.pat_beat(), -1.0);
 }
+
+#[test]
+fn the_metronome_counts_the_pattern_loop() {
+    // an empty 2-beat pattern looped on its own: with the metronome on, a click on every beat
+    // of it (each loop pass too); off, silence
+    let clicks = |metro: bool| {
+        let p = one_pattern(vec![], 2.0, 0.0);
+        let spb = 60.0 / p.bpm;
+        let e = Engine::new(p, Arc::new(NoPlugins));
+        let mut rt = e.create_rt(SR as f32, 256);
+        e.set_transport(Some(metro), None, None, None);
+        e.pattern_play(Some(1), 0.0, None).unwrap();
+        let n = (4.5 * spb * SR as f64) as usize / 256;
+        let (mut l, mut r) = ([0.0; 256], [0.0; 256]);
+        let out: Vec<f32> = (0..n)
+            .flat_map(|_| {
+                rt.process(&mut l, &mut r, None);
+                l
+            })
+            .collect();
+        (out, (spb * SR as f64) as usize)
+    };
+    let (quiet, _) = clicks(false);
+    assert!(rms(&quiet) < 1e-9, "the metronome is off");
+    let (out, beat) = clicks(true);
+    for b in 0..4 {
+        let at = b * beat;
+        let win = &out[at..at + beat / 2];
+        let first = win.iter().position(|v| v.abs() > 1e-4);
+        assert!(first.is_some_and(|i| i < 64), "no click on beat {b} of the pattern loop");
+    }
+}

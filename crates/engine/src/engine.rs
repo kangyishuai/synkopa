@@ -77,6 +77,13 @@ pub struct TransportDto {
     pub metro: bool,
     pub count_in: bool,
     pub start_beat: f64,
+    /// The recording filter (FL's right-click on Record): the input's audio becomes takes.
+    pub rec_audio: bool,
+    /// The recording filter: notes played on a MIDI keyboard become a pattern.
+    pub rec_notes: bool,
+    /// Input quantize of recorded notes: their starts move to multiples of this many beats
+    /// (lengths kept); 0 = as played.
+    pub rec_quantize: f64,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -299,6 +306,11 @@ struct Core {
     source_errors: HashMap<Id, String>,
     wires: Option<Wires>,
     take: Option<RecBuf>,
+    /// The pattern the loop preview plays and the part of it that loops (PAT mode).
+    pat_loop: Option<(Id, Option<(f64, f64)>)>,
+    /// The track a recording added because no track had room (removed again if nothing
+    /// lands on it, and left out of the undo snapshots taken while it was empty).
+    rec_added: Option<Id>,
     /// A mixer change that would alter the playback latency arrived during a take: the
     /// audio thread keeps the old graph until the take ends (its `skip` stays right).
     graph_deferred: bool,
@@ -332,6 +344,45 @@ struct MidiTake {
     rec: Option<(MidiRecorder, usize, Id)>,
     /// The running take received notes (then its audio take is dropped).
     played: bool,
+    /// Set when the take records into the looping pattern (PAT mode) instead of the song.
+    pat: Option<PatLoopRec>,
+}
+
+/// A MIDI take over the pattern loop: its notes are added to pattern `id` (FL's pattern-mode
+/// recording, overdubbing what the pattern holds).
+struct PatLoopRec {
+    id: Id,
+    /// The loop: from beat `la` of the pattern, `span` beats long.
+    la: f64,
+    span: f64,
+    /// The last pattern beat seen, and the beats of the passes completed before it.
+    prev: f64,
+    laps: f64,
+}
+
+impl PatLoopRec {
+    /// Pattern beat `b` counted on from the first pass (a jump back is the loop wrapping);
+    /// a stopped loop (`b` < 0) stays where it was.
+    fn unwrap(&mut self, b: f64) -> f64 {
+        if b < 0.0 {
+            return self.prev.max(self.la) + self.laps;
+        }
+        if b + 1e-9 < self.prev {
+            self.laps += self.span;
+        }
+        self.prev = b;
+        b + self.laps
+    }
+}
+
+impl MidiTake {
+    /// The beat a keyboard event lands on: the song's, or the pattern loop's while recording into it.
+    fn beat(&mut self, song: f64, pat: f64) -> f64 {
+        match self.pat.as_mut() {
+            Some(p) => p.unwrap(pat),
+            None => song,
+        }
+    }
 }
 
 /// What a keyboard event needs, readable without the core lock: whether a device is live,
@@ -388,7 +439,17 @@ impl Engine {
                 sources,
                 path: None,
                 saved_revision: 1,
-                transport: TransportDto { playing: false, rec: false, monitor: false, metro: false, count_in: true, start_beat: 0.0 },
+                transport: TransportDto {
+                    playing: false,
+                    rec: false,
+                    monitor: false,
+                    metro: false,
+                    count_in: true,
+                    start_beat: 0.0,
+                    rec_audio: true,
+                    rec_notes: true,
+                    rec_quantize: 0.0,
+                },
                 live_fx: HashSet::new(),
                 sent_params: HashMap::new(),
                 sent_maps: HashMap::new(),
@@ -397,6 +458,8 @@ impl Engine {
                 source_errors: HashMap::new(),
                 wires: None,
                 take: None,
+                pat_loop: None,
+                rec_added: None,
                 graph_deferred: false,
                 watch: vec![],
                 audition: HashMap::new(),
@@ -492,6 +555,8 @@ impl Engine {
                 t.resolve(&old);
             }
         }
+        // ...and a MIDI take (keyboard or computer keyboard) ends at its playhead
+        self.finish_midi_take();
         *self.shared.lock() = shared.clone();
         let mut rt = Rt::new(sample_rate, max_block, cmd_rx, gb_tx, shared, Taps { input: inputs, output: outputs }, rec_tx);
         rt.set_skip_silent(self.skip_silent.load(Relaxed));
@@ -526,6 +591,8 @@ impl Engine {
         send(&mut c, flags);
         send(&mut c, watch);
         c.transport.playing = false;
+        c.pat_loop = None; // the new stream plays nothing
+        self.settle_rec_track(&mut c);
         self.changed(c);
         rt
     }
@@ -773,21 +840,24 @@ impl Engine {
         }
         let from = from.max(0.0);
         let p = &c.project;
-        let rec_track = if c.transport.rec { p.tracks.iter().position(|t| t.arm) } else { None };
+        let rec = c.transport.rec;
         let (ls, le) = p.loop_range.map(|l| (l.a, l.b)).unwrap_or((0.0, p.song_end()));
         // with a loop set, recording cycles over it: one take per pass
-        let lap = p.loop_range.filter(|l| rec_track.is_some() && l.b > l.a).map(|l| (l.a, l.b));
+        let lap = p.loop_range.filter(|l| rec && l.b > l.a).map(|l| (l.a, l.b));
         let from = match lap {
             Some((a, b)) if from < a || from >= b => a,
             Some(_) => from,
-            None if rec_track.is_none() && (from >= le || from < ls && p.loop_range.is_some()) => ls,
+            None if !rec && (from >= le || from < ls && p.loop_range.is_some()) => ls,
             None => from,
         };
+        c.pat_loop = None; // the song and the pattern loop are exclusive
+        let rec_track = rec.then(|| self.rec_target(&mut c, from, lap.map_or(f64::INFINITY, |l| l.1)));
         let count_in = if rec_track.is_some() && c.transport.count_in { 4.0 } else { 0.0 };
         if let Some(track) = rec_track {
-            c.take = self.new_take(&c, track, from, lap);
-        }
-        if let Some(track) = rec_track {
+            if c.transport.rec_audio {
+                c.take = self.new_take(&c, track, from, lap);
+                self.send_monitor(&mut c);
+            }
             self.begin_midi_take(&mut c, track, from);
         }
         c.transport.start_beat = from;
@@ -811,9 +881,36 @@ impl Engine {
         }
         self.finish_take();
         self.finish_midi_take();
-        let c = self.core.lock();
+        let mut c = self.core.lock();
+        self.settle_rec_track(&mut c);
         drop(control);
         self.changed(c);
+    }
+
+    /// The recording filter: what a recording captures (the input's audio, keyboard notes).
+    /// At least one stays on; a recording running keeps what it started with.
+    pub fn set_rec_filter(&self, audio: Option<bool>, notes: Option<bool>) -> TransportDto {
+        let mut c = self.core.lock();
+        let (a, n) = (audio.unwrap_or(c.transport.rec_audio), notes.unwrap_or(c.transport.rec_notes));
+        if a || n {
+            c.transport.rec_audio = a;
+            c.transport.rec_notes = n;
+        }
+        let t = c.transport.clone();
+        self.changed(c);
+        t
+    }
+
+    /// Input quantize of recorded notes, in beats (0 = off; 1/4 = a step). A take running
+    /// uses the value it ends with.
+    pub fn set_rec_quantize(&self, grid: f64) -> TransportDto {
+        let mut c = self.core.lock();
+        if grid.is_finite() && (0.0..=4.0).contains(&grid) {
+            c.transport.rec_quantize = grid;
+        }
+        let t = c.transport.clone();
+        self.changed(c);
+        t
     }
 
     pub fn set_start(&self, beat: f64) {
@@ -839,22 +936,24 @@ impl Engine {
         }
         let punch_out = !c.transport.rec && (c.take.is_some() || self.midi_take.lock().rec.is_some());
         let drain = if punch_out { self.end_take(&mut c, false) } else { None };
-        // arming while the song plays punches in right away (on the first armed track)
-        if c.transport.rec && c.transport.playing && c.take.is_none() {
-            if let Some(track) = c.project.tracks.iter().position(|t| t.arm) {
-                let lap = c.project.loop_range.filter(|l| l.b > l.a).map(|l| (l.a, l.b));
-                if let Some(t) = self.new_take(&c, track, f64::NAN, lap) {
-                    self.shared().set_rec_start(f64::NAN);
-                    c.take = Some(t);
-                    send(&mut c, Cmd::PunchIn { rec_loop: lap.is_some() });
-                }
+        // arming while the song plays punches in right away (on the armed track, else where
+        // there is room from the playhead on)
+        let punch_in = c.transport.rec && c.transport.playing && c.take.is_none() && self.midi_take.lock().rec.is_none();
+        if punch_in {
+            let at = self.shared().beat();
+            let lap = c.project.loop_range.filter(|l| l.b > l.a).map(|l| (l.a, l.b));
+            let track = self.rec_target(&mut c, at, lap.map_or(f64::INFINITY, |l| l.1));
+            if let Some(t) = self.new_take(&c, track, f64::NAN, lap).filter(|_| c.transport.rec_audio) {
+                self.shared().set_rec_start(f64::NAN);
+                c.take = Some(t);
+                self.send_monitor(&mut c);
+                send(&mut c, Cmd::PunchIn { rec_loop: lap.is_some() });
             }
+            self.begin_midi_take(&mut c, track, at);
         }
-        if c.transport.rec && c.transport.playing && self.midi_take.lock().rec.is_none() {
-            if let Some(track) = c.project.tracks.iter().position(|t| t.arm) {
-                let at = self.shared().beat();
-                self.begin_midi_take(&mut c, track, at);
-            }
+        // Record turned on while a pattern loops (PAT mode): the keyboard records into it
+        if c.transport.rec && !c.transport.playing {
+            self.begin_pat_take(&mut c);
         }
         let f = Cmd::Flags { metro: c.transport.metro, monitor: c.transport.monitor };
         send(&mut c, f);
@@ -866,7 +965,8 @@ impl Engine {
             }
             self.finish_take();
             self.finish_midi_take();
-            let c = self.core.lock();
+            let mut c = self.core.lock();
+            self.settle_rec_track(&mut c);
             drop(control);
             self.changed(c);
         } else {
@@ -874,6 +974,55 @@ impl Engine {
             self.changed(c);
         }
         t
+    }
+
+    /// The track a recording starting at `from` goes to: the armed one ("Record into this
+    /// track"), else, as in FL, the first track with nothing on it from `from` to `until`
+    /// (the loop end, or for good), else a new track added below the others.
+    fn rec_target(&self, c: &mut Core, from: f64, until: f64) -> usize {
+        let p = &c.project;
+        if let Some(i) = p.tracks.iter().position(|t| t.arm).or_else(|| free_track(p, from, until)) {
+            return i;
+        }
+        let n = c.project.tracks.len();
+        let id = c.project.alloc_id();
+        c.project.tracks.push(Track {
+            id,
+            name: format!("Track {}", n + 1),
+            color: "#8b93a1".into(),
+            muted: false,
+            solo: false,
+            arm: false,
+            vol: VOL_UNITY,
+            h: 56.0,
+            insert: 0,
+            icon: None,
+        });
+        c.rec_added = Some(id);
+        c.revision += 1;
+        self.sync(c, Dirty { timeline: true, mixer: true, params: true });
+        n
+    }
+
+    /// Tells the audio thread which track the live input is monitored through (see [`monitor_of`]).
+    fn send_monitor(&self, c: &mut Core) {
+        let mut m = mix_state(&c.project);
+        m.monitor_track = monitor_of(c);
+        send(c, Cmd::Mix(Box::new(m)));
+    }
+
+    /// After a take landed (or did not): a track added for it that stayed empty goes away,
+    /// and undo snapshots holding it empty forget it, so undoing the take removes it too.
+    fn settle_rec_track(&self, c: &mut Core) {
+        self.send_monitor(c);
+        let Some(id) = c.rec_added.take() else { return };
+        for snap in c.undo.iter_mut() {
+            drop_empty_track(snap, id);
+        }
+        if drop_empty_track(&mut c.project, id) {
+            c.revision += 1;
+            self.sync(c, Dirty { timeline: true, mixer: true, params: true });
+        }
     }
 
     fn end_take(&self, c: &mut Core, stop: bool) -> Option<(Arc<Shared>, Duration)> {
@@ -1874,9 +2023,15 @@ impl Engine {
         if !from.is_finite() || range.is_some_and(|(a, b)| !a.is_finite() || !b.is_finite()) {
             return Err(EngineError::Msg("pattern position: not a number".into()));
         }
+        // notes recorded over the loop so far join their pattern before it stops or restarts
+        let recorded = self.finish_pat_take(&mut c);
         send(&mut c, Cmd::PatPlay { id: pattern, from: from.max(0.0), range });
+        c.pat_loop = pattern.map(|id| (id, range));
+        self.begin_pat_take(&mut c);
         if pattern.is_some() && c.transport.playing {
             c.transport.playing = false;
+            self.changed(c);
+        } else if recorded {
             self.changed(c);
         }
         Ok(())
@@ -1891,6 +2046,9 @@ impl Engine {
         }
         let mut c = self.core.lock();
         send(&mut c, Cmd::PatRange(range));
+        if let Some(p) = c.pat_loop.as_mut() {
+            p.1 = range;
+        }
         Ok(())
     }
 
@@ -2420,7 +2578,8 @@ impl Engine {
             }
             let mut errs = std::mem::take(&mut c.fx_errors);
             let mut hosted = std::mem::take(&mut c.plugin_lat);
-            let graph = build_graph(&c.project, &c.live_fx, sr, max_block, &*self.factory, true, &mut errs, &mut hosted);
+            let mut graph = build_graph(&c.project, &c.live_fx, sr, max_block, &*self.factory, true, &mut errs, &mut hosted);
+            graph.monitor_track = monitor_of(c);
             c.fx_errors = errs;
             c.plugin_lat = hosted;
             c.live_fx = graph.inserts.iter().flat_map(|i| i.fx.iter().map(|s| s.id)).collect();
@@ -2435,7 +2594,9 @@ impl Engine {
             }
             send(c, Cmd::Graph(Box::new(graph)));
         } else if d.params || defer {
-            send(c, Cmd::Mix(Box::new(mix_state(&c.project))));
+            let mut m = mix_state(&c.project);
+            m.monitor_track = monitor_of(c);
+            send(c, Cmd::Mix(Box::new(m)));
             let changed: Vec<(Id, (Option<ParamBlock>, f32))> = c
                 .project
                 .inserts
@@ -2720,7 +2881,20 @@ impl Engine {
             i => Some(i),
         };
         let vel = if on { vel.clamp(0.0, 1.0) } else { 0.0 };
-        self.midi_fast.send(Cmd::MidiNote { chan, key: key.min(127), vel, on, ins: if on { ins } else { None } });
+        let key = key.min(127);
+        self.midi_fast.send(Cmd::MidiNote { chan, key, vel, on, ins: if on { ins } else { None } });
+        // while a take records notes, the computer keyboard plays into it like a MIDI keyboard
+        let (song, pat) = (self.shared().beat(), self.shared().pat_beat());
+        let mut t = self.midi_take.lock();
+        let beat = t.beat(song, pat);
+        if let Some((r, _, _)) = t.rec.as_mut() {
+            if on {
+                r.note_on_ch(beat, key, (vel * 127.0).round() as u8, Some(chan));
+                t.played = true;
+            } else {
+                r.note_off_ch(beat, key, Some(chan));
+            }
+        }
     }
 
     /// Releases every sounding keyboard note (device unplugged).
@@ -2751,12 +2925,13 @@ impl Engine {
             usize::MAX => None,
             i => Some(i),
         };
-        let beat = self.shared().beat();
+        let (song, pat) = (self.shared().beat(), self.shared().pat_beat());
         match m {
             MidiMsg::NoteOn { key, vel, .. } => {
                 let Some(chan) = chan else { return };
                 mf.send(Cmd::MidiNote { chan, key, vel: MidiMsg::vel_gain(vel), on: true, ins });
                 let mut t = self.midi_take.lock();
+                let beat = t.beat(song, pat);
                 if let Some((r, _, _)) = t.rec.as_mut() {
                     r.note_on(beat, key, vel);
                     t.played = true;
@@ -2765,13 +2940,17 @@ impl Engine {
             MidiMsg::NoteOff { key, .. } => {
                 let Some(chan) = chan else { return };
                 mf.send(Cmd::MidiNote { chan, key, vel: 0.0, on: false, ins: None });
-                if let Some((r, _, _)) = self.midi_take.lock().rec.as_mut() {
+                let mut t = self.midi_take.lock();
+                let beat = t.beat(song, pat);
+                if let Some((r, _, _)) = t.rec.as_mut() {
                     r.note_off(beat, key);
                 }
             }
             MidiMsg::Sustain { down, .. } => {
                 mf.send(Cmd::MidiSustain(down));
-                if let Some((r, _, _)) = self.midi_take.lock().rec.as_mut() {
+                let mut t = self.midi_take.lock();
+                let beat = t.beat(song, pat);
+                if let Some((r, _, _)) = t.rec.as_mut() {
                     r.sustain(beat, down);
                 }
             }
@@ -2781,11 +2960,62 @@ impl Engine {
         }
     }
 
+    /// PAT mode with Record on and Notes ticked: what the keyboard plays over the pattern loop
+    /// goes into that pattern (on the channel the keyboard plays), added to what it holds.
+    fn begin_pat_take(&self, c: &mut Core) {
+        let Some((id, range)) = c.pat_loop else { return };
+        if !(c.transport.rec && c.transport.rec_notes) {
+            return;
+        }
+        let Some(len) = c.project.patterns.iter().find(|p| p.id == id).map(|p| p.len) else { return };
+        let Some(ch) = midi_channel(c) else { return };
+        let (la, lb) = crate::rt::loop_span(range, len);
+        let mut t = self.midi_take.lock();
+        if t.rec.is_some() {
+            return;
+        }
+        t.played = false;
+        t.rec = Some((MidiRecorder::new(f64::NEG_INFINITY), usize::MAX, ch));
+        t.pat = Some(PatLoopRec { id, la, span: lb - la, prev: f64::NEG_INFINITY, laps: 0.0 });
+    }
+
+    /// Ends a take over the pattern loop: the notes played join the pattern (one undo step).
+    /// False when no such take runs.
+    fn finish_pat_take(&self, c: &mut Core) -> bool {
+        let pb = self.shared().pat_beat();
+        let (rec, ch, mut pl) = {
+            let mut t = self.midi_take.lock();
+            let Some(pl) = t.pat.take() else { return false };
+            t.played = false;
+            let Some((rec, _, ch)) = t.rec.take() else { return true };
+            (rec, ch, pl)
+        };
+        let end = pl.unwrap(pb);
+        let mut played = rec.finish(end);
+        midi::quantize(&mut played, c.transport.rec_quantize);
+        let notes = midi::fold_loop(&played, ch, pl.la, pl.span);
+        let Some(mut pat) = c.project.patterns.iter().find(|p| p.id == pl.id).cloned() else { return true };
+        if notes.is_empty() {
+            return true;
+        }
+        pat.notes.extend(notes);
+        let before = c.project.clone();
+        match ops::apply_all(&mut c.project, &[Op::PutPattern { pattern: pat }]) {
+            Ok(d) => {
+                push_undo(c, before);
+                c.revision += 1;
+                self.sync(c, d);
+            }
+            Err(e) => log::error!("could not add the recorded notes to the pattern: {e}"),
+        }
+        true
+    }
+
     /// Starts collecting keyboard notes for a take on armed track `track` from beat `from`.
     fn begin_midi_take(&self, c: &mut Core, track: usize, from: f64) {
         let mut t = self.midi_take.lock();
         t.played = false;
-        if !c.midi.live {
+        if !c.transport.rec_notes {
             return;
         }
         if let Some(ch) = midi_channel(c) {
@@ -2798,6 +3028,9 @@ impl Engine {
     fn finish_midi_take(&self) {
         let end = self.shared().beat();
         let mut c = self.core.lock();
+        if self.finish_pat_take(&mut c) {
+            return;
+        }
         let Some((rec, track, ch)) = ({
             let mut t = self.midi_take.lock();
             t.played = false;
@@ -2805,7 +3038,8 @@ impl Engine {
         }) else {
             return;
         };
-        let notes = rec.finish(end);
+        let mut notes = rec.finish(end);
+        midi::quantize(&mut notes, c.transport.rec_quantize);
         let Some(laid) = midi::layout(&notes, ch, 4.0) else { return };
         let color = c.project.channel(ch).map(|x| x.color.clone()).unwrap_or_else(|| "#69c3d6".into());
         let n = c.project.patterns.iter().filter(|p| p.name.starts_with("MIDI take")).count() + 1;
@@ -3426,6 +3660,30 @@ fn fx_latency(f: &crate::model::Fx, sr: f32, hosted: &HashMap<Id, usize>) -> usi
 
 fn monitor_track(p: &Project) -> Option<usize> {
     p.tracks.iter().position(|t| t.arm)
+}
+
+/// The track the live input is monitored through: the armed one, else the one being recorded
+/// on. `None`: the input is heard dry on the master.
+fn monitor_of(c: &Core) -> Option<usize> {
+    monitor_track(&c.project).or_else(|| c.take.as_ref().map(|t| t.track))
+}
+
+/// The first track with no clip between beats `from` and `until`.
+pub fn free_track(p: &Project, from: f64, until: f64) -> Option<usize> {
+    (0..p.tracks.len()).find(|&i| !p.clips.iter().any(|c| c.track as usize == i && c.start < until - 1e-9 && c.start + c.len > from + 1e-9))
+}
+
+/// Removes track `id` if no clip is on it (the tracks below move up). True when it did.
+fn drop_empty_track(p: &mut Project, id: Id) -> bool {
+    let Some(i) = p.tracks.iter().position(|t| t.id == id) else { return false };
+    if p.clips.iter().any(|c| c.track as usize == i) {
+        return false;
+    }
+    p.tracks.remove(i);
+    for c in p.clips.iter_mut().filter(|c| c.track as usize > i) {
+        c.track -= 1;
+    }
+    true
 }
 
 fn mix_state(p: &Project) -> MixState {

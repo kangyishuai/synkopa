@@ -15,30 +15,29 @@ import { clearPeaks } from './peaks';
 import { modePattern, openRack, patMode, rackFloating, rollFloating, setPatMode, stopPreview, togglePreview } from './pattern';
 import { allocId, findFx, insName, plain, S, setTransport } from './store';
 import { say, setU, U, type SampleTarget } from './ui';
+import { notify } from './notice';
+import { midiStatus } from './midi';
+import { typingOn } from './typingKeys';
+import { recTarget, recUntil } from '../lib/recTarget';
+import { curBeat, markPlayCmd } from './telemetry';
 import { confirmRecover, confirmUnsaved } from '../ui/Confirm';
 import { showPlugin } from './pluginWindows';
 
 // ---------- transport ----------
 /** Recording is on but no track is armed: the engine plays and records nothing. */
-const NO_ARMED = () => t('d.act.noarmed');
-const armedTrack = () => S.project.tracks.find(t => t.arm);
-/** Recording with nothing armed: arm the first track with no clips at all (waits until the engine has it). */
-async function autoArm() {
-  if (armedTrack()) return;
-  const used = new Set(S.project.clips.map(c => c.track));
-  const i = S.project.tracks.findIndex((_, k) => !used.has(k));
-  if (i < 0) return;
-  armTrack(i);
-  await enqueue(() => Promise.resolve());
-  say(t('d.act.recon1', { name: S.project.tracks[i].name }));
+/** The name of the track a recording from `from` goes to (see `recTarget`), or "a new track". */
+export function recTargetName(from: number): string {
+  const i = recTarget(S.project, from, recUntil(S.project));
+  return i === 'new' ? t('d.act.newTrack') : S.project.tracks[i].name;
 }
 export async function play(from = U.start) {
   if (U.patPlaying) await stopPreview();
+  markPlayCmd();
   setU('playing', true);
   try {
-    if (S.transport.rec) await autoArm();
-    await be().transportPlay(from); setTransport({ playing: true });
-    say(!S.transport.rec ? 'Play' : armedTrack() ? t('d.act.recon', { name: armedTrack()!.name }) : NO_ARMED());
+    const dest = S.transport.rec ? recTargetName(from) : '';
+    await be().transportPlay(from); markPlayCmd(); setU('playing', true); setTransport({ playing: true });
+    say(!S.transport.rec ? 'Play' : t('d.act.recon', { name: dest }));
   }
   catch (e) { setU('playing', false); say(t('d.act.playerr', { err: String(e) })); }
 }
@@ -47,9 +46,10 @@ export async function stop(rewind = false) {
   // Stop while nothing plays (the second press) also cuts what still rings: reverb and delay tails, held notes, a preview
   const again = !U.playing && !U.patPlaying;
   if (U.patPlaying) void stopPreview();
+  markPlayCmd();
   setU('playing', false);
   if (rewind) setU('start', 0);
-  try { await be().transportStop(); setTransport({ playing: false }); } catch (e) { console.warn(e); }
+  try { await be().transportStop(); markPlayCmd(); setU('playing', false); setTransport({ playing: false }); } catch (e) { console.warn(e); }
   if (again) return silence(rewind);
   say(rewind ? t('d.act.stop.rew') : 'Stop');
 }
@@ -60,17 +60,41 @@ export async function silence(rewound = false) {
   if (U.previewPath != null) setU('previewPath', null);
   say(t(rewound ? 'd.act.silence.rew' : 'd.act.silence'));
 }
+/**
+ * PAT mode with Record on records into the looping pattern when Record captures notes and there is
+ * something to play them on (a MIDI keyboard, or the computer keyboard as piano) (FL); any other
+ * recording runs the song.
+ */
+export const patRecords = () => patMode() && S.transport.rec && S.transport.recNotes && (!!midiStatus()?.connected || typingOn());
 /** Space: stop whatever plays; else PAT mode loops the current pattern, SONG mode plays the song
- * (recording always runs the song). */
+ * (a recording that is not PAT-mode notes runs the song, and the lit mode says so). */
 export function togglePlay() {
   if (U.playing) return stop();
   if (U.patPlaying) { void stopPreview(); say('Stop'); return; }
-  const p = patMode() && !S.transport.rec ? modePattern() : undefined;
+  const p = patMode() && (!S.transport.rec || patRecords()) ? modePattern() : undefined;
   if (p) return togglePreview(p.id);
-  // SONG with an empty playlist would play silence: play the pattern being edited and say why
+  if (S.transport.rec && patMode()) setPatMode(false);
+  // SONG with an empty playlist would play silence: switch to PAT (the lit mode is always what
+  // plays) and offer to put the pattern in the song
   const cur = modePattern();
-  if (!S.transport.rec && !S.project.clips.length && cur?.notes.length) { say(t('d.act.songEmpty', { name: cur.name })); return togglePreview(cur.id); }
+  if (!S.transport.rec && !S.project.clips.length && cur?.notes.length) {
+    setPatMode(true);
+    const id = cur.id;
+    notify(t('d.act.songEmpty', { name: cur.name }), [{ label: t('d.act.addToSong'), act: () => addPatternToSong(id) }]);
+    return togglePreview(id);
+  }
   return play();
+}
+/** Puts pattern `id` in the playlist at bar 1, on the first track with room for it (one undo step). */
+export function addPatternToSong(id: Id) {
+  const p = S.project.patterns.find(x => x.id === id); if (!p) return;
+  const len = Math.min(p.len, TOTAL);
+  const free = (i: number) => !S.project.clips.some(c => c.track === i && c.start < len && c.start + c.len > 0);
+  const track = S.project.tracks.findIndex((_, i) => free(i));
+  if (track < 0) return say(t('d.act.noFreeTrack'));
+  const nc: Clip = { id: allocId(), track, start: 0, len, offset: 0, kind: 'pat', ref: id, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false };
+  commit([{ op: 'putClips', clips: [nc] }], t('a.pl.insertClip'));
+  say(t('d.act.addedToSong', { name: p.name, track: S.project.tracks[track].name }));
 }
 /**
  * The PAT / SONG switch (L): while something plays, what plays switches with it (FL) — the song
@@ -113,13 +137,59 @@ export async function setTransportFlag(k: 'metro' | 'countIn' | 'rec' | 'monitor
 }
 export async function toggleRec() {
   const on = !S.transport.rec;
-  if (on) await autoArm();
-  void setTransportFlag('rec', on);
-  say(!on ? (U.playing ? 'Punch out' : t('d.act.recoff'))
-    : !armedTrack() ? NO_ARMED()
-    : U.playing ? t('d.act.punchin', { name: armedTrack()!.name })
-    : t(S.transport.countIn ? 'd.act.recspace.ci' : 'd.act.recspace', { name: armedTrack()!.name }));
+  const dest = recTargetName(U.playing ? curBeat() : U.start);
+  await setTransportFlag('rec', on);
+  const pat = on && patRecords() ? modePattern() : undefined;
+  if (pat) return say(t(U.patPlaying ? 'd.act.recPatNow' : 'd.act.recPat', { name: pat.name }));
+  say(!on ? (U.playing || U.patPlaying ? 'Punch out' : t('d.act.recoff'))
+    : U.playing ? t('d.act.punchin', { name: dest })
+    : t(S.transport.countIn ? 'd.act.recspace.ci' : 'd.act.recspace', { name: dest }));
 }
+// ---- the recording filter (FL's right-click on Record): what a recording captures. A setting of
+// this computer, not of the song: kept in localStorage and handed to the engine at start-up.
+const REC_FILTER_KEY = 'wave.recFilter';
+/** Ticks or unticks one kind; the last one ticked stays on (a recording must capture something). */
+export async function setRecFilter(kind: 'audio' | 'notes', on: boolean) {
+  const cur = { audio: S.transport.recAudio, notes: S.transport.recNotes }, next = { ...cur, [kind]: on };
+  if (!next.audio && !next.notes) return say(t('d.act.recFilterLast'));
+  try {
+    const tr = await be().transportSet({ recAudio: next.audio, recNotes: next.notes });
+    setTransport(tr);
+    saveRecFilter();
+    say(t('d.act.recFilter', { what: recFilterName() }));
+  } catch (e) { say(t('d.act.err', { err: String(e) })); }
+}
+const saveRecFilter = () => {
+  const tr = S.transport;
+  try { localStorage.setItem(REC_FILTER_KEY, JSON.stringify({ audio: tr.recAudio, notes: tr.recNotes, quantize: tr.recQuantize })); } catch { /* private window */ }
+};
+/** Input quantize of recorded notes (FL's snap while recording): beats, 0 = as played. */
+export const REC_QUANTIZE = [
+  { beats: 0, label: 'd.act.q.off' as const }, { beats: 0.25, label: 'd.act.q.step' as const }, { beats: 0.5, label: 'd.act.q.eighth' as const }, { beats: 1, label: 'd.act.q.beat' as const },
+];
+export async function setRecQuantize(beats: number) {
+  try {
+    setTransport(await be().transportSet({ recQuantize: beats }));
+    saveRecFilter();
+    const q = REC_QUANTIZE.find(x => x.beats === beats);
+    say(t('d.act.recQuantize', { q: q ? t(q.label) : String(beats) }));
+  } catch (e) { say(t('d.act.err', { err: String(e) })); }
+}
+/** At start-up: the filter last chosen on this computer. */
+export async function restoreRecFilter() {
+  let v: { audio?: unknown; notes?: unknown; quantize?: unknown } | null = null;
+  try { v = JSON.parse(localStorage.getItem(REC_FILTER_KEY) ?? 'null'); } catch { /* none or unreadable */ }
+  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes)) return;
+  const q = REC_QUANTIZE.some(x => x.beats === v!.quantize) ? v.quantize as number : 0;
+  if (v.audio === S.transport.recAudio && v.notes === S.transport.recNotes && q === S.transport.recQuantize) return;
+  try { setTransport(await be().transportSet({ recAudio: v.audio, recNotes: v.notes, recQuantize: q })); } catch (e) { console.warn(e); }
+}
+/** "audio and notes", "audio", "notes": what Record captures. */
+export function recFilterName() {
+  const a = S.transport.recAudio, n = S.transport.recNotes;
+  return t(a && n ? 'd.act.recWhat.both' : a ? 'd.act.recWhat.audio' : 'd.act.recWhat.notes');
+}
+
 export function toggleMonitor() {
   const on = !S.transport.monitor;
   void setTransportFlag('monitor', on);

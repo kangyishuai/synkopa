@@ -15,6 +15,7 @@ import { commit, Gesture, wheelEdit } from '../state/edit';
 import { peaksVersion } from '../state/peaks';
 import { allocId, anyTrackSolo, arrVersion, clipSrcLen, onArrangementChange, plain, S, srcLenBeats, srcOf } from '../state/store';
 import { curBeat, recState, tele } from '../state/telemetry';
+import { recTarget, recUntil } from '../lib/recTarget';
 import { closeMenu, openMenu, openRename, say, setU, U, type MenuItem } from '../state/ui';
 import { showInsert } from '../state/mixView';
 import { dblCheck, dragCursor, edgeScroller, panDrag, track } from '../ui/drag';
@@ -114,7 +115,7 @@ export function Playlist() {
   // recording starts: make sure the armed track is on screen (a tall mixer can hide it)
   createEffect(on(() => S.transport.rec && U.playing, rec => {
     if (!rec || !scrollEl) return;
-    const i = S.project.tracks.findIndex(t => t.arm); if (i < 0) return;
+    const r = recTarget(S.project, U.start, recUntil(S.project)), i = r === 'new' ? S.project.tracks.length - 1 : r; if (i < 0) return;
     const y0 = tops()[i], y1 = y0 + S.project.tracks[i].h, top = scrollEl.scrollTop, vis = scrollEl.clientHeight - 30;
     if (y0 < top || y1 > top + vis) scrollEl.scrollTop = Math.max(0, y0 - 10);
   }, { defer: true }));
@@ -1377,9 +1378,12 @@ function LaneHeader(props: { t: Track; i: number }) {
             </Show>
             <button class="mini m" classList={{ on: t().muted }} title={tl('a.pl.muteTip')} onPointerDown={stop} onClick={() => A.toggleTrackMute(props.i)}>M</button>
             <button class="mini s" classList={{ on: t().solo }} title={tl('a.pl.soloTip')} onPointerDown={stop} onClick={e => A.toggleTrackSolo(props.i, e.ctrlKey || e.metaKey)}>S</button>
-            <button class="mini r" classList={{ on: t().arm }} title={tl('a.pl.arm')} onPointerDown={stop} onClick={() => A.armTrack(props.i)}>
-              <svg width="7" height="7" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3.5" fill="currentColor" /></svg>
-            </button>
+            {/* recordings go to the first free track (FL); only a track picked with "Record into this track" shows it */}
+            <Show when={t().arm}>
+              <button class="mini r on" title={tl('a.pl.armedTip')} onPointerDown={stop} onClick={() => A.armTrack(props.i)}>
+                <svg width="7" height="7" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3.5" fill="currentColor" /></svg>
+              </button>
+            </Show>
           </div>
         </div>
         <Show when={t().h >= 50}>

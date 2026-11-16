@@ -7,6 +7,8 @@ import { onStateEvent } from './state/edit';
 import { replaceState, S, setS } from './state/store';
 import { openRack } from './state/pattern';
 import { startTelemetry } from './state/telemetry';
+import { restoreRecFilter } from './state/actions';
+import './state/recFeedback';
 import { say, setU } from './state/ui';
 import { watchAudio } from './state/audioWatch';
 import { App } from './App';
@@ -27,6 +29,7 @@ async function boot() {
   setS('catalog', catalog);
   replaceState(state);
   await be.on('state', onStateEvent);
+  await restoreRecFilter();
   await startTelemetry();
   void watchAudio(() => be.audioGetConfig(), cb => be.on('audio-status', cb), say)
     .catch(e => console.error('[wave] audio status', e));

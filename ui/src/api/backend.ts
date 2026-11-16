@@ -43,7 +43,7 @@ export interface Backend {
   transportStop(): Promise<void>;
   /** A second Stop (panic): cut every tail still ringing — voices, effect tails, the preview. Not an edit. */
   transportSilence(): Promise<void>;
-  transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor'>>): Promise<TransportDto>;
+  transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor' | 'recAudio' | 'recNotes' | 'recQuantize'>>): Promise<TransportDto>;
   subscribeTelemetry(onFrame: (buf: ArrayBuffer) => void): Promise<void>;
   watchFx(ids: Id[]): Promise<void>;
   fxCatalog(): Promise<Catalog>;

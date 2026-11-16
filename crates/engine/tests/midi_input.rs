@@ -257,3 +257,139 @@ fn live_keys_play_where_the_song_plays_the_channel_not_through_the_armed_track()
     q.patterns[0].notes.clear();
     assert_eq!(heard(q, 45), 0.0);
 }
+
+/// `Project::routed()` with one 4-beat pattern holding a kick on beat 0.
+fn with_pattern() -> (Project, Id) {
+    let mut p = Project::routed();
+    let ch = p.channels[0].id;
+    p.patterns = vec![Pattern {
+        id: 7000,
+        name: "Beat".into(),
+        color: "#4f8ef7".into(),
+        len: 4.0,
+        min_len: 4.0,
+        notes: vec![Note::trigger(ch, 0.0, None)],
+        swing: 0.0,
+    }];
+    (p, 7000)
+}
+
+#[test]
+fn pat_mode_recording_overdubs_the_looping_pattern() {
+    let (p, pid) = with_pattern();
+    let bpm = p.bpm;
+    let e = engine(p);
+    let mut rt = e.create_rt(SR as f32, BLOCK);
+    let beat = |b: f64| (b * 60.0 / bpm * SR as f64) as usize;
+    e.midi_configure(None, true);
+    e.set_transport(None, Some(false), Some(true), None);
+    e.pattern_play(Some(pid), 0.0, None).unwrap();
+    run(&mut rt, beat(1.0));
+    e.midi_event(on(48)); // beat 1 of the first pass
+    run(&mut rt, beat(0.5));
+    e.midi_event(off(48));
+    run(&mut rt, beat(4.0)); // beat 1.5 of the second pass
+    e.midi_event(on(50));
+    run(&mut rt, beat(0.25));
+    e.midi_event(off(50));
+    run(&mut rt, beat(0.25));
+    e.pattern_play(None, 0.0, None).unwrap();
+    let p = e.project();
+    assert!(p.clips.is_empty(), "PAT mode records into the pattern, not the playlist");
+    let pat = p.patterns.iter().find(|x| x.id == pid).unwrap();
+    assert_eq!(pat.notes.len(), 3, "the kick stays and the two notes join it");
+    let at = |key: u8| pat.notes.iter().find(|n| n.p == Some(key)).map(|n| (n.step, n.len)).expect("a recorded note");
+    let (s48, l48) = at(48);
+    assert!((s48 - 4.0).abs() < 0.2 && (l48 - 2.0).abs() < 0.2, "48 at step {s48}, {l48} long");
+    let (s50, _) = at(50);
+    assert!((s50 - 6.0).abs() < 0.2, "the second pass's note lands at step {s50}, not past the loop");
+    // one undo step takes the recording back, the kick stays
+    assert!(e.undo());
+    assert_eq!(e.project().patterns[0].notes.len(), 1);
+}
+
+#[test]
+fn pat_mode_records_nothing_with_notes_unticked_and_starts_when_record_is_turned_on() {
+    let (p, pid) = with_pattern();
+    let e = engine(p);
+    let mut rt = e.create_rt(SR as f32, BLOCK);
+    e.midi_configure(None, true);
+    // Notes unticked: the keys play, nothing is recorded
+    e.set_rec_filter(None, Some(false));
+    e.set_transport(None, Some(false), Some(true), None);
+    e.pattern_play(Some(pid), 0.0, None).unwrap();
+    run(&mut rt, 4000);
+    e.midi_event(on(48));
+    run(&mut rt, 4000);
+    e.midi_event(off(48));
+    e.pattern_play(None, 0.0, None).unwrap();
+    assert_eq!(e.project().patterns[0].notes.len(), 1);
+    // Notes ticked, Record off while the loop plays; turning Record on records from there
+    e.set_rec_filter(None, Some(true));
+    e.set_transport(None, None, Some(false), None);
+    e.pattern_play(Some(pid), 0.0, None).unwrap();
+    run(&mut rt, 4000);
+    e.set_transport(None, None, Some(true), None);
+    e.midi_event(on(55));
+    run(&mut rt, 4000);
+    e.midi_event(off(55));
+    // turning Record off lands the notes (the loop goes on)
+    e.set_transport(None, None, Some(false), None);
+    assert_eq!(e.project().patterns[0].notes.len(), 2);
+    assert!(e.state().transport.rec_notes);
+}
+
+#[test]
+fn the_computer_keyboard_records_without_a_midi_device_and_input_quantize_snaps_starts() {
+    // no MIDI device: the computer keyboard (typing_note) records into the looping pattern,
+    // on the channel it plays, with starts quantized to steps
+    let (mut p, pid) = with_pattern();
+    let other = p.channels[1].id;
+    p.tracks[0].arm = false;
+    let bpm = p.bpm;
+    let e = engine(p);
+    let mut rt = e.create_rt(SR as f32, BLOCK);
+    let beat = |b: f64| (b * 60.0 / bpm * SR as f64) as usize;
+    let t = e.set_rec_quantize(0.25);
+    assert_eq!(t.rec_quantize, 0.25);
+    e.set_transport(None, Some(false), Some(true), None);
+    e.pattern_play(Some(pid), 0.0, None).unwrap();
+    run(&mut rt, beat(1.07)); // a little late for beat 1
+    e.typing_note(other, 60, 0.8, true);
+    run(&mut rt, beat(0.5));
+    e.typing_note(other, 60, 0.0, false);
+    run(&mut rt, beat(0.2));
+    e.pattern_play(None, 0.0, None).unwrap();
+    let pat = e.project().patterns.into_iter().find(|x| x.id == pid).unwrap();
+    let n = pat.notes.iter().find(|n| n.p == Some(60)).expect("the typed note was recorded");
+    assert_eq!(n.ch, other, "recorded on the channel the keyboard played");
+    assert!((n.step - 4.0).abs() < 1e-3, "quantized to step 4, got {}", n.step);
+    assert!((n.len - 2.0).abs() < 0.2, "length kept, got {}", n.len);
+}
+
+#[test]
+fn the_computer_keyboard_records_a_midi_take_in_the_song() {
+    let mut p = Project::routed();
+    for t in p.tracks.iter_mut() {
+        t.arm = false;
+    }
+    let ch = p.channels[0].id;
+    let bpm = p.bpm;
+    let e = engine(p);
+    let mut rt = e.create_rt(SR as f32, BLOCK);
+    let beat = |b: f64| (b * 60.0 / bpm * SR as f64) as usize;
+    e.set_rec_filter(Some(false), None); // notes only: no audio take
+    e.set_transport(None, Some(false), Some(true), None);
+    e.play(0.0);
+    run(&mut rt, beat(2.0));
+    e.typing_note(ch, 64, 1.0, true);
+    run(&mut rt, beat(1.0));
+    e.typing_note(ch, 64, 0.0, false);
+    run(&mut rt, beat(0.5));
+    e.stop();
+    let p = e.project();
+    let clip = p.clips.iter().find(|c| c.kind == ClipKind::Pat).expect("a MIDI take clip");
+    let pat = p.patterns.iter().find(|x| x.id == clip.source).unwrap();
+    assert_eq!(pat.notes.len(), 1);
+    assert_eq!(pat.notes[0].p, Some(64));
+}

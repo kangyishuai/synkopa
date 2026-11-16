@@ -189,6 +189,7 @@ async fn transport_stop(app: St<'_>) -> R<()> {
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)] // one optional argument per transport setting
 async fn transport_set(
     app: St<'_>,
     metro: Option<bool>,
@@ -196,11 +197,20 @@ async fn transport_set(
     rec: Option<bool>,
     monitor: Option<bool>,
     start_beat: Option<f64>,
+    rec_audio: Option<bool>,
+    rec_notes: Option<bool>,
+    rec_quantize: Option<f64>,
 ) -> R<wave_engine::TransportDto> {
     let e = app.engine.clone();
     let t = tauri::async_runtime::spawn_blocking(move || {
         if let Some(b) = start_beat {
             e.set_start(b);
+        }
+        if rec_audio.is_some() || rec_notes.is_some() {
+            e.set_rec_filter(rec_audio, rec_notes);
+        }
+        if let Some(q) = rec_quantize {
+            e.set_rec_quantize(q);
         }
         e.set_transport(metro, count_in, rec, monitor)
     })
@@ -210,8 +220,9 @@ async fn transport_set(
     // drop to the low-quality headset profile whenever a mic stream is open). It opens and
     // closes without touching the output, so a punch-in keeps the song playing; closing
     // still waits for the transport to stop (a punch-out may be followed by another punch-in).
-    if rec.is_some() || monitor.is_some() {
-        let need = t.rec || t.monitor;
+    // (notes-only recording needs no mic)
+    if rec.is_some() || monitor.is_some() || rec_audio.is_some() {
+        let need = t.rec && t.rec_audio || t.monitor;
         if need || !t.playing {
             let a = app.inner().clone();
             let st = tauri::async_runtime::spawn_blocking(move || a.audio.set_input(need)).await.map_err(es)?;

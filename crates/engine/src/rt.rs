@@ -1297,6 +1297,19 @@ impl Rt {
                 );
             }
         }
+        // the metronome counts the pattern's beats (accent on each of its bars), as in the song
+        if self.metro {
+            for r in r0..=r1 {
+                let mut p = la.ceil();
+                while p < lb {
+                    let nb = r as f64 * span + p - la;
+                    if nb >= b0 && nb < b1 {
+                        self.voices.click((p as i64).rem_euclid(4) == 0, ((nb - b0) / bps) as u32);
+                    }
+                    p += 1.0;
+                }
+            }
+        }
         self.pat_beat = la + b1.rem_euclid(span);
         self.shared.pat_beat.store(self.pat_beat.to_bits(), Relaxed);
     }
@@ -1606,6 +1619,15 @@ impl Rt {
             for i in 0..n {
                 ins.l[i] += tl[i] * t.gain;
                 ins.r[i] += tr[i] * t.gain;
+            }
+        }
+        // monitoring with no track to monitor through (nothing armed or being recorded): dry on the master
+        if self.monitor && g.monitor_track.is_none() {
+            if let (Some((il, ir)), Some(m)) = (input, g.inserts.first_mut()) {
+                for i in 0..n.min(il.len()) {
+                    m.l[i] += il[i];
+                    m.r[i] += ir[i];
+                }
             }
         }
 
@@ -2287,7 +2309,7 @@ pub const CLIP_GAIN_DB: (f32, f32) = (-24.0, 12.0);
 
 /// The part of a pattern `len` beats long that its loop preview plays: `range` kept inside the
 /// pattern, or the whole pattern when there is none or it is too short to loop (< 1/64 beat).
-fn loop_span(range: Option<(f64, f64)>, len: f64) -> (f64, f64) {
+pub(crate) fn loop_span(range: Option<(f64, f64)>, len: f64) -> (f64, f64) {
     match range {
         Some((a, b)) if a.is_finite() && b.is_finite() => {
             let (a, b) = (a.min(b).clamp(0.0, len), a.max(b).clamp(0.0, len));

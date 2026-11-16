@@ -220,3 +220,37 @@ describe('pattern loop in the mock (like the engine)', () => {
     } finally { clock.mockRestore(); }
   });
 });
+
+describe('recording in the mock (like the engine)', () => {
+  const recordOneSecond = async (be: MockBackend) => {
+    await be.transportSet({ rec: true, countIn: false });
+    await be.transportPlay(0);
+    await new Promise(r => setTimeout(r, 300));
+    await be.transportStop();
+  };
+  it('records to the first free track without arming, onto a new track when none has room, and undo removes both', async () => {
+    {
+      const be = new MockBackend();
+      await be.subscribeTelemetry(() => {});
+      const p0 = (await be.getState()).project;
+      // fill every track where the take goes
+      const busy = p0.tracks.map((_, i) => ({ id: 90000 + i, track: i, start: 0, len: 64, offset: 0, kind: 'pat' as const, ref: p0.patterns[0].id, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false }));
+      for (const t of p0.tracks) if (t.arm) await be.applyOps([{ op: 'putTrack', track: { ...t, arm: false } }], { label: 'disarm' });
+      await be.applyOps([{ op: 'putClips', clips: busy }], { label: 'fill' });
+      const n = (await be.getState()).project.tracks.length;
+      await recordOneSecond(be);
+      const p = (await be.getState()).project;
+      expect(p.tracks).toHaveLength(n + 1);
+      expect(p.clips.find(c => c.kind === 'audio')?.track).toBe(n);
+      await be.undo();
+      const u = (await be.getState()).project;
+      expect(u.tracks).toHaveLength(n);
+      expect(u.clips.some(c => c.kind === 'audio')).toBe(false);
+    }
+  });
+  it('records nothing with Audio unticked and keeps one kind ticked', async () => {
+    const be = new MockBackend();
+    expect(await be.transportSet({ recAudio: false })).toMatchObject({ recAudio: false, recNotes: true });
+    expect(await be.transportSet({ recNotes: false })).toMatchObject({ recAudio: false, recNotes: true });
+  });
+});

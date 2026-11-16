@@ -85,6 +85,24 @@ export function Toolbar() {
       say(t('a.tb.tapKeep'));
     }
   };
+  const recDest = () => {
+    const pat = A.patRecords() ? curPat() : undefined;
+    if (pat) return { label: pat.name, tip: t('d.rec.destPat', { name: pat.name }) };
+    const dest = A.recTargetName(U.start);
+    return { label: dest, tip: t('d.rec.dest', { what: A.recFilterName(), dest }) };
+  };
+  // FL: right-click on Record chooses what a recording captures
+  const recMenu = (e: MouseEvent) => {
+    e.preventDefault(); e.stopPropagation();
+    openMenu(e.clientX, e.clientY, [
+      { t: 'title', label: t('a.tb.recWhat') },
+      { t: 'item', label: t('a.tb.recAudio'), title: t('a.tb.recAudioTip'), checked: T().recAudio, act: () => void A.setRecFilter('audio', !T().recAudio) },
+      { t: 'item', label: t('a.tb.recNotes'), title: t('a.tb.recNotesTip'), checked: T().recNotes, act: () => void A.setRecFilter('notes', !T().recNotes) },
+      { t: 'sep' },
+      { t: 'sub', label: t('a.tb.recQuantize'), items: A.REC_QUANTIZE.map(q => ({ t: 'item' as const, label: t(q.label), checked: T().recQuantize === q.beats, act: () => void A.setRecQuantize(q.beats) })) },
+      { t: 'item', label: t('a.tb.recTyping'), kbd: 'Ctrl+T', title: t('a.tb.typOff'), checked: typingOn(), act: () => setTypingOn(!typingOn()) },
+    ]);
+  };
   const bpmMenu = (e: MouseEvent) => {
     e.preventDefault(); e.stopPropagation();
     const b = S.project.bpm;
@@ -148,6 +166,10 @@ export function Toolbar() {
           <span data-drag class="readout" data-readout title={U.readout}>{U.readout}</span>
           <Show when={U.alt}><span class="offgrid">OFF GRID</span></Show>
           <Show when={prefs().hints}><span data-drag class="hinttxt">{hint()}</span></Show>
+          {/* Record armed: where the recording goes (the first free track, a new one, the looping pattern) */}
+          <Show when={T().rec}>
+            <span class="recdest" title={recDest().tip}>● {recDest().label}</span>
+          </Show>
           <div class="row inrow" title={t('a.tb.inLevel')} style={{ gap: '6px', display: T().rec || T().monitor ? 'flex' : 'none' }}>
             <span class="tag9">IN</span>
             <div class="inmeter"><div ref={inEl} /></div>
@@ -160,7 +182,7 @@ export function Toolbar() {
           <svg width="11" height="11" viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
         </button>
         <button title={t('a.tb.stopTip')} onClick={() => void A.stop(!(U.playing || U.patPlaying))}><svg width="10" height="10" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1" fill="currentColor" /></svg></button>
-        <button title={t('a.tb.recTip')} class="rec" classList={{ armed: T().rec }} onClick={A.toggleRec}>
+        <button title={t('a.tb.recTip', { what: A.recFilterName() })} class="rec" classList={{ armed: T().rec }} onClick={A.toggleRec} onContextMenu={recMenu}>
           <svg width="10" height="10" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg>
         </button>
         <button title={t('a.tb.monTip')} class="mon monbtn" classList={{ on: T().monitor }} onClick={A.toggleMonitor}>

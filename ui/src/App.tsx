@@ -25,6 +25,7 @@ import { PitchEditor } from './views/PitchEditor';
 import { Export } from './views/Export';
 import { Settings, VstPicker } from './views/Settings';
 import { AudioToast } from './views/AudioToast';
+import { Notice } from './views/Notice';
 import { Updates } from './views/Updates';
 import { midiStatus, startMidi } from './state/midi';
 import { releaseAll, setTypingOn, typingDown, typingOn, typingUp } from './state/typingKeys';
@@ -288,6 +289,7 @@ export function App() {
       <MusicDialog />
       <MidiImport />
       <AudioToast />
+      <Notice />
       <MissingAudio />
     </div>
     <Show when={U.openingProject}>
