@@ -5,6 +5,7 @@ import { createEffect, createRoot, createSignal, on } from 'solid-js';
 import { topFloating } from './winOrder';
 import { t, tName } from '../lib/i18n';
 import { newSynthChannel } from '../lib/synth';
+import { nextChannelColor } from '../lib/color';
 import { prefs } from './prefs';
 import { be } from '../api/backend';
 import { KEYS_DYNAMICS, KEYS_RELEASE, SAMPLE_ROOT, samplerDefault, TOTAL_BEATS, VOL_UNITY, type Channel, type Id, type LibFile, type Note, type Op, type Pattern, type PluginInfo } from '../api/types';
@@ -413,11 +414,13 @@ export function toggleChanSolo(c: Channel) { setChannel(c, c.solo ? { solo: fals
 /** A new channel of the built-in synth playing factory preset `name` (or the blank patch). */
 export function addSynth(name: string | null) {
   const cat = S.catalog?.synth; if (!cat) { say(t('b.st.synthNA')); return; }
-  const c = newSynthChannel(cat, allocId(), name);
+  const c = newSynthChannel(cat, allocId(), name, freshColor());
   commit([chanOp(c)], t('b.st.addSynth'));
   selectChannel(c.id);
   say(t('b.st.synthSay', { name: name ? tName(name) : t('b.st.emptySound') }));
 }
+/** A new channel's colour: one the rack uses least, so its steps and notes stand apart. */
+const freshColor = () => nextChannelColor(channels().map(c => c.color));
 const keysChannel = (id: Id): Channel => ({ id, name: 'WAVE Keys', color: '#e0a44a', kind: 'keys', keys: { release: KEYS_RELEASE.def, dynamics: KEYS_DYNAMICS.def }, vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root: 60 });
 /** `root`: the key at which the file plays at its own pitch (a library file may know it). */
 const samplerChannel = (id: Id, s: { id: Id; name: string; color: string }, root: number = SAMPLE_ROOT): Channel => ({ id, name: s.name, color: s.color, kind: 'sample', source: s.id, sampler: samplerDefault(), vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root });
@@ -438,7 +441,7 @@ export type InstrumentPick =
   | { kind: 'plugin'; plugin: PluginInfo };
 function makeChannel(id: Id, pick: InstrumentPick): Channel | null {
   switch (pick.kind) {
-    case 'synth': { const cat = S.catalog?.synth; if (!cat) { say(t('b.st.synthNA')); return null; } return newSynthChannel(cat, id, pick.preset); }
+    case 'synth': { const cat = S.catalog?.synth; if (!cat) { say(t('b.st.synthNA')); return null; } return newSynthChannel(cat, id, pick.preset, freshColor()); }
     case 'keys': return keysChannel(id);
     case 'sample': { const src = S.project.sources.find(x => x.id === pick.source); return src ? samplerChannel(id, src, pick.root) : null; }
     case 'plugin': return pluginChannel(id, pick.plugin);
@@ -488,14 +491,14 @@ export function replaceWithSource(c: Channel, id: Id, root?: number) {
 
 /** A new channel playing a scanned VST3 instrument (the engine loads it; a failure shows on the channel). */
 export function addPlugin(p: PluginInfo) {
-  const c = pluginChannel(allocId(), p);
+  const c = { ...pluginChannel(allocId(), p), color: freshColor() };
   commit([chanOp(c)], t('b.st.addPlugin'));
   selectChannel(c.id);
   say(t('b.st.pluginSay', { name: p.name }));
 }
 /** A new WAVE Keys channel: the sampled grand piano. */
 export function addKeys() {
-  const c = keysChannel(allocId());
+  const c = { ...keysChannel(allocId()), color: freshColor() };
   commit([chanOp(c)], t('b.st.addKeys'));
   selectChannel(c.id);
   say(t('b.st.keysSay'));
@@ -503,7 +506,7 @@ export function addKeys() {
 /** A new sampler channel of a project source, at `index` in the rack (default: the end). */
 export function addSampler(sourceId: Id, root?: number, index?: number) {
   const s = S.project.sources.find(x => x.id === sourceId); if (!s) return;
-  const c = samplerChannel(allocId(), s, root);
+  const c = { ...samplerChannel(allocId(), s, root), color: freshColor() };
   commit([chanOp(c, {}, index)], t('b.st.addSampler'));
   selectChannel(c.id);
   say(t('b.st.samplerSay', { name: s.name }));

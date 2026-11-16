@@ -19,6 +19,18 @@ shown in the app after an update and is published as the release notes (see
 - **Effects in the mixer strips.** When the mixer is taller, each strip lists its effects
   above the knobs (icon, name, on/bypass dot; click to open), as many as fit; the strip
   itself keeps its size. In the maximized mixer there is always room for five effects, and the faders take the rest of the height.
+- **Three new themes**: *Dim*, a mid-grey dark theme, and *Fog* (cool) and *Sand* (warm), two
+  mid-grey light themes for when white is too bright.
+
+### Changed
+- **Redesigned Settings.** A bigger window with an icon sidebar (General, Look, Audio, MIDI and
+  a new Updates tab), settings grouped into cards, and each option's explanation shown under its
+  name instead of hidden in a tooltip. Themes are shown as small previews of the app, grouped
+  into dark and light.
+- **New channels get their own colour.** Each channel you add takes the next colour from a
+  wider palette (blue, amber, green, pink, violet …), so its steps and piano-roll notes stand
+  apart from the other channels' instead of all being the same purple. The colour menu offers
+  the new colours too.
 
 ## 0.9.19 — 2026-11-16
 
