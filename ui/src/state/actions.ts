@@ -119,6 +119,14 @@ export function seekSong(b: number) {
   if (U.patPlaying) { setU('start', from); void play(from); return; }
   seek(from);
 }
+/**
+ * A press on the playlist's grid: working there is working on the song, so SONG lights up and
+ * Space plays what is being arranged. A pattern loop that is playing keeps playing (the lit mode
+ * is always what plays); the ruler hands it over to the song.
+ */
+export function songHere() {
+  if (patMode() && !U.patPlaying) setPatMode(false);
+}
 /** Play / stop the song from the start marker, whatever PAT / SONG says (the pitch editor: a vocal is
  *  heard in its song, never alone in a pattern loop). */
 export function toggleSong() {

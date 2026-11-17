@@ -666,6 +666,7 @@ export function Playlist() {
     if (e.button === 2) return rightDown(e, h, p);
     if (e.button !== 0) return;
     e.preventDefault(); closeMenu();
+    A.songHere();
     const tool = U.tool;
     if (tool === 'erase') return eraseDrag(id);
     if (tool === 'mute') return muteDrag(id);

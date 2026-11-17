@@ -616,8 +616,8 @@ pub struct PatRt {
     pub len: f64,
     /// Only the notes that start before `len` (later ones are kept in the project, hidden).
     pub notes: Vec<NoteRt>,
-    /// Insert index of the track of the first clip that plays this pattern (where the
-    /// loop preview and auditions of track-routed channels go).
+    /// Insert index of the track of the first clip that plays this pattern (where auditions
+    /// of track-routed channels go while no pattern loops; the loop itself skips it).
     pub home: Option<usize>,
 }
 
@@ -1294,7 +1294,8 @@ impl Rt {
                     if let Some(i) = tl.chans.iter().position(|c| c.id == chan) {
                         let ch = &tl.chans[i];
                         let home = pattern.and_then(|id| tl.pats.iter().find(|p| p.id == id)).and_then(|p| p.home);
-                        let ins = ch.insert.or(home).unwrap_or(ch.home);
+                        // over a pattern loop it sounds like the loop: no playlist track's insert
+                        let ins = if self.pat_play.is_some() { ch.insert.unwrap_or(0) } else { ch.insert.or(home).unwrap_or(ch.home) };
                         play(
                             &mut self.voices,
                             &mut self.synths,
@@ -1318,7 +1319,11 @@ impl Rt {
                             let ch = &tl.chans[i];
                             // never through an unrelated armed track: a vocal chain (compressor, pitch
                             // correction) mangles chords that sound right in the piano roll
-                            let ins = ch.insert.or(ch.heard).or(ins).unwrap_or(ch.home);
+                            let ins = if self.pat_play.is_some() {
+                                ch.insert.unwrap_or(0)
+                            } else {
+                                ch.insert.or(ch.heard).or(ins).unwrap_or(ch.home)
+                            };
                             if ch.kind == VoiceKind::Synth {
                                 if let Some(s) = self.synths.get(chan) {
                                     s.key_down(key, vel, Dest::Insert(ins));
@@ -1447,7 +1452,10 @@ impl Rt {
                 if !ch.on {
                     continue;
                 }
-                let ins = ch.insert.or(pat.home).unwrap_or(ch.home);
+                // PAT mode plays the pattern itself, not its place in the song: a channel without
+                // an insert of its own goes to the master, not through the insert (and effects) of
+                // the playlist track its clip is on
+                let ins = ch.insert.unwrap_or(0);
                 let delay = ((nb - b0) / bps) as u32;
                 play(
                     &mut self.voices,

@@ -541,3 +541,39 @@ fn the_metronome_counts_the_pattern_loop() {
         assert!(first.is_some_and(|i| i < 64), "no click on beat {b} of the pattern loop");
     }
 }
+
+/// PAT mode plays the pattern itself: the insert of the playlist track its clip is on (its
+/// effects, fader, mute) belongs to the song, so the loop goes past it; a channel's own insert
+/// still applies.
+#[test]
+fn pattern_loop_skips_the_playlist_tracks_insert() {
+    let mut p = one_pattern(vec![], 4.0, 0.0);
+    let k = chan(&p, "Kick");
+    p.channels.iter_mut().find(|c| c.id == k).unwrap().insert = None;
+    p.patterns[0].notes = vec![Note::new(k, 0.0, 1.0, None)];
+    let track_ins = p.tracks[0].insert;
+    assert_ne!(track_ins, 0, "the clip's track plays into an insert of its own");
+    p.inserts.iter_mut().find(|m| m.id == track_ins).unwrap().muted = true;
+    let other = p.inserts.iter().find(|m| m.id != 0 && m.id != track_ins).unwrap().id;
+    let e = Engine::new(p.clone(), Arc::new(NoPlugins));
+    assert!(e.render(0.0, 4.0, 0.0, SR).unwrap().iter().all(|x| x.abs() < 1e-6), "the song goes through the muted insert");
+    let mut rt = e.create_rt(SR as f32, 256);
+    e.pattern_play(Some(1), 0.0, None).unwrap();
+    assert!(run_rt(&mut rt, SR as usize / 2) > 0.05, "the loop must not go through the track's insert");
+    // a key played over the loop sounds like the loop
+    e.pattern_play(Some(1), 0.0, Some((2.0, 3.0))).unwrap();
+    run_rt(&mut rt, SR as usize);
+    e.note_audition(k, None, 0.8, Some(1)).unwrap();
+    assert!(run_rt(&mut rt, SR as usize / 4) > 0.05, "an audition over the loop goes where the loop goes");
+    e.pattern_play(None, 0.0, None).unwrap();
+    run_rt(&mut rt, SR as usize);
+
+    // the channel's own insert is its sound in every mode
+    p.inserts.iter_mut().find(|m| m.id == track_ins).unwrap().muted = false;
+    p.inserts.iter_mut().find(|m| m.id == other).unwrap().muted = true;
+    p.channels.iter_mut().find(|c| c.id == k).unwrap().insert = Some(other);
+    let e = Engine::new(p, Arc::new(NoPlugins));
+    let mut rt = e.create_rt(SR as f32, 256);
+    e.pattern_play(Some(1), 0.0, None).unwrap();
+    assert!(run_rt(&mut rt, SR as usize / 2) < 1e-6, "a channel's own (muted) insert still applies");
+}

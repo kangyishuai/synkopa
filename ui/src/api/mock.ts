@@ -395,14 +395,17 @@ export class MockBackend implements Backend {
       live.set(tr.insert, Math.max(live.get(tr.insert) ?? 0, lvl));
     }
     // pattern loop preview and auditions (engine: rt.rs schedule_pattern / Cmd::Audition)
-    let patBeat = -1;
+    let patBeat = -1, direct = 0; // `direct`: what plays straight into the master
     if (this.patPlay) {
       const pt = this.p.patterns.find(x => x.id === this.patPlay!.id);
       if (!pt) this.patPlay = null;
       else {
         patBeat = this.patPos(pt.len, spb);
-        const ins = this.patHome(pt.id) ?? 0, pf = ((patBeat % 1) + 1) % 1;
-        live.set(ins, Math.max(live.get(ins) ?? 0, 0.25 + 0.55 * Math.exp(-pf * 5)));
+        // each channel into its own insert, else the master: never the playlist track's insert
+        const pf = ((patBeat % 1) + 1) % 1, lvl = 0.25 + 0.55 * Math.exp(-pf * 5);
+        for (const id of new Set(pt.notes.map(n => this.p.channels?.find(c => c.id === n.ch)?.insert ?? 0))) {
+          if (id === 0) direct = Math.max(direct, lvl); else live.set(id, Math.max(live.get(id) ?? 0, lvl));
+        }
       }
     }
     for (const [id, at] of this.flash) {
@@ -410,7 +413,7 @@ export class MockBackend implements Backend {
       if (age > 0.6) { this.flash.delete(id); continue; }
       live.set(id, Math.max(live.get(id) ?? 0, 0.7 * Math.exp(-age * 9)));
     }
-    let master = 0;
+    let master = direct;
     const lvOf = new Map<Id, number>();
     for (const m of this.p.inserts) if (m.id !== 0) {
       const lv = (live.get(m.id) ?? 0) * (m.muted ? 0 : 2 * m.vol ** 3) * (0.9 + 0.1 * Math.random());
@@ -1228,7 +1231,8 @@ export class MockBackend implements Backend {
   async noteAudition(a: { ch: Id; key?: number; vel?: number; pattern?: Id }) {
     const c = this.p.channels?.find(x => x.id === a.ch); if (!c) throw new Error('no channel ' + a.ch);
     const heard = this.p.patterns.find(pt => pt.notes.some(n => n.ch === c.id));
-    const ins = c.insert ?? (a.pattern != null ? this.patHome(a.pattern) : null) ?? (heard ? this.patHome(heard.id) : null) ?? 0;
+    // over a pattern loop it goes where the loop goes (rt.rs `Cmd::Audition`)
+    const ins = this.patPlay ? c.insert ?? 0 : c.insert ?? (a.pattern != null ? this.patHome(a.pattern) : null) ?? (heard ? this.patHome(heard.id) : null) ?? 0;
     this.flash.set(ins, performance.now());
   }
   async typingNote(a: { ch: Id; key: number; vel?: number; on: boolean }) { if (a.on) await this.noteAudition({ ch: a.ch, key: a.key, vel: a.vel }); }

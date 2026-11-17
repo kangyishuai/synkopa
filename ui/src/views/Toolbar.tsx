@@ -291,6 +291,7 @@ function MenuBar() {
       { t: 'item', label: t('a.mn.saveAs'), glyph: G.saveAs, kbd: 'Ctrl+Shift+S', act: () => void A.projectSave(true) },
       { t: 'sep' },
       { t: 'item', label: t('a.mn.export'), glyph: G.export, kbd: 'Ctrl+Shift+R', act: () => setU('exportOpen', true) },
+      { t: 'item', label: t('a.pl.inPlace'), glyph: G.export, kbd: 'Ctrl+Alt+E', title: t('a.pl.inPlaceTip'), disabled: !S.project.clips.some(c => U.sel.includes(c.id) && c.kind !== 'auto'), act: () => void A.exportInPlace() },
       { t: 'item', label: t('a.mn.exportProjectZip'), glyph: G.exportZip, disabled: U.projectZipBusy || U.openingProject, act: () => void A.projectExportZip() },
       { t: 'sep' },
       { t: 'item', label: t('d.midi.mnImport'), glyph: G.midiImport, act: () => void A.midiImport() },

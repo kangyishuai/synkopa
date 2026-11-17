@@ -252,7 +252,11 @@ chip is the output into the master. Docked, a strip's right-click menu has *Send
 *Output to Master*, and the chain header says where the insert goes.
 
 PAT mode (L) loops the current pattern and follows
-it when it changes. The Playlist, the Piano roll and the Pitch editor share one overview bar
+it when it changes. The loop plays the pattern itself, not its place in the song: a channel
+goes into its own insert, or the master when it has none, never through the insert of the
+playlist track its clip is on (those effects belong to the song); a key played while it loops
+goes the same way. A click on the playlist's ruler or a press on its grid lights SONG (a loop
+that is playing is handed over by the ruler only). The Playlist, the Piano roll and the Pitch editor share one overview bar
 on top (`ui/ZoomScrollbar` with a minimap: drag = scroll, drag an end = zoom) and one time
 ruler (`ui/timeRuler.ts`, `lib/rulerEdit.ts`: click = start, drag = loop, drag a loop edge =
 resize, Shift+drag inside = move, double-click = no loop). The Piano roll's ruler is in

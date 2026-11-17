@@ -105,3 +105,34 @@ describe('export in place', () => {
     expect(spy).not.toHaveBeenCalled();
   });
 });
+
+describe('working in the playlist lights SONG', () => {
+  it('a press on the grid leaves PAT mode, but not under a playing pattern loop', async () => {
+    const pat = await import('./pattern');
+    pat.setPatMode(true);
+    A.songHere();
+    expect(pat.patMode()).toBe(false);
+    pat.setPatMode(true);
+    ui.setU('patPlaying', true);
+    A.songHere();
+    expect(pat.patMode()).toBe(true); // the lit mode is what plays
+    ui.setU('patPlaying', false);
+  });
+  it('the pattern loop meters on the master, not on the insert of its clip\'s track', async () => {
+    const p = store.S.project, clip = p.clips.find(c => c.kind === 'pat')!;
+    const trackIns = p.tracks[clip.track].insert;
+    const pt = p.patterns.find(x => x.id === clip.ref)!;
+    expect(trackIns).not.toBe(0);
+    expect(pt.notes.every(n => p.channels?.find(c => c.id === n.ch)?.insert == null)).toBe(true);
+    const { TelemetryDecoder } = await import('../api/telemetry');
+    const dec = new TelemetryDecoder();
+    let frames = 0;
+    await mock.subscribeTelemetry(b => { if (dec.decode(b)) frames++; });
+    await mock.patternPlay(pt.id);
+    await new Promise(r => setTimeout(r, 80));
+    expect(frames).toBeGreaterThan(0);
+    expect(dec.frame.ins.get(0)!.l).toBeGreaterThan(0);
+    expect(dec.frame.ins.get(trackIns)?.l ?? 0).toBe(0);
+    await mock.patternPlay(null);
+  });
+});
