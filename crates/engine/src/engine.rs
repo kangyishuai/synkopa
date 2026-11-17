@@ -4099,7 +4099,17 @@ pub(crate) fn build_timeline(
             *k = clips.iter().position(|c| c.id == id && matches!(c.src, ClipSrc::Audio(_))).unwrap_or(usize::MAX);
         }
     }
-    Timeline { bpm: p.bpm, clips, pats, chans, autos, loop_range: p.loop_range.map(|l| (l.a, l.b)), song_end: p.song_end() }
+    // the clips of each automated target, by start (automations of the same target share one)
+    let mut drives: Vec<Drive> = vec![];
+    for (ci, c) in clips.iter().enumerate() {
+        let ClipSrc::Auto(ai) = c.src else { continue };
+        let target = autos[ai].target;
+        match drives.iter_mut().find(|d| d.target == target) {
+            Some(d) => d.clips.push(ci),
+            None => drives.push(Drive { target, clips: vec![ci] }),
+        }
+    }
+    Timeline { bpm: p.bpm, clips, pats, chans, autos, drives, loop_range: p.loop_range.map(|l| (l.a, l.b)), song_end: p.song_end() }
 }
 
 /// Turns an automation target into graph indices; `None` if it no longer exists.

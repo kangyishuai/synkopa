@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sketchProject, mockCatalog } from '../api/mockData';
 import { CLIP_GAIN_DB, KEYS_RELEASE, VOL_UNITY, type AutoTarget, type CurveShape, type Channel, type Clip, type Project } from '../api/types';
 import { applyAll } from './applyOps';
-import { createAutomationOps, curveAt, denormalize, normalize, autoValueText, parseAutoValue, readTarget, sortPoints, targetKey, targetLabel, trackForAutomation, valueAt } from './automation';
+import { createAutomationOps, curveAt, spansValue, denormalize, normalize, autoValueText, parseAutoValue, readTarget, sortPoints, targetKey, targetLabel, trackForAutomation, valueAt } from './automation';
 import { newSynthChannel, synthParam } from './synth';
 import curvesJson from '../../../crates/engine/tests/fixtures/curves.json?raw';
 
@@ -159,5 +159,25 @@ describe('point values in the control\'s unit', () => {
     const f: AutoTarget = { kind: 'fx', fxId: fx.id, param: 'band:0:f' };
     expect(autoValueText(p, cat, f, parseAutoValue(p, cat, f, '1.2k')!)).toBe('1.20 kHz');
     expect(parseAutoValue(p, cat, f, 'loud')).toBeNull();
+  });
+});
+
+describe('a target outside its automation clips (engine drive_value)', () => {
+  const span = (start: number, len: number, v0: number, v1: number) => ({ start, end: start + len, offset: 0, points: [{ t: 0, v: v0 }, { t: len, v: v1 }] });
+  it('holds the first clip\'s first value before it, not the static value', () => {
+    const one = [span(16, 8, 0, 1)];
+    expect(spansValue(one, 0)).toBe(0);
+    expect(spansValue(one, 15.9)).toBe(0);
+    expect(spansValue(one, 20)).toBeCloseTo(0.5, 9);
+  });
+  it('holds where the last clip ended between clips and after the last one', () => {
+    const two = [span(2, 2, 0, 0.25), span(8, 2, 1, 0.75)];
+    expect(spansValue(two, 0)).toBe(0);
+    expect(spansValue(two, 6)).toBe(0.25);
+    expect(spansValue(two, 9)).toBeCloseTo(0.875, 9);
+    expect(spansValue(two, 12)).toBe(0.75);
+  });
+  it('is null only without clips', () => {
+    expect(spansValue([], 4)).toBeNull();
   });
 });

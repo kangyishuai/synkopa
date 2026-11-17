@@ -2,8 +2,8 @@ import { t as tl } from '../lib/i18n';
 // Automation in the UI: the right-click menu every automatable control shares, creating an
 // automation clip, and the live (automated) value a control shows while the song plays.
 import { createMemo, createRoot, createSignal } from 'solid-js';
-import type { AutoPoint, AutoTarget } from '../api/types';
-import { createAutomationOps, denormalize, targetKey, targetLabel, valueAt } from '../lib/automation';
+import type { AutoTarget } from '../api/types';
+import { automationSpans, createAutomationOps, denormalize, spansValue, targetKey, targetLabel } from '../lib/automation';
 import { fmtPos } from '../lib/format';
 import { addFrameTask } from '../ui/frameLoop';
 import { commit } from './edit';
@@ -12,34 +12,14 @@ import { curBeat } from './telemetry';
 import { openMenu, revealInPlaylist, say, setU, U } from './ui';
 
 const [beatSig, setBeatSig] = createSignal(0);
-type Span = { start: number; end: number; offset: number; points: AutoPoint[] };
 /**
- * Automation clips per target key, in clip order (the last one covering the beat wins). Built once
- * per edit; a knob then looks up only its own few clips instead of walking every clip each frame
- * (65 mixer strips × 1400 clips held playback at 20 fps).
+ * Automation clips per target key, by start. Built once per edit; a knob then looks up only its
+ * own few clips instead of walking every clip each frame (65 mixer strips × 1400 clips held
+ * playback at 20 fps).
  */
-const index = createRoot(() => createMemo(() => {
-  const autos = new Map((S.project.automations ?? []).map(a => [a.id, a]));
-  const m = new Map<string, Span[]>();
-  for (const c of S.project.clips) {
-    if (c.kind !== 'auto' || c.muted) continue;
-    const a = autos.get(c.ref); if (!a) continue;
-    const k = targetKey(a.target);
-    let l = m.get(k); if (!l) m.set(k, l = []);
-    l.push({ start: c.start, end: c.start + c.len, offset: c.offset, points: a.points });
-  }
-  return m;
-}));
+const index = createRoot(() => createMemo(() => automationSpans(S.project)));
 const keys = () => index();
-const valueFor = (t: AutoTarget, beat: number) => {
-  let out: number | null = null;
-  for (const s of index().get(targetKey(t)) ?? []) {
-    if (beat < s.start || beat >= s.end) continue;
-    const v = valueAt(s.points, beat - s.start + s.offset);
-    if (v != null) out = v;
-  }
-  return out;
-};
+const valueFor = (t: AutoTarget, beat: number) => spansValue(index().get(targetKey(t)) ?? [], beat);
 
 // While playing, publish the playhead ~30×/s — only controls that are automated subscribe to it.
 let lastSet = 0;
@@ -54,7 +34,8 @@ export const isAutomated = (t: AutoTarget) => keys().has(targetKey(t));
 
 /**
  * The value (plain units) a control should display: the automated value at the playhead while
- * playing (or at the start marker when stopped), or null when not automated.
+ * playing (or at the start marker when stopped) — also before, between and after its clips, like
+ * the engine plays it — or null when not automated.
  */
 export function autoDisplay(t: AutoTarget): number | null {
   if (!isAutomated(t)) return null;

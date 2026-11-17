@@ -166,21 +166,48 @@ export function automatedKeys(p: Project): Set<string> {
   return s;
 }
 
+/** An automation clip of one target: beats [start, end) play `points` from `offset` on. */
+export type AutoSpan = { start: number; end: number; offset: number; points: AutoPoint[] };
+
 /**
- * Normalised value driving `target` at `beat` (the last unmuted clip under the playhead wins),
- * or null when no automation clip covers it.
+ * The value a target's automation clips give it at `beat` (engine `drive_value`, rt.rs): the clip
+ * under the playhead (the latest-starting one where clips overlap); between clips, where the last
+ * one before ended; before the first clip, where that clip begins. `spans` sorted by start.
+ */
+export function spansValue(spans: AutoSpan[], beat: number): number | null {
+  let covering: AutoSpan | null = null, ended: AutoSpan | null = null;
+  for (const s of spans) {
+    if (s.start > beat) break;
+    if (beat < s.end) covering = s;
+    else if (!ended || s.end >= ended.end) ended = s;
+  }
+  if (covering) return valueAt(covering.points, beat - covering.start + covering.offset);
+  if (ended) return valueAt(ended.points, ended.end - ended.start + ended.offset);
+  const f = spans[0];
+  return f ? valueAt(f.points, f.offset) : null;
+}
+
+/** The unmuted automation clips of each target key, sorted by start (stable, like the engine). */
+export function automationSpans(p: Project): Map<string, AutoSpan[]> {
+  const autos = new Map((p.automations ?? []).map(a => [a.id, a]));
+  const m = new Map<string, AutoSpan[]>();
+  for (const c of p.clips) {
+    if (c.kind !== 'auto' || c.muted) continue;
+    const a = autos.get(c.ref); if (!a) continue;
+    const k = targetKey(a.target);
+    let l = m.get(k); if (!l) m.set(k, l = []);
+    l.push({ start: c.start, end: c.start + c.len, offset: c.offset, points: a.points });
+  }
+  for (const l of m.values()) l.sort((a, b) => a.start - b.start);
+  return m;
+}
+
+/**
+ * Normalised value driving `target` at `beat` (see `spansValue`: also before, between and after
+ * its clips), or null when no unmuted automation clip drives it.
  */
 export function automatedValue(p: Project, target: AutoTarget, beat: number): number | null {
-  const key = targetKey(target);
-  let out: number | null = null;
-  for (const c of p.clips) {
-    if (c.kind !== 'auto' || c.muted || beat < c.start || beat >= c.start + c.len) continue;
-    const a = p.automations?.find(x => x.id === c.ref);
-    if (!a || targetKey(a.target) !== key) continue;
-    const v = valueAt(a.points, beat - c.start + c.offset);
-    if (v != null) out = v;
-  }
-  return out;
+  return spansValue(automationSpans(p).get(targetKey(target)) ?? [], beat);
 }
 
 /** A track to put a new automation clip on: an empty track (no clips at all), else a new one at the end. */

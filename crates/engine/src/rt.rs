@@ -507,7 +507,7 @@ pub enum ClipSrc {
 }
 
 /// A resolved automation target (indices into the graph built from the same project).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TargetRt {
     Param {
         fx: Id,
@@ -558,6 +558,13 @@ pub enum TargetRt {
 pub struct AutoRt {
     pub target: TargetRt,
     pub env: crate::model::Automation,
+}
+
+/// Every automation clip that drives one target (indices into `Timeline::clips`, by start).
+/// Between, before and after them the target still follows them (see `drive_value`).
+pub struct Drive {
+    pub target: TargetRt,
+    pub clips: Vec<usize>,
 }
 
 pub struct ClipRt {
@@ -716,6 +723,8 @@ pub struct Timeline {
     pub pats: Vec<PatRt>,
     pub chans: Vec<ChanRt>,
     pub autos: Vec<AutoRt>,
+    /// The automated targets, each with its clips.
+    pub drives: Vec<Drive>,
     pub loop_range: Option<(f64, f64)>,
     pub song_end: f64,
 }
@@ -948,6 +957,7 @@ impl Rt {
                 pats: vec![],
                 chans: vec![],
                 autos: vec![],
+                drives: vec![],
                 loop_range: None,
                 song_end: 4.0,
             }),
@@ -1015,6 +1025,20 @@ impl Rt {
 
     /// Starts the pre-roll at a transport jump. Not while recording: a take's alignment
     /// assumes the delayed start (`RecBuf::skip` drops the playback latency).
+    /// Moves every automated target to its value at the playhead at once (no glide from the
+    /// previous value). Allocation-free.
+    fn settle_automation(&mut self) {
+        apply_automation(&mut self.timeline, &mut self.graph, &mut self.synths, self.beat);
+        for c in self.timeline.chans.iter_mut() {
+            c.gain0 = c.gain;
+            c.pan0 = c.pan;
+        }
+        for c in self.timeline.clips.iter_mut() {
+            c.gain0 = c.gain;
+            c.pan0 = c.pan;
+        }
+    }
+
     fn jump(&mut self) {
         if self.instant.is_none() || self.rec {
             return;
@@ -1231,6 +1255,9 @@ impl Rt {
                     self.playing = true;
                     self.shared.playing.store(true, Relaxed);
                     self.shared.stopped_at_end.store(false, Relaxed);
+                    // automated targets start at their value here, without gliding from
+                    // whatever the last pass (or the static value) left them at
+                    self.settle_automation();
                     self.jump();
                 }
                 Cmd::EndTake { stop, fallback_skip, pdc } => self.end_take(stop, fallback_skip, pdc),
@@ -2397,17 +2424,45 @@ fn carry_automated(new: &mut Timeline, old: &Timeline) {
     }
 }
 
+/// The value a target's automation clips give it at `beat` (FL Studio / Ableton / Bitwig): the
+/// clip under the playhead (the latest-starting one where clips overlap); between clips, where
+/// the last one before ended; before the first clip, where that clip begins. So the value never
+/// depends on what played before (a jump back to the song start used to keep the last pass's
+/// value or the static one until the first clip was reached).
+fn drive_value(tl: &Timeline, d: &Drive, beat: f64) -> Option<f32> {
+    let env_at = |ci: usize, t: f64| {
+        let c = &tl.clips[ci];
+        let ClipSrc::Auto(ai) = c.src else { return None };
+        tl.autos.get(ai)?.env.value_at(t - c.start + c.offset)
+    };
+    let mut covering = None;
+    let mut ended: Option<usize> = None;
+    for &ci in &d.clips {
+        let c = &tl.clips[ci];
+        if c.start > beat {
+            break;
+        }
+        if beat < c.end {
+            covering = Some(ci);
+        } else if ended.is_none_or(|e| c.end >= tl.clips[e].end) {
+            ended = Some(ci);
+        }
+    }
+    if let Some(ci) = covering {
+        return env_at(ci, beat);
+    }
+    if let Some(ci) = ended {
+        return env_at(ci, tl.clips[ci].end);
+    }
+    let &first = d.clips.first()?;
+    env_at(first, tl.clips[first].start)
+}
+
 /// Moves automated parameters to their value at `beat`. Allocation-free.
 fn apply_automation(tl: &mut Timeline, g: &mut Graph, synths: &mut crate::poly::SynthBank, beat: f64) {
-    for ci in 0..tl.clips.len() {
-        let c = &tl.clips[ci];
-        let ClipSrc::Auto(ai) = c.src else { continue };
-        if beat < c.start || beat >= c.end {
-            continue;
-        }
-        let Some(a) = tl.autos.get(ai) else { continue };
-        let Some(v) = a.env.value_at(beat - c.start + c.offset) else { continue };
-        let target = a.target;
+    for di in 0..tl.drives.len() {
+        let Some(v) = drive_value(tl, &tl.drives[di], beat) else { continue };
+        let target = tl.drives[di].target;
         match target {
             TargetRt::Param { fx, idx, min, max, log } => {
                 if let Some(s) = slot(g, fx) {

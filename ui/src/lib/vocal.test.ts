@@ -296,7 +296,7 @@ describe('automation', () => {
     expect(a.points).toEqual([{ t: 0, v: p.inserts.find(m => m.id === 3)!.vol }, { t: 16, v: p.inserts.find(m => m.id === 3)!.vol }]);
     const q2 = applyAll(q, [{ op: 'putAutomation', automation: { ...a, points: [{ t: 0, v: 0 }, { t: 16, v: 1 }] } }]);
     expect(automatedValue(q2, target, 16)).toBeCloseTo(0.5, 9);
-    expect(automatedValue(q2, target, 7.9)).toBeNull();
+    expect(automatedValue(q2, target, 7.9)).toBe(0); // before the clip: where it begins
     const q3 = applyAll(q2, [{ op: 'removeAutomation', id: r.autoId }]);
     expect(q3.clips.some(c => c.kind === 'auto')).toBe(false);
   });
