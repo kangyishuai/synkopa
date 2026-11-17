@@ -1,13 +1,13 @@
 //! Crash recovery for projects that were never saved.
 //!
 //! A saved project is autosaved to its own file (and the previous save is kept as
-//! `Song (backup).wave`). A project without a file has nowhere to go, so the autosave
-//! timer writes it to `<data>/WAVE/Recovery/<session>.wave` instead. The file is
-//! removed when the project gets a real file, is replaced (New/Open), or WAVE exits
+//! `Song (backup).synkopa`). A project without a file has nowhere to go, so the autosave
+//! timer writes it to `<data>/WAVE/Recovery/<session>.synkopa` instead. The file is
+//! removed when the project gets a real file, is replaced (New/Open), or Synkopa exits
 //! normally; a copy that is still there at the next start therefore belongs to a
 //! session that crashed or was killed, and the UI offers it back.
 //!
-//! Every running WAVE holds an exclusive lock on its own `<session>.lock` for its
+//! Every running Synkopa holds an exclusive lock on its own `<session>.lock` for its
 //! whole life, so two windows never offer (or delete) each other's copy: a copy is
 //! an orphan only when nobody holds its lock.
 
@@ -58,7 +58,7 @@ impl Recovery {
         static SEQ: std::sync::atomic::AtomicU32 = std::sync::atomic::AtomicU32::new(0);
         let seq = SEQ.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let id = format!("{}-{}-{seq}", std::process::id(), now_ms(SystemTime::now()));
-        let file = dir.join(format!("{id}.wave"));
+        let file = dir.join(format!("{id}.synkopa"));
         let lock = std::fs::create_dir_all(&dir)
             .and_then(|_| File::create(dir.join(format!("{id}.lock"))))
             .and_then(|f| f.try_lock().map(|_| f).map_err(std::io::Error::other));
@@ -92,7 +92,7 @@ impl Recovery {
         Ok(true)
     }
 
-    /// Drops this session's copy (the project was saved, replaced, or WAVE is exiting
+    /// Drops this session's copy (the project was saved, replaced, or Synkopa is exiting
     /// after the user answered the unsaved-changes question).
     pub fn clear(&self) {
         let _ = std::fs::remove_file(&self.file);
@@ -118,7 +118,7 @@ impl Recovery {
         let mut out = vec![];
         for e in rd.flatten() {
             let p = e.path();
-            if p.extension().and_then(|x| x.to_str()) != Some("wave") || p == self.file {
+            if !matches!(p.extension().and_then(|x| x.to_str()), Some("synkopa" | "wave")) || p == self.file {
                 continue;
             }
             let Some(id) = p.file_stem().and_then(|s| s.to_str()).filter(|s| valid_id(s)).map(str::to_owned) else {
@@ -134,7 +134,7 @@ impl Recovery {
         out
     }
 
-    /// True when no running WAVE holds `id`'s lock (or the lock file is gone).
+    /// True when no running Synkopa holds `id`'s lock (or the lock file is gone).
     fn owner_gone(&self, id: &str) -> bool {
         match File::options().write(true).open(self.dir.join(format!("{id}.lock"))) {
             Ok(f) => f.try_lock().is_ok(),
@@ -146,12 +146,12 @@ impl Recovery {
         if !valid_id(id) || !self.owner_gone(id) {
             return Err(format!("no recovered project `{id}`"));
         }
-        let p = self.dir.join(format!("{id}.wave"));
-        if p.is_file() {
-            Ok(p)
-        } else {
-            Err(format!("no recovered project `{id}`"))
-        }
+        // `.wave`: a copy left by a version from before the rename
+        ["synkopa", "wave"]
+            .iter()
+            .map(|ext| self.dir.join(format!("{id}.{ext}")))
+            .find(|p| p.is_file())
+            .ok_or_else(|| format!("no recovered project `{id}`"))
     }
 
     /// Opens an orphan as this session's unsaved project. The copy becomes this
@@ -230,6 +230,29 @@ mod tests {
         b.close();
         assert!(!b.file.is_file());
         assert!(Recovery::start(dir.clone()).orphans().is_empty());
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn a_copy_left_by_a_version_from_before_the_rename_is_still_offered() {
+        let dir = tmp("legacy");
+        let a = Recovery::start(dir.clone());
+        assert!(a.write(&edited()).unwrap());
+        assert_eq!(a.file.extension().and_then(|x| x.to_str()), Some("synkopa"));
+        // that version wrote `<session>.wave`
+        let legacy = a.file.with_extension("wave");
+        std::fs::rename(&a.file, &legacy).unwrap();
+        drop(a);
+
+        let b = Recovery::start(dir.clone());
+        let o = b.orphans();
+        assert_eq!(o.len(), 1, "{o:?}");
+        let e = Engine::new(Project::empty(), Arc::new(NoPlugins));
+        b.restore(&e, &o[0].id).unwrap();
+        assert_eq!(e.state().project.bpm, 137.0);
+        assert!(!legacy.exists(), "the old copy became this session's own");
+        assert!(b.file.is_file());
+        b.close();
         std::fs::remove_dir_all(&dir).ok();
     }
 
