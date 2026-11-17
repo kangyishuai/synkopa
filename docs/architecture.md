@@ -297,6 +297,23 @@ lists, previews and drags it like any downloaded kit. `ui/src/api/factory.json` 
 table and the empty project, for the in-browser mock) is generated from the engine;
 `tests/sampler.rs` fails when it is stale and says how to regenerate it.
 
+**Parity by fixtures.** The browser mock is a second implementation of the engine's edit
+layer, so what the engine computes is written to files the UI replays instead of trusting
+comments. `crates/engine/tests/ui_ops_fixture.rs` runs 108 canonical op batches (every op,
+happy and refused) through `ops::apply_all` and writes `ui/src/lib/__fixtures__/ops.json`;
+`opsParity.test.ts` replays them through `lib/applyOps.ts` (same resulting project, the
+engine's exact error strings — they are user-visible toasts) and `mockParity.test.ts`
+through the whole `MockBackend` command path, including the undo/revision rule that an
+unchanged batch is not an edit. The four error-string prefixes consumers match on
+— views match `EXISTS:` (FX chains) and `NO_EDITOR:` (plugin windows), `wave watch`
+recognises `REVISION_CONFLICT`, and both adapters throw `INVALID_TARGET:` for a dead
+automation target — are named once in
+`crates/engine/src/errors.rs`, mirrored by `ui/src/api/errors.ts`, and pinned to
+`ui/src/api/__fixtures__/error-prefixes.json` by `app/src/ui_prefixes_tests.rs` ↔
+`errors.test.ts`. Every writer re-derives its file on each run and fails when the file on
+disk is stale (`WAVE_WRITE_FIXTURES=1` rewrites); the same ritual as
+`ui/src/api/factory.json` and the tune-edit fixture.
+
 **Old files.** Files from before the standard library name synthesised instruments:
 `{"kind":"inst","inst":"kick"}` channels, or `inst` on notes before channels existed.
 `Project::from_json` (used by `open`) turns each into a sampler of the closest library sample
