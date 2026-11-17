@@ -1,6 +1,6 @@
 """Build Synkopa's icons from the logo's geometry.
 
-The mark is nine rectangles (the same ones as app/icons/synkopa-logo.svg), so
+The mark is six bars (the same ones as app/icons/synkopa-logo.svg), so
 the icons are drawn here instead of being resampled from a bitmap: every size
 starts from a 4x supersampled drawing and stays sharp.
 
@@ -41,17 +41,14 @@ PAGE_EDGE = (110, 116, 128, 255)
 
 # x, y, width, height, colour: in the 1254-unit square of the logo source
 MARK = [
-    (498, 219, 370, 73, AMBER),
-    (363, 327, 460, 73, AMBER),
-    (316, 435, 246, 71, GREY),
-    (468, 533, 83, 181, AMBER),
-    (586, 471, 81, 304, AMBER),
-    (702, 533, 83, 181, AMBER),
-    (692, 747, 247, 71, GREY),
-    (421, 850, 470, 73, AMBER),
-    (363, 958, 393, 74, AMBER),
+    (502, 268, 454, 96, AMBER),
+    (298, 408, 578, 96, AMBER),
+    (298, 548, 329, 96, GREY),
+    (598, 688, 358, 96, GREY),
+    (378, 828, 578, 96, AMBER),
+    (298, 968, 436, 96, AMBER),
 ]
-MARK_BOX = (316, 219, 939, 1032)  # left, top, right, bottom of the rectangles above
+MARK_BOX = (298, 268, 956, 1064)  # left, top, right, bottom of the rectangles above
 SS = 4  # supersampling
 ICO_SIZES = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
 
