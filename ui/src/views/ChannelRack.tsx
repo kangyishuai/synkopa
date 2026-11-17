@@ -9,7 +9,7 @@ import { unwrap } from 'solid-js/store';
 import { t } from '../lib/i18n';
 import { TOTAL_BEATS, VOL_UNITY, type Channel } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
-import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setStep, setVelAt, stepsOf, type ChannelClip } from '../lib/pattern';
+import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, isStepOn, keyOf, notesText, rotate, setKeyAt, setStep, setVelAt, stepsOf, type ChannelClip } from '../lib/pattern';
 import { moveIndex, rackMoveIndex } from '../lib/rack';
 import { noteName } from '../lib/pitch';
 import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
@@ -129,7 +129,7 @@ function Rack(props: { z: number; docked?: boolean }) {
       if (e.button === 0) { e.stopPropagation(); openRoll(c.id); }
       return;
     }
-    const on = e.button === 0 ? !unwrap(pt()).notes.some(n => n.ch === c.id && Math.abs(n.step - step) < 1e-3) : false;
+    const on = e.button === 0 ? !isStepOn(unwrap(pt()).notes, c.id, step) : false;
     const g = new Gesture(on ? t('b.pe.gestSteps') : t('b.pe.gestDelSteps'));
     // freeze the grid (and the window's width) before the first step can make the pattern longer
     setHold({ cw: G.cw, steps: G.steps });
@@ -175,7 +175,7 @@ function Rack(props: { z: number; docked?: boolean }) {
     apply(last.s, last.f);
     g.update([putNotes(pt(), notes)]);
     tell(last.f);
-    if (mode === 'key') { const n = notes.find(x => x.ch === c.id && Math.round(x.step) === last.s); if (n) audition(c.id, keyOf(n, c), 0.8); }
+    if (mode === 'key') { const n = notes.find(x => x.ch === c.id && Math.floor(x.step + 1e-3) === last.s); if (n) audition(c.id, keyOf(n, c), 0.8); }
     let lastKey = keyFor(last.f);
     track(ev => {
       const q = at(ev);
@@ -184,7 +184,7 @@ function Rack(props: { z: number; docked?: boolean }) {
       last = q;
       g.update([putNotes(pt(), notes)]);
       tell(q.f);
-      if (mode === 'key' && keyFor(q.f) !== lastKey) { lastKey = keyFor(q.f); if (notes.some(x => x.ch === c.id && Math.round(x.step) === q.s)) audition(c.id, lastKey, 0.8); }
+      if (mode === 'key' && keyFor(q.f) !== lastKey) { lastKey = keyFor(q.f); if (notes.some(x => x.ch === c.id && Math.floor(x.step + 1e-3) === q.s)) audition(c.id, lastKey, 0.8); }
     }, () => g.end(), 'ns-resize');
   };
   const hbar = () => { const m = maxScroll(), w = size().w, G = geo(); if (!m.x) return null; const total = gridW(G.steps, G.cw); return { left: scroll().x / total * w, width: Math.max(24, w / total * w) }; };

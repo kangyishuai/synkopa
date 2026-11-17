@@ -66,9 +66,11 @@ export interface RollCtx {
   // selection: indices into the pattern's notes, the shown channel's only
   sel(): ReadonlySet<number>;
   setSel(s: Set<number>): void;
-  // new-note defaults: the last touched length and velocity (FL)
+  // new-note defaults: the last touched length and velocity (FL). `trig`: the last touched note
+  // was a Channel Rack step (a zero-length trigger), so new notes are steps too.
   lastLen(): number;
-  setLastLen(len: number): void;
+  lastTrig(): boolean;
+  setLastLen(len: number, trig?: boolean): void;
   lastVel(): number;
   setLastVel(v: number): void;
   // edits: a finished change (one undo step), an op for a gesture's update, a new gesture
@@ -128,6 +130,14 @@ export interface RollTool {
 
 /** New notes take the last touched velocity (FL); 1 = full, stored as absent. */
 export const velProp = (c: RollCtx) => (c.lastVel() < 0.995 ? { v: c.lastVel() } : {});
+
+/**
+ * The length and kind of a new drawn note: the last touched one's (FL). After a Channel Rack
+ * step, a step trigger (no note-off) occupying one grid cell at most, so a triplet drawn among
+ * the hats stays a step and the rack keeps showing the row as steps.
+ */
+export const noteShape = (c: RollCtx): { len: number; trig: boolean } =>
+  c.lastTrig() ? { len: Math.min(1, c.snap() || 1), trig: true } : { len: c.lastLen(), trig: false };
 
 /** The snap unit the pointer's Alt picks: Alt = free, else the grid snap. */
 export const unitOf = (c: RollCtx, m: { alt: boolean }) => (m.alt ? 0 : c.snap());

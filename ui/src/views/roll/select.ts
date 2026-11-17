@@ -40,7 +40,7 @@ export const selectTool: RollTool = {
     if (i < 0) return marqueeDrag(ctx, e, false);
     const idx = ctx.sel().has(i) ? [...ctx.sel()] : [i];
     if (!ctx.sel().has(i)) ctx.setSel(new Set([i]));
-    ctx.setLastLen(ctx.notes()[i].len); ctx.setLastVel(ctx.notes()[i].v ?? 1);
+    ctx.setLastLen(ctx.notes()[i].len, !!ctx.notes()[i].trig); ctx.setLastVel(ctx.notes()[i].v ?? 1);
     return moveDrag(ctx, e, idx.filter(k => k !== i).concat(i), 'move');
   },
 };

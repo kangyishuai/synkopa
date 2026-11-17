@@ -90,7 +90,7 @@ export function rollDown(ctx: RollCtx, e: RollPtr): void {
     const idx = ctx.sel().has(i)
       ? [...ctx.sel()].filter(k => k !== i && ctx.notes()[k]?.ch === ctx.ch().id).concat(i)
       : [i];
-    ctx.setLastLen(ctx.notes()[i].len); ctx.setLastVel(ctx.notes()[i].v ?? 1);
+    ctx.setLastLen(ctx.notes()[i].len, !!ctx.notes()[i].trig); ctx.setLastVel(ctx.notes()[i].v ?? 1);
     return moveDrag(ctx, e, idx, 'move', undefined, toggle);
   }
   // the stamp tool's right button: the chord is the unit, so the whole chord at the

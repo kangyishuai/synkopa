@@ -190,10 +190,11 @@ export function applyPatternOp(p: Project, op: Op, strict: boolean, adopt: <T ex
 
 // ---------------------------------------------------------------- step sequencer
 
-const onStep = (n: Note, ch: Id, s: number) => n.ch === ch && Math.abs(n.step - s) < EPS;
+/** A note of channel `ch` starting in cell [s, s+1): on the step, or off the grid inside it (a triplet). */
+const onStep = (n: Note, ch: Id, s: number) => n.ch === ch && n.step >= s - EPS && n.step < s + 1 - EPS;
 export const isStepOn = (notes: readonly Note[], ch: Id, s: number) => notes.some(n => onStep(n, ch, s));
 
-/** Notes with step `s` of channel `ch` set on (a trigger at the root) or off (every note starting there). */
+/** Notes with step `s` of channel `ch` set on (a trigger at the root) or off (every note starting in its cell). */
 export function setStep(notes: readonly Note[], ch: Id, s: number, on: boolean): Note[] {
   const has = isStepOn(notes, ch, s);
   if (on === has) return notes as Note[];
@@ -244,19 +245,35 @@ export function pasteChannelNotes(notes: readonly Note[], ch: Id, clip: ChannelC
 }
 
 /**
- * A row with held notes, off-grid events or chords needs the mini piano roll.
- * Legacy rows keep their previous step-grid layout and playback until edited.
+ * A row with held notes or chords needs the mini piano roll. Triggers off the 16th grid (a
+ * triplet written in the Piano roll) stay steps, drawn at their place inside the cell.
+ * Legacy rows (no `trig` flag) keep their previous layout: off the grid, they are a roll.
  */
 export function isRollRow(notes: readonly Note[], c: Channel): boolean {
   const seen = new Set<number>();
   for (const n of notes) {
     if (n.ch !== c.id) continue;
-    const r = Math.round(n.step);
     const isStep = n.trig ?? Math.abs(n.len - 1) <= EPS;
-    if (!isStep || Math.abs(n.step - r) > EPS || seen.has(r)) return true;
-    seen.add(r);
+    const onGrid = Math.abs(n.step - Math.round(n.step)) <= EPS;
+    const at = Math.round(n.step * 1000);
+    if (!isStep || (!onGrid && n.trig !== true) || seen.has(at)) return true;
+    seen.add(at);
   }
   return false;
+}
+
+/**
+ * How wide each of a step row's triggers is drawn, in steps: its whole cell, or less when the
+ * row's next trigger comes sooner (a 16th triplet puts two in one cell).
+ */
+export function stepSpans(notes: readonly Note[]): number[] {
+  const starts = notes.map(n => n.step).sort((a, b) => a - b);
+  return notes.map(n => {
+    // the first start after this one (binary search; starts within EPS are the same time)
+    let lo = 0, hi = starts.length;
+    while (lo < hi) { const m = (lo + hi) >> 1; if (starts[m] <= n.step + EPS) lo = m + 1; else hi = m; }
+    return lo < starts.length ? Math.min(1, starts[lo] - n.step) : 1;
+  });
 }
 
 /** Set the key of the channel's notes that start in cell [s, s+1) (`root` = no key of its own). */

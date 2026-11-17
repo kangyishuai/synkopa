@@ -151,6 +151,11 @@ the kit and its mixer routing in every pattern.
   set duration or the sample runs out; with the envelope on its end starts the release
   instead. Without it, a short fade just before the note boundary prevents clicks. The Piano Roll shows triggers as short marks. Drag their resize grip or use
   **Convert to held note** in note properties to give them a duration.
+  After a trigger is clicked, notes drawn in the Piano Roll are triggers too (one grid cell at
+  most), so a triplet added among the hats stays steps: the Rack draws an off-grid trigger at its
+  place inside the cell, as wide as the gap to the next one. Only held notes and chords (two
+  triggers at the same time) turn a row into the mini piano roll. A click on a cell clears every
+  trigger starting in it.
   Notes without `trig` keep their original playback and Rack layout. Resizing a legacy note
   in Piano Roll makes it a held note. Replacing a legacy step in the Rack makes it a trigger.
 * `pattern.len` in beats is **derived**, like FL Studio's automatic pattern length: the end

@@ -4,7 +4,7 @@ import { applyAll } from './applyOps';
 import {
   migrateSamplerEnvelope,
   BEAT_GAP, cellsBetween, fitCw, gridW, stepAt, stepX, contentLen, duplicateRight, fillEvery, isRollRow, isStepOn, migrateProject, moveNotes, noteAt, resizeNotes,
-  rotate, samplerError, setKeyAt, setStep, setVelAt, snapStep, swingOffset, transpose,
+  rotate, samplerError, setKeyAt, setStep, setVelAt, snapStep, stepSpans, swingOffset, transpose,
 } from './pattern';
 
 const KICK = 1000, BASS = 1003;
@@ -66,6 +66,22 @@ describe('step sequencer', () => {
     expect(isRollRow([{ ch: BASS, step: 0, len: 1, p: 40 }], bass)).toBe(false);
     expect(isRollRow([{ ch: BASS, step: 0, len: 1, p: 40 }, { ch: BASS, step: 0, len: 1, p: 43 }], bass)).toBe(true);
     expect(isRollRow([{ ch: BASS, step: 0.5, len: 1 }], bass)).toBe(true);
+  });
+  it('keeps a step row with triplet triggers written in the Piano roll as steps', () => {
+    const trip = [12, 12 + 2 / 3, 12 + 4 / 3].map(step => ({ ch: BASS, step, len: 2 / 3, trig: true }));
+    const row = [{ ch: BASS, step: 0, len: 1, trig: true }, ...trip];
+    expect(isRollRow(row, bass)).toBe(false);
+    // two triggers at the same time are a chord: the roll
+    expect(isRollRow([...row, { ch: BASS, step: 12, len: 1, trig: true }], bass)).toBe(true);
+    // a held note among them still makes it a melody
+    expect(isRollRow([...row, { ch: BASS, step: 4, len: 1, trig: false }], bass)).toBe(true);
+    // drawn widths: a full cell, or the gap to the next trigger
+    expect(stepSpans(row).map(x => +x.toFixed(3))).toEqual([1, 0.667, 0.667, 1]);
+    // a click on a cell with off-grid triggers clears them; another click sets the step again
+    expect(isStepOn(row, BASS, 13)).toBe(true);
+    const cleared = setStep(row, BASS, 13, false);
+    expect(cleared.map(n => +n.step.toFixed(3))).toEqual([0, 12, 12.667]);
+    expect(setStep(cleared, BASS, 13, true).at(-1)).toEqual({ ch: BASS, step: 13, len: 1, trig: true });
   });
   it('sets a step key from the graph editor (the root clears it)', () => {
     const n: Note[] = [{ ch: BASS, step: 2, len: 1 }, { ch: BASS, step: 3, len: 1, p: 40 }];

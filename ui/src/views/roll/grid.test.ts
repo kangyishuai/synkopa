@@ -51,7 +51,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     pat.len = Math.max(pat.minLen ?? 4, content);
   };
   let sel = new Set<number>();
-  let lastLen = 2, lastVel = 1;
+  let lastLen = 2, lastTrig = false, lastVel = 1;
   let drag: RecDrag | null = null;
   let dblArmed = false;
   let modCb: ((m: Mods) => void) | null = null;
@@ -79,7 +79,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     tool: () => tool,
     sel: () => sel,
     setSel: s => { sel = s; rec.sels.push([...s]); },
-    lastLen: () => lastLen, setLastLen: l => { lastLen = l; },
+    lastLen: () => lastLen, lastTrig: () => lastTrig, setLastLen: (l, tr = false) => { lastLen = l; lastTrig = tr; },
     lastVel: () => lastVel, setLastVel: v => { lastVel = v; },
     commitNotes: (nts, label) => { setNotes(nts); rec.commits.push({ notes: nts, label }); },
     notesOp: nts => {
@@ -131,6 +131,13 @@ const mv = (c: ReturnType<typeof makeCtx>, p: Pt, mods: Partial<Mods> = {}): Rol
   ({ alt: !!mods.alt, shift: !!mods.shift, ctrl: !!mods.ctrl, p });
 
 describe('draw tool', () => {
+  it('after touching a Channel Rack step, new notes are steps (triggers) too', () => {
+    const c = makeCtx([{ ch: CH.id, step: 0, len: 1, p: 60, trig: true }]);
+    down(c, 0, at(0.2, 60));
+    c.drag()?.up(mv(c, at(0.2, 60)));
+    down(c, 0, at(6.4, 62));
+    expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 6, len: 1, p: 62, trig: true });
+  });
   it('creates a snapped note on empty grid, selects it, auditions it, and drags it', () => {
     const c = makeCtx([]);
     down(c, 0, at(4.4, 60));

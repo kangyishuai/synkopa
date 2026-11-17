@@ -68,7 +68,10 @@ export function PianoRoll(props: { z: number; docked?: boolean }) {
   return <Show when={U.rollWin && curPat() && selChan()}><Roll z={props.z} docked={props.docked} /></Show>;
 }
 
-const [lastLen, setLastLen] = createSignal(2);
+const [lastLen, setLastLenRaw] = createSignal(2);
+/** The last touched note was a Channel Rack step: new notes are steps (triggers) too (FL). */
+const [lastTrig, setLastTrig] = createSignal(false);
+const setLastLen = (len: number, trig = false) => { setLastLenRaw(len); setLastTrig(trig); };
 /** Velocity of the last note touched: new notes take it, like the length (FL). 1 = full, stored as none. */
 const [lastVel, setLastVel] = createSignal(1);
 const [rollTool, setRollTool] = createSignal<Tool>('draw');
@@ -386,7 +389,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     hit: hitNote, edgeHit, ghostAt,
     tool: () => rollTool(),
     sel: () => sel(), setSel,
-    lastLen: () => lastLen(), setLastLen,
+    lastLen: () => lastLen(), lastTrig: () => lastTrig(), setLastLen,
     lastVel: () => lastVel(), setLastVel,
     commitNotes,
     notesOp: notes => putNotes(pt(), [...notes]),
@@ -683,7 +686,7 @@ function Roll(props: { z: number; docked?: boolean }) {
         <span class="toolname">{t(TOOLS.find(x => x.id === rollTool())!.label)}</span>
         <div class="vsep" />
         <label class="plab">{t('b.pe.lblGrid')}
-          <select class="sel" title={t('b.pe.snapTitle')} value={String(rollSnap())} onChange={e => { setRollSnap(+e.currentTarget.value); setLastLen(Math.min(4, rollSnap())); backToRoll(e.currentTarget); }}>
+          <select class="sel" title={t('b.pe.snapTitle')} value={String(rollSnap())} onChange={e => { setRollSnap(+e.currentTarget.value); setLastLen(Math.min(4, rollSnap()), lastTrig()); backToRoll(e.currentTarget); }}>
             <For each={ROLL_SNAPS}>{([l, v]) => <option value={String(v)}>{l}</option>}</For>
             <optgroup label={t('b.pe.snapTriplets')}>
               <For each={ROLL_SNAPS_TRIPLET}>{([l, v]) => <option value={String(v)}>{l}</option>}</For>
@@ -785,6 +788,7 @@ function Roll(props: { z: number; docked?: boolean }) {
 }
 
 function lastLenText() {
+  if (lastTrig()) return t('b.pe.newStep');
   const l = lastLen();
   return l >= 4 && l % 4 === 0 ? t(l === 4 ? 'b.pe.beat1' : 'b.pe.beatN', { n: l / 4 }) : rollSnapName(l) ?? t('b.pe.stepsN', { n: +l.toFixed(2) });
 }

@@ -5,7 +5,7 @@ import { cloneNotes } from '../../lib/noteClone';
 import { keyOf, moveNotes, notesText, resizeNotes, snapStep, transpose } from '../../lib/pattern';
 import { MAX_STEP } from '../../lib/rollEdit';
 import type { Note } from '../../api/types';
-import { velProp, unitOf, grewSay, type Mods, type Pt, type RollCtx, type RollGesture, type RollPtr, type RollMove, type RollTool } from './types';
+import { noteShape, velProp, unitOf, grewSay, type Mods, type Pt, type RollCtx, type RollGesture, type RollPtr, type RollMove, type RollTool } from './types';
 
 /** Drags notes `idx` (the last one leads). `clone`: Shift+drag — once the pointer really
  * moves, copies of the notes are made and moved instead (originals stay), one undo step;
@@ -44,7 +44,7 @@ export function moveDrag(ctx: RollCtx, e: RollPtr, idx0: number[], mode: 'move' 
       : resizeNotes(orig, idx, q.step - p0.step, unitOf(ctx, m));
     gest.update([ctx.notesOp(notes)]);
     const ln = notes[idx[idx.length - 1]];
-    if (ln && !ln.trig) ctx.setLastLen(ln.len);
+    if (ln) ctx.setLastLen(ln.len, !!ln.trig);
     if (mode === 'move' && ln && keyOf(ln, ctx.ch()) !== lastKey) { lastKey = keyOf(ln, ctx.ch()); ctx.audition(lastKey, ln.v ?? 1); }
   };
   const es = ctx.autoScroll(run, mode === 'resize' ? { x: true } : undefined);
@@ -69,11 +69,12 @@ export function paintDrag(ctx: RollCtx, e: RollPtr, g: RollGesture, startNotes: 
   const run = (m: RollMove) => {
     const q = m.p, u = unitOf(ctx, m) || 1, cell = Math.floor(q.step / u);
     if (Math.hypot(q.x - p0.x, q.y - p0.y) >= 3) moved = true;
-    if (cell === lastCell || q.step < 0 || q.step + ctx.lastLen() > MAX_STEP) return;
+    const shape = noteShape(ctx);
+    if (cell === lastCell || q.step < 0 || q.step + shape.len > MAX_STEP) return;
     lastCell = cell;
     const s = cell * u;
     if (notes.some(n => n.ch === ctx.ch().id && Math.abs(n.step - s) < 1e-3)) return;
-    notes = [...notes, { ch: ctx.ch().id, step: s, len: ctx.lastLen(), trig: false, p: q.key, ...velProp(ctx) }];
+    notes = [...notes, { ch: ctx.ch().id, step: s, ...shape, p: q.key, ...velProp(ctx) }];
     g.update([ctx.notesOp(notes)]);
   };
   const es = ctx.autoScroll(run);
@@ -89,7 +90,7 @@ const dragIdx = (ctx: RollCtx, i: number, ownChannelToo: boolean) =>
 const noteToolDown = (ctx: RollCtx, e: RollPtr, i: number, paint: boolean) => {
   if (i >= 0) {
     const n = ctx.notes()[i];
-    if (!n.trig) ctx.setLastLen(n.len);
+    ctx.setLastLen(n.len, !!n.trig);
     ctx.setLastVel(n.v ?? 1);
     const idx = dragIdx(ctx, i, false);
     if (!ctx.sel().has(i)) ctx.setSel(new Set([i]));
@@ -99,8 +100,9 @@ const noteToolDown = (ctx: RollCtx, e: RollPtr, i: number, paint: boolean) => {
   }
   // a new note: grid start, last touched length, the row's key
   const s = snapStep(e.p.step, unitOf(ctx, e), true);
-  if (s < 0 || s + ctx.lastLen() > MAX_STEP) return;
-  const n: Note = { ch: ctx.ch().id, step: s, len: ctx.lastLen(), trig: false, p: e.p.key, ...velProp(ctx) };
+  const shape = noteShape(ctx);
+  if (s < 0 || s + shape.len > MAX_STEP) return;
+  const n: Note = { ch: ctx.ch().id, step: s, ...shape, p: e.p.key, ...velProp(ctx) };
   const notes = [...ctx.notes(), n];
   const lenBefore = ctx.pt().len;
   const g = ctx.gest(paint ? t('b.pe.gestPaint') : t('b.pe.gestNew'));

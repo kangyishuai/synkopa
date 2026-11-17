@@ -4,7 +4,7 @@
 import type { Channel, Id, Note, Pattern } from '../api/types';
 import { t } from '../lib/i18n';
 import { mix } from '../lib/color';
-import { BEAT_GAP, gridW, inScale, keyOf, noteWidth, stepAt, stepX, velOf } from '../lib/pattern';
+import { BEAT_GAP, gridW, inScale, keyOf, noteWidth, stepAt, stepSpans, stepX, velOf } from '../lib/pattern';
 import { isBlack, noteName } from '../lib/pitch';
 import type { Layer } from '../ui/frameLoop';
 import { rgba, T, theme } from '../ui/theme';
@@ -84,18 +84,20 @@ export function drawRack(g: CanvasRenderingContext2D, W: number, H: number, G: R
       }
       continue;
     }
-    for (const n of notes) {
-      const s = Math.round(n.step), x = stepX(s, G.cw) - G.sx;
-      if (x > W || x + G.cw < 0) continue;
+    // a trigger off the grid (a triplet) sits at its place inside the cell, as wide as the gap to the next one
+    const spans = stepSpans(notes);
+    notes.forEach((n, k) => {
+      const x = stepX(n.step, G.cw) - G.sx, cw = G.cw * spans[k];
+      if (x > W || x + cw < 0) return;
       g.fillStyle = stepOn(velOf(n), dim);
-      g.beginPath(); rr(g, x + STEP_PAD, y + vpad, G.cw - 2 * STEP_PAD, G.rh - 2 * vpad, STEP_R); g.fill();
+      g.beginPath(); rr(g, x + STEP_PAD, y + vpad, Math.max(3, cw - 2 * STEP_PAD), G.rh - 2 * vpad, Math.min(STEP_R, cw / 4)); g.fill();
       // a step with its own key (graph editor): its note name, or a tick when the cell is narrow
       if (n.p != null && n.p !== c.root) {
         g.fillStyle = T.onFill;
-        if (G.cw >= 18) { g.font = MONO8; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(noteName(n.p), x + G.cw / 2, y + G.rh / 2 + 1); }
-        else g.fillRect(x + G.cw / 2 - 1, y + G.rh - vpad - 4, 2, 2);
+        if (cw >= 18) { g.font = MONO8; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(noteName(n.p), x + cw / 2, y + G.rh / 2 + 1); }
+        else g.fillRect(x + cw / 2 - 1, y + G.rh - vpad - 4, 2, 2);
       }
-    }
+    });
   }
 }
 
@@ -123,18 +125,19 @@ export function drawLane(g: CanvasRenderingContext2D, W: number, H: number, o: {
   g.fillStyle = T.vizGrid2;
   for (const f of [0.25, 0.5, 0.75]) g.fillRect(o.x0, Math.round(top + bh * (1 - f)) + 0.5, endX - o.x0, 1);
   g.fillStyle = T.vizAxis; g.fillRect(o.x0, top, endX - o.x0, 1);
-  for (const { n, i } of o.notes) {
+  const spans = o.cells ? stepSpans(o.notes.map(x => x.n)) : [];
+  o.notes.forEach(({ n, i }, k) => {
     const v = velOf(n);
-    const x = o.x0 + px(o.cells ? Math.round(n.step) : n.step) - o.sx;
-    const w = o.cells ? Math.max(2, o.cw - 6) : Math.max(3, Math.min(8, n.len * o.cw - 2));
-    const bx = o.cells ? x + (o.cw - w) / 2 : x;
-    if (bx > W || bx + w < o.x0 - 4) continue;
+    const x = o.x0 + px(n.step) - o.sx, cw = o.cw * (spans[k] ?? 1);
+    const w = o.cells ? Math.max(2, cw - 6) : Math.max(3, Math.min(8, n.len * o.cw - 2));
+    const bx = o.cells ? x + (cw - w) / 2 : x;
+    if (bx > W || bx + w < o.x0 - 4) return;
     const y = top + bh * (1 - v), sel = !!o.sel?.has(i);
     g.fillStyle = rgba(o.color, (o.muted ? 0.35 : 0.75) * (sel ? 1.25 : 1));
     g.fillRect(bx, y, w, top + bh - y);
     g.fillStyle = sel ? T.fgHi : mix(o.color, 60, T.fgHi);
     g.fillRect(bx, y - 1, w, 2);
-  }
+  });
 }
 
 /**
@@ -159,15 +162,16 @@ export function drawKeyGraph(g: CanvasRenderingContext2D, W: number, H: number, 
     return;
   }
   g.font = MONO8; g.textAlign = 'center'; g.textBaseline = 'bottom';
-  for (const { n } of o.notes) {
-    const k = n.p ?? o.root;
-    const x = stepX(Math.round(n.step), o.cw) - o.sx, w = Math.max(2, o.cw - 6), bx = x + (o.cw - w) / 2;
+  const spans = stepSpans(o.notes.map(x => x.n));
+  for (const [j, { n }] of o.notes.entries()) {
+    const k = n.p ?? o.root, cw = o.cw * spans[j];
+    const x = stepX(n.step, o.cw) - o.sx, w = Math.max(2, cw - 6), bx = x + (cw - w) / 2;
     if (bx > W || bx + w < 0) continue;
     const y0 = yOf(o.root), y = yOf(Math.max(o.root - o.span, Math.min(o.root + o.span, k)));
     g.fillStyle = rgba(o.color, 0.75);
     g.fillRect(bx, Math.min(y, y0), w, Math.max(2, Math.abs(y - y0)));
     g.fillStyle = mix(o.color, 60, T.fgHi); g.fillRect(bx, y - 1, w, 2);
-    if (k !== o.root && o.cw >= 22) { g.fillStyle = T.fg3; g.fillText(noteName(k), x + o.cw / 2, Math.min(y, y0) - 1); }
+    if (k !== o.root && cw >= 22) { g.fillStyle = T.fg3; g.fillText(noteName(k), x + cw / 2, Math.min(y, y0) - 1); }
   }
 }
 
