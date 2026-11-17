@@ -887,11 +887,8 @@ export function Playlist() {
       dragCursor(null);
       if (g) { g.end(); return; }
       if (h?.edge === 'cb') openBoundaryMenu(sx, sy, h.c, h.bnd!);
-      else {
-        // a right-click on empty space also drops the selection (its menu acts on no clip)
-        if (!h && U.sel.length) setU('sel', []);
-        openGridMenu(sx, sy, p);
-      }
+      // FL: a right-click on empty space only drops the selection, no menu
+      else if (!h && U.sel.length) setU('sel', []);
     });
   }
 
@@ -1210,17 +1207,6 @@ export function Playlist() {
       { t: 'sep' },
       { t: 'item', label: tl('a.pl.delete'), kbd: 'Del', danger: true, act: () => A.delIds(U.sel.includes(c.id) ? [...U.sel] : [c.id]) },
     ], 470);
-  }
-
-  function openGridMenu(x: number, y: number, p: { beat: number; track: number }) {
-    const at = { beat: snapFloor(p.beat, unit(false)), track: clamp(p.track, 0, S.project.tracks.length - 1) };
-    openMenu(x, y, [
-      { t: 'title', label: 'Playlist · ' + fmtPos(at.beat) },
-      { t: 'item', label: tl('a.pl.pasteHere'), kbd: 'Ctrl+V', act: () => A.paste(at), disabled: !A.hasClipboard() },
-      { t: 'item', label: tl('a.pl.setStartHere'), act: () => A.seek(at.beat) },
-      { t: 'item', label: tl('a.pl.selectAll'), kbd: 'Ctrl+A', act: A.selectAll },
-      { t: 'item', label: tl('a.pl.selectTrack'), act: () => setU('sel', S.project.clips.filter(c => c.track === at.track).map(c => c.id)) },
-    ], 180);
   }
 
   // ---------- ruler (ui/timeRuler: the same gestures in the Piano roll and the Pitch editor) ----------
