@@ -7,7 +7,7 @@ import type { Id } from '../api/types';
 import { t } from '../lib/i18n';
 import { restoreArrange, takeArrange, type Arrange } from '../lib/mixer';
 import { insName, S } from './store';
-import { docked, say, setU, U } from './ui';
+import { docked, say, setU, tucked, U } from './ui';
 import { topFloating } from './winOrder';
 
 let saved: Arrange | null = null, savedPlugs = new Set<number>();
@@ -61,8 +61,7 @@ export function showInsert(id: Id | null | undefined) {
 /** Bring the floating Mixer in front of the other floating windows (showing them if F5 tucked them away). */
 export function mixFront() {
   if (docked('mix') || U.mixMin) return;
-  if (U.plugsHidden) setU('plugsHidden', false);
-  if (U.mixWin.z === U.zTop) return;
+  if (U.mixWin.z === U.zTop && !tucked(U.mixWin.z)) return;
   const z = U.zTop + 1;
   setU({ zTop: z, mixWin: { ...U.mixWin, z } });
 }

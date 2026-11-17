@@ -30,7 +30,7 @@ describe('floating editor stacking', () => {
     A.editorFront();
     expect(outerZ(U.editor!.z)).toBeGreaterThan(outerZ(U.pitchEd!.z));
     // effect windows tucked away (F5): nothing to sit under
-    const z2 = U.zTop + 1; setU('zTop', z2); setU('plugs', 0, 'z', z2); setU('plugsHidden', true);
+    const z2 = U.zTop + 1; setU('zTop', z2); setU('plugs', 0, 'z', z2); A.playlistFront(); A.editorFront();
     expect(outerZ(U.editor!.z)).toBeGreaterThan(45);
   });
 });
@@ -39,7 +39,7 @@ describe('one stack for every floating window', () => {
   it('the window used last is in front, whatever its kind; F5 tucks them all away', async () => {
     const { U, setU } = await import('../state/ui');
     const A = await import('../state/actions');
-    const { topFloating, shownFloating } = await import('../state/winOrder');
+    const { topFloating, shownFloating, anyTucked } = await import('../state/winOrder');
     setU({ zTop: 1, plugs: [], editor: null, pitchEd: null, plugsHidden: false, rackWin: null, rollWin: null });
     expect(topFloating()).toBeNull();
     setU({ zTop: 2, plugs: [{ fxId: 7, x: 0, y: 0, w: 400, z: 2 }] });
@@ -55,9 +55,37 @@ describe('one stack for every floating window', () => {
     expect(shownFloating()).toEqual([]);
     A.openPitchEditor(-1); // not an audio clip: nothing opens, nothing comes back
     expect(U.plugsHidden).toBe(true);
+    // the editor comes back on its own: the effect window stays behind the playlist
     A.openSampleEditor({ kind: 'clip', id: 1 });
-    expect(U.plugsHidden).toBe(false);
+    expect(shownFloating().map(f => f.kind)).toEqual(['editor']);
+    expect(anyTucked()).toBe(true);
+    // F5 then shows the tucked ones
+    A.showPlugs();
     expect(shownFloating().map(f => f.kind).sort()).toEqual(['editor', 'plug']);
+    expect(anyTucked()).toBe(false);
+  });
+
+  it('a window opened or raised while the others are tucked shows alone', async () => {
+    const { U, setU } = await import('../state/ui');
+    const A = await import('../state/actions');
+    const P = await import('../state/pattern');
+    const { shownFloating, anyTucked } = await import('../state/winOrder');
+    setU({ zTop: 3, plugs: [{ fxId: 7, x: 0, y: 0, w: 400, z: 2 }, { fxId: 8, x: 0, y: 0, w: 400, z: 3 }], editor: null, pitchEd: null, plugsHidden: false, tuckZ: 0,
+      rackWin: { x: 0, y: 0, w: 600, h: 300, z: 1 }, rollWin: null, mixView: false, dock: { left: [], right: [], bottom: [] } });
+    A.playlistFront();
+    expect(shownFloating()).toEqual([]);
+    // the top window, already at the top of the stack, still comes back when raised
+    A.plugFront(8);
+    expect(shownFloating()).toMatchObject([{ kind: 'plug', id: 8 }]);
+    A.playlistFront();
+    P.rackFront();
+    expect(shownFloating().map(f => f.kind)).toEqual(['rack']);
+    expect(anyTucked()).toBe(true);
+    // a click that opened a window: only what was there before it is tucked
+    const before = U.zTop;
+    A.plugFront(7);
+    A.tuckBelow(before);
+    expect(shownFloating()).toMatchObject([{ kind: 'plug', id: 7 }]);
   });
 });
 

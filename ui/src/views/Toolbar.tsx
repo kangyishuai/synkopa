@@ -14,6 +14,7 @@ import { commit, Gesture, wheelEdit } from '../state/edit';
 import { S } from '../state/store';
 import { curBeat, tele } from '../state/telemetry';
 import { closeMenu, openMenu, say, setU, U, type MenuItem, type Tool } from '../state/ui';
+import { anyTucked } from '../state/winOrder';
 import { checkUpdates, showWhatsNew } from '../state/updates';
 import { toggleMixer, toggleMixView } from '../state/mixView';
 import { dockMenu, resetLayout } from '../state/docking';
@@ -230,8 +231,8 @@ export function Toolbar() {
         <For each={SNAPS}>{([label, v]) => <option value={String(v)}>{v === 0 ? t('a.snap.off') : label}</option>}</For>
       </select>
       <Show when={wins()}>
-        <button class="tbtn icon winsbtn" classList={{ on: !U.plugsHidden }} onClick={() => (U.plugsHidden ? A.showPlugs() : A.playlistFront())}
-          title={U.plugsHidden ? t('a.tb.showWins', { n: wins() }) : t('a.tb.hideWins')} aria-label={t('a.tb.windows', { n: wins() })}>
+        <button class="tbtn icon winsbtn" classList={{ on: !anyTucked() }} onClick={() => (anyTucked() ? A.showPlugs() : A.playlistFront())}
+          title={anyTucked() ? t('a.tb.showWins', { n: wins() }) : t('a.tb.hideWins')} aria-label={t('a.tb.windows', { n: wins() })}>
           <Icon d="M4 7h12v12H4z M8 3h12v12" size={14} /><span class="cnt mono">{wins()}</span>
         </button>
       </Show>
@@ -323,7 +324,7 @@ function MenuBar() {
         { t: 'sep' },
         { t: 'item', label: t('a.mn.layoutReset'), title: t('a.mn.layoutResetTip'), act: resetLayout },
       ] },
-      { t: 'item', label: t(U.plugsHidden ? 'a.mn.winsShow' : 'a.mn.winsHide'), glyph: G.windows, kbd: 'F5', disabled: !wins(), act: () => (U.plugsHidden ? A.showPlugs() : A.playlistFront()) },
+      { t: 'item', label: t(anyTucked() ? 'a.mn.winsShow' : 'a.mn.winsHide'), glyph: G.windows, kbd: 'F5', disabled: !wins(), act: () => (anyTucked() ? A.showPlugs() : A.playlistFront()) },
       { t: 'sep' },
       // the transport toggles the toolbar hides first on a narrow window
       { t: 'item', label: t('a.mn.metro'), checked: S.transport.metro, act: () => void A.setTransportFlag('metro', !S.transport.metro) },

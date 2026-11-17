@@ -10,7 +10,7 @@ import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/autom
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { audition, chanById, chanOp } from '../state/pattern';
 import { outerZ, setWin, win, type Win } from '../state/winOrder';
-import { docked, say, setU, U } from '../state/ui';
+import { docked, say, setU, tucked, U } from '../state/ui';
 import { showInsert } from '../state/mixView';
 import { channelIcon, InstIcon } from '../ui/instIcons';
 import { Knob } from '../ui/Knob';
@@ -34,7 +34,7 @@ export function chanHeardInsert(c: Channel): Id | null {
 
 /** The channel window over the plugin / pattern windows (it is used last). */
 function chanFront() {
-  const w = win(); if (!w || w.z === U.zTop) return;
+  const w = win(); if (!w || (w.z === U.zTop && !tucked(w.z))) return;
   const z = U.zTop + 1;
   setU('zTop', z); setWin({ ...w, z });
 }
@@ -69,7 +69,7 @@ export function toggleChannelWindow(id: Id, settings = false) {
   }
   if (U.editor?.kind === 'channel') closeEditor();
   const z = U.zTop + 1;
-  setU({ zTop: z, plugsHidden: false });
+  setU({ zTop: z });
   setWin({ id, x: w?.x ?? x, y: w?.y ?? y, w: width, z });
 }
 export function closeChannelWindow() {

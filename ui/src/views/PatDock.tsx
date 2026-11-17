@@ -12,6 +12,7 @@ import { channels, closeRack, closeRoll, curPat, newPattern, openRack, RACK_LEFT
 import { rackDockFitWidth } from '../lib/rack';
 import { stepsOf } from '../lib/pattern';
 import { say, setU, U } from '../state/ui';
+import { tuckOnClick } from '../state/actions';
 import { guides, openDockMenu, paneDock, paneHeadDown, paneOpen } from '../state/docking';
 import { track } from '../ui/drag';
 import { Browser } from './Browser';
@@ -163,7 +164,9 @@ export function Workspace() {
 
   return (
     // the Mix view (F9) covers this; it stays laid out (scroll, zoom and sizes are kept) but is not painted or reachable
-    <div ref={col} class="workcol" classList={{ away: U.mixView }} inert={U.mixView} aria-hidden={U.mixView}>
+    // a plain click anywhere in it (Browser, docked panels, Playlist) sends the floating windows behind it
+    <div ref={col} class="workcol" classList={{ away: U.mixView }} inert={U.mixView} aria-hidden={U.mixView}
+      on:pointerdown={{ capture: true, handleEvent: tuckOnClick }}>
       <div ref={row} class="workrow">
         <Show when={U.pickOpen}><Browser /></Show>
         {/* left strips: the outermost first, each with its splitter on the Playlist side */}

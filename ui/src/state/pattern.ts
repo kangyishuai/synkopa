@@ -20,7 +20,7 @@ import { unwrap } from 'solid-js/store';
 import { allocId, plain, plainNotes, S } from './store';
 import { curBeat, tele } from './telemetry';
 import { loopSpan, type BeatRange } from '../lib/patLoop';
-import { docked, say, setU, U } from './ui';
+import { docked, say, setU, tucked, U } from './ui';
 import { markPlayCmd } from './telemetry';
 import { leaveMixView } from './mixView';
 import { planRoute, rangeSelect, toggleSelect } from '../lib/mixer';
@@ -104,8 +104,7 @@ export const rollFloating = () => !!U.rollWin && !docked('roll');
 /** Bring a pattern window to the front of the window layer (showing the layer if it was tucked away). A docked panel has no front. */
 function front(k: WinKey) {
   const w = U[k]; if (!w || dockOf(k)) return;
-  if (U.plugsHidden) setU('plugsHidden', false);
-  if (w.z === U.zTop) return;
+  if (w.z === U.zTop && !tucked(w.z)) return;
   const z = U.zTop + 1;
   setU('zTop', z); setU(k, 'z', z);
 }
@@ -147,7 +146,7 @@ export function openRack() {
   // as wide as when it was closed if that is wider (patterns browsed before), like FL
   const fit = rackPlaceFor(stepsOf(pt), x), pl = g && g.w > fit.w ? fitOnScreen(x, g.w, window.innerWidth) : fit;
   // a docked rack keeps the floating place for when it floats again; opening it docked does not show the window layer
-  setU({ zTop: z, rackWin: { x: pl.x, y, w: pl.w, h, z }, ...(docked('rack') ? {} : { plugsHidden: false }) });
+  setU({ zTop: z, rackWin: { x: pl.x, y, w: pl.w, h, z } });
 }
 /** Close the Channel Rack; it reopens where it was (`rackFloat`: kept across restarts). */
 export function closeRack() { const w = U.rackWin; if (w) setU('rackFloat', { x: w.x, y: w.y, w: w.w, h: w.h }); setU('rackWin', null); }
@@ -180,16 +179,14 @@ export function openRoll(ch?: Id) {
   focusSoon('rollWin');
   if (U.rollWin) { rollFront(); return; }
   const z = U.zTop + 1, g = U.rollFloat, W = window.innerWidth, H = window.innerHeight;
-  // docked: the floating place is only kept for later, the window layer stays as it is
-  const shown = docked('roll') ? {} : { plugsHidden: false };
   // full screen by default, like FL's piano roll (a melody needs the room; the Channel Rack stays
   // one F6 away). A window the user made smaller reopens where they left it.
   if (g && !U.rollMax) {
     const w = clamp(g.w, 640, Math.max(640, W - 20)), h = clamp(g.h, 360, Math.max(360, H - 20));
-    setU({ zTop: z, ...shown, rollWin: { x: clamp(g.x, 0, Math.max(0, W - 120)), y: clamp(g.y, 0, Math.max(0, H - 80)), w, h, z } });
+    setU({ zTop: z, rollWin: { x: clamp(g.x, 0, Math.max(0, W - 120)), y: clamp(g.y, 0, Math.max(0, H - 80)), w, h, z } });
     return;
   }
-  setU({ zTop: z, ...shown, rollMax: true, rollWin: { ...fullArea(), z } });
+  setU({ zTop: z, rollMax: true, rollWin: { ...fullArea(), z } });
 }
 /** Everything under the toolbar: where the maximised Piano roll goes (it covers the browser and the mixer too). */
 function fullArea() {

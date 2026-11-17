@@ -238,7 +238,7 @@ a { color: var(--blue); }
 .mixer.floating { flex: 1; min-height: 0; }
 .mvhint { flex: 1; min-width: 0; font: 400 11px var(--sans); color: var(--fg4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .mixer.full { flex: 1; min-height: 0; }
-.winlayer.mv > .patwin { visibility: hidden; }
+.winlayer.mv > .tuck > .patwin { visibility: hidden; }
 .mixer { flex: none; display: flex; background: var(--mixer-bg); min-height: 0; }
 .strips { flex: 1; min-width: 0; display: flex; overflow-x: auto; overflow-y: hidden; }
 .strip { width: 86px; flex: none; display: flex; flex-direction: column; gap: 6px; padding: 0 6px 8px; background: var(--bg4); border-right: 1px solid var(--bg0); min-height: 0; }
@@ -426,11 +426,11 @@ select option { background: var(--bg4); color: var(--fg); }
 
 /* ---------- effect windows ---------- */
 .winlayer { position: fixed; inset: 0; z-index: 45; pointer-events: none; }
-.winlayer > .win { pointer-events: auto; }
-.winlayer.hidden { display: none; }
+.winlayer > .tuck > .win { pointer-events: auto; }
+.tuck { display: contents; }
+.tuck.hidden { display: none; }
 /* no box of its own: the editors keep their own z-index against the window layer */
 .outerwins { display: contents; }
-.outerwins.hidden { display: none; }
 .fxwin .winhd .pwr { width: 12px; height: 12px; flex: none; padding: 0; border: 0; border-radius: 50%; background: var(--green); cursor: pointer; box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 18%, transparent); }
 .fxwin .winhd .pwr.off { background: var(--line2); box-shadow: none; }
 .bypasstag { font: 600 9px var(--mono); color: var(--amber); letter-spacing: .08em; }

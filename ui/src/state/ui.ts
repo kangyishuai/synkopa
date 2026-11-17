@@ -58,8 +58,12 @@ export interface UiState {
   /** F9: the Mix view fills the workspace with the mixer (not saved: a launch starts in the arrange layout). */
   mixView: boolean;
   plugs: PlugWin[];
-  /** effect windows tucked behind the playlist (FL-style: clicking the playlist brings it to the front) */
-  plugsHidden: boolean;
+  /**
+   * Floating windows tucked behind the workspace (FL-style: clicking the playlist brings it to the front):
+   * those whose place in the stack (`z`) is at most `tuckZ`. A window opened or raised afterwards gets a
+   * higher `z` and shows on its own; the others stay tucked until F5 / the toolbar shows them.
+   */
+  plugsHidden: boolean; tuckZ: number;
   editor: EditorWin | null; menu: Menu | null; help: boolean; settings: boolean; exportOpen: boolean;
   /** True while `exportAudio` is in flight (so Escape can abort and report). */
   exportBusy: boolean;
@@ -137,7 +141,7 @@ export const [U, setU] = createStore<UiState>({
   tool: 'draw', snap: -1, bw: 22, sel: [], cur: { kind: 'pat', ref: 1, clipId: null },
   start: 0, follow: true, alt: false,
   mixMin: false, mixView: false, mixSel: 6, fxSel: 903, fxDrag: null,
-  plugs: [], plugsHidden: false, editor: null, menu: null, help: false, settings: false, exportOpen: false, exportBusy: false, vstPicker: null, fxPicker: null, fxChainWin: null, musicWin: null, missingOpen: false, midiWin: null,
+  plugs: [], plugsHidden: false, tuckZ: 0, editor: null, menu: null, help: false, settings: false, exportOpen: false, exportBusy: false, vstPicker: null, fxPicker: null, fxChainWin: null, musicWin: null, missingOpen: false, midiWin: null,
   openingProject: false,
   projectZipBusy: false,
   readout: t('d.ui.ready'),
@@ -165,6 +169,8 @@ createRoot(() => createEffect(() => {
     rackFloat: U.rackWin ? geo(U.rackWin) : U.rackFloat, rollFloat: U.rollWin ? geo(U.rollWin) : U.rollFloat, mixFloat: geo(U.mixWin) });
   try { localStorage.setItem(LAYOUT_KEY, s); } catch { /* private window */ }
 }));
+/** A floating window at stack place `z` is tucked behind the workspace (see `plugsHidden`). */
+export const tucked = (z: number | undefined) => U.plugsHidden && (z ?? 0) <= U.tuckZ;
 /** The panel is docked (anywhere); otherwise it floats as a window when open. */
 export const docked = (id: PaneId) => isDocked(U.dock, id);
 export const say = (msg: string) => { readoutPristine = false; setU('readout', msg); };

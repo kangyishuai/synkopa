@@ -3,7 +3,7 @@
 import { createSignal } from 'solid-js';
 import type { Id } from '../api/types';
 import { rackFloating, rollFloating } from './pattern';
-import { docked, U } from './ui';
+import { docked, tucked, U } from './ui';
 
 /** The open channel window (synth / Synkopa Keys / plugin settings) and its place; null when closed. */
 export type Win = { id: Id; x: number; y: number; w: number; z: number };
@@ -19,7 +19,7 @@ export const [win, setWin] = createSignal<Win | null>(null);
  * used last is on top. `z` is the window's place in the stacking order (`UiState.zTop`).
  */
 export function outerZ(z: number | undefined): number {
-  const layer = U.plugsHidden ? [] : [...U.plugs.map(p => p.z), rackFloating() ? U.rackWin!.z : 0, rollFloating() ? U.rollWin!.z : 0, mixFloating() ? U.mixWin.z : 0];
+  const layer = [...U.plugs.map(p => p.z), rackFloating() ? U.rackWin!.z : 0, rollFloating() ? U.rollWin!.z : 0, mixFloating() ? U.mixWin.z : 0].filter(v => !tucked(v));
   const over = (v: number) => layer.every(o => v > o);
   const me = z ?? 0, above = over(me);
   const peers = [U.editor?.z, win()?.z, U.pitchEd?.z].filter((v): v is number => v != null && over(v) === above);
@@ -33,11 +33,14 @@ export interface Floating { kind: FloatKind; z: number; id?: Id }
 
 /**
  * Every floating window on screen, whatever layer draws it: effect windows, the floating Channel Rack,
- * Piano roll and Mixer, the sample editor, the channel window, the pitch editor. F5 (`plugsHidden`) tucks
- * all of them away; the Mix view hides the pattern windows.
+ * Piano roll and Mixer, the sample editor, the channel window, the pitch editor. A window tucked behind
+ * the workspace (`tucked`) is not on screen; the Mix view hides the pattern windows.
  */
-export function shownFloating(): Floating[] {
-  if (U.plugsHidden) return [];
+export function shownFloating(): Floating[] { return openFloating().filter(f => !tucked(f.z)); }
+/** Some open window is tucked behind the workspace (F5 / the toolbar's windows button then shows them). */
+export const anyTucked = () => U.plugsHidden && openFloating().some(f => tucked(f.z));
+/** Every open floating window, tucked or not. */
+function openFloating(): Floating[] {
   const l: Floating[] = U.plugs.map(p => ({ kind: 'plug' as const, z: p.z, id: p.fxId }));
   if (!U.mixView && rackFloating()) l.push({ kind: 'rack', z: U.rackWin!.z });
   if (!U.mixView && rollFloating()) l.push({ kind: 'roll', z: U.rollWin!.z });

@@ -10,7 +10,7 @@ import { snapRes } from './lib/snap';
 import * as A from './state/actions';
 import { findFx, S } from './state/store';
 import { swapTake } from './state/comp';
-import { closeMenu, docked, say, setU, U } from './state/ui';
+import { closeMenu, docked, say, setU, tucked, U } from './state/ui';
 import { ContextMenu } from './ui/Menu';
 import { osDragEnd, osDragOver, osDrop } from './views/Browser';
 import { FxWindow } from './views/FxWindow';
@@ -44,7 +44,7 @@ import { renameCurrent } from './views/patternShared';
 import { NotebookHost } from './views/Notebook';
 import { toggleNotebook } from './state/notebook';
 import { clonePattern, closeRack, closeRoll, nextEmptyPattern, patMode, pickPatternNum, rackFloating, rollFloating, stepPattern, toggleRack, toggleRoll } from './state/pattern';
-import { mixFloating, topFloating, type Floating } from './state/winOrder';
+import { anyTucked, mixFloating, topFloating, win, type Floating } from './state/winOrder';
 import { Help, Toolbar, TOOLS } from './views/Toolbar';
 
 /** Closes one floating window. */
@@ -159,7 +159,7 @@ function onKey(e: KeyboardEvent) {
   if (!m && !e.altKey && e.code === 'NumpadSubtract') { e.preventDefault(); return stepPattern(-1); }
   if (!m && !e.altKey && /^Numpad[1-9]$/.test(e.code)) { e.preventDefault(); return pickPatternNum(+e.code.slice(6)); }
   if (m && e.shiftKey && k === 'c') { e.preventDefault(); return clonePattern(); }
-  if (e.key === 'F5') { e.preventDefault(); return U.plugsHidden ? A.showPlugs() : A.playlistFront(); }
+  if (e.key === 'F5') { e.preventDefault(); return anyTucked() ? A.showPlugs() : A.playlistFront(); }
   if (e.key === 'F9') { e.preventDefault(); return toggleMixer(); }
   // FL: route the selected Channel Rack channels to the selected mixer insert (Shift: one per insert from it on)
   if (m && !e.altKey && e.code === 'KeyL') { e.preventDefault(); return routeSelectedChannels(U.mixSel, e.shiftKey); }
@@ -256,7 +256,7 @@ export function App() {
   let lastWatch = '';
   createEffect(() => {
     // the 8 front-most windows (engine limit), in a stable order so focusing does not re-send
-    const ids = (U.plugsHidden ? [] : [...U.plugs]).sort((a, b) => b.z - a.z).map(p => p.fxId).filter(id => { const f = findFx(id)?.f; return f && f.type !== 'plugin'; }).slice(0, 8).sort((a, b) => a - b);
+    const ids = U.plugs.filter(p => !tucked(p.z)).sort((a, b) => b.z - a.z).map(p => p.fxId).filter(id => { const f = findFx(id)?.f; return f && f.type !== 'plugin'; }).slice(0, 8).sort((a, b) => a - b);
     const key = ids.join(',');
     if (key !== lastWatch) { lastWatch = key; be().watchFx(ids).catch(e => console.warn(e)); }
   });
@@ -283,16 +283,17 @@ export function App() {
         <Show when={U.mixView}><MixView /></Show>
       </div>
       {/* the editors float outside the window layer (own z order, see outerZ); F5 tucks them away too */}
-      <div class="outerwins" classList={{ hidden: U.plugsHidden }}>
-        <SampleEditor />
-        <ChannelWindow />
-        <PitchEditor />
+      {/* each window steps behind the workspace on its own (`tucked`): it stays mounted, only not drawn */}
+      <div class="outerwins">
+        <div class="tuck" classList={{ hidden: tucked(U.editor?.z) }}><SampleEditor /></div>
+        <div class="tuck" classList={{ hidden: tucked(win()?.z) }}><ChannelWindow /></div>
+        <div class="tuck" classList={{ hidden: tucked(U.pitchEd?.z) }}><PitchEditor /></div>
       </div>
-      <div class="winlayer" classList={{ hidden: U.plugsHidden, mv: U.mixView }}>
-        <For each={U.plugs}>{pw => <FxWindow pw={pw} z={plugRank(pw.z)} />}</For>
-        <Show when={!docked('rack')}><ChannelRack z={U.rackWin ? plugRank(U.rackWin.z) : 1} /></Show>
-        <Show when={!docked('roll')}><PianoRoll z={U.rollWin ? plugRank(U.rollWin.z) : 1} /></Show>
-        <Show when={mixFloating()}><MixerWindow z={plugRank(U.mixWin.z)} /></Show>
+      <div class="winlayer" classList={{ mv: U.mixView }}>
+        <For each={U.plugs}>{pw => <div class="tuck" classList={{ hidden: tucked(pw.z) }}><FxWindow pw={pw} z={plugRank(pw.z)} /></div>}</For>
+        <Show when={!docked('rack')}><div class="tuck" classList={{ hidden: tucked(U.rackWin?.z) }}><ChannelRack z={U.rackWin ? plugRank(U.rackWin.z) : 1} /></div></Show>
+        <Show when={!docked('roll')}><div class="tuck" classList={{ hidden: tucked(U.rollWin?.z) }}><PianoRoll z={U.rollWin ? plugRank(U.rollWin.z) : 1} /></div></Show>
+        <Show when={mixFloating()}><div class="tuck" classList={{ hidden: tucked(U.mixWin.z) }}><MixerWindow z={plugRank(U.mixWin.z)} /></div></Show>
       </div>
       <DockGuides />
       <NotebookHost />

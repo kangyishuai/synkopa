@@ -5,7 +5,7 @@ import { createSignal, For, Show } from 'solid-js';
 import { be } from '../api/backend';
 import { askPrompt, askUrl, type AskService } from '../lib/askLink';
 import { t } from '../lib/i18n';
-import { say, U } from '../state/ui';
+import { say, tucked, U } from '../state/ui';
 import { rackFloating, rollFloating } from '../state/pattern';
 import { APP_GLYPH } from '../ui/menuIcons';
 
@@ -40,7 +40,7 @@ function currentView(): string {
   const parts = [U.mixView ? 'Mix view (F9)' : 'Playlist'];
   if (U.rackWin || rackFloating()) parts.push('Channel rack');
   if (U.rollWin || rollFloating()) parts.push('Piano roll');
-  if (U.plugs.length && !U.plugsHidden) parts.push('an effect window');
+  if (U.plugs.some(p => !tucked(p.z))) parts.push('an effect window');
   return parts.join(', ');
 }
 

@@ -15,7 +15,7 @@ import { flushNotebook } from './notebook';
 import { clearPeaks } from './peaks';
 import { modePattern, openRack, patMode, setPatMode, stopPreview, togglePreview } from './pattern';
 import { allocId, findFx, insName, plain, S, setTransport } from './store';
-import { say, setU, U, type SampleTarget } from './ui';
+import { say, setU, tucked, U, type SampleTarget } from './ui';
 import { notify } from './notice';
 import { midiStatus } from './midi';
 import { typingOn } from './typingKeys';
@@ -658,7 +658,27 @@ const PLUG_W: Partial<Record<string, number>> = { eq: 780, reverb: 640, plugin: 
 /** Open (or bring to front) an effect window. The newest/most recently focused window is always on top. */
 /** Playlist to the front: floating windows go behind it (they keep their place and state); docked panels stay. */
 /** F5 / a click on the Playlist: every floating window steps aside (effects, pattern windows, the sample, channel and pitch editors). */
-export function playlistFront() { if (shownFloating().length) setU('plugsHidden', true); }
+export function playlistFront() { tuckBelow(U.zTop); }
+/** The floating windows up to stack place `z` step behind the workspace; one opened or raised later shows on its own. */
+export function tuckBelow(z: number) {
+  if (!shownFloating().some(f => f.z <= z)) return;
+  setU({ plugsHidden: true, tuckZ: U.plugsHidden ? Math.max(U.tuckZ, z) : z });
+}
+/**
+ * A plain click in the workspace (Browser, a docked Mixer / Channel Rack / Piano roll) sends the floating
+ * windows behind it, like a click on the Playlist. It acts on release and only without a drag, so dragging
+ * a sample from the Browser onto a floating Channel Rack keeps the rack; a window the click itself opens
+ * (an effect slot) comes after `z` and stays in front.
+ */
+export function tuckOnClick(e: PointerEvent) {
+  if (e.button !== 0) return;
+  const sx = e.clientX, sy = e.clientY, z = U.zTop;
+  const done = (ev: PointerEvent) => {
+    window.removeEventListener('pointerup', done, true); window.removeEventListener('pointercancel', done, true);
+    if (ev.type === 'pointerup' && Math.hypot(ev.clientX - sx, ev.clientY - sy) < 5) tuckBelow(z);
+  };
+  window.addEventListener('pointerup', done, true); window.addEventListener('pointercancel', done, true);
+}
 export function showPlugs() { setU('plugsHidden', false); }
 
 /** The real-time Pitch Correct effect onto insert `insId` (key and scale from the caller, e.g. the pitch editor's). */
@@ -682,7 +702,6 @@ export function openPlug(fxId: Id, settings = false) {
 }
 /** Synkopa's own window for an effect (for a plugin: its parameters, under the gear). */
 function openPlugWindow(fxId: Id) {
-  if (U.plugsHidden) setU('plugsHidden', false);
   const ex = U.plugs.find(p => p.fxId === fxId);
   if (ex) { plugFront(fxId, true); return; }
   const ty = findFx(fxId)?.f.type ?? '';
@@ -694,8 +713,7 @@ export const closePlug = (fxId: Id) => setU('plugs', U.plugs.filter(p => p.fxId 
 /** Raise a window above all others (array order stays put, so canvases are never re-created). */
 export function plugFront(fxId: Id, force = false) {
   const p = U.plugs.find(x => x.fxId === fxId); if (!p) return;
-  if (U.plugsHidden) setU('plugsHidden', false);
-  if (!force && p.z === U.zTop) return;
+  if (!force && p.z === U.zTop && !tucked(p.z)) return;
   const z = U.zTop + 1;
   setU('zTop', z);
   setU('plugs', x => x.fxId === fxId, 'z', z);
@@ -713,11 +731,11 @@ export function openSampleEditor(target: SampleTarget, position?: { x: number; y
   const x = U.editor?.x ?? position?.x ?? (window.innerWidth - w) / 2;
   const y = U.editor?.y ?? position?.y ?? 64;
   const z = U.zTop + 1;
-  setU({ zTop: z, editor: { ...target, x: clamp(x, 0, window.innerWidth - w), y, w, z }, plugsHidden: false });
+  setU({ zTop: z, editor: { ...target, x: clamp(x, 0, window.innerWidth - w), y, w, z } });
 }
 /** The sample editor over the plugin / pattern windows (it is used last). */
 export function editorFront() {
-  if (!U.editor || (U.editor.z ?? 0) === U.zTop) return;
+  if (!U.editor || ((U.editor.z ?? 0) === U.zTop && !tucked(U.editor.z))) return;
   const z = U.zTop + 1;
   setU('zTop', z); setU('editor', ed => ed && { ...ed, z });
 }
@@ -732,13 +750,13 @@ export function openPitchEditor(id: Id, melody?: { channel: Id; span?: [number, 
   const c = S.project.clips.find(x => x.id === id); if (!c || c.kind !== 'audio') return;
   // already open on this clip: keep its place, only pass the melody on
   const z = U.zTop + 1;
-  if (U.pitchEd?.clipId === id) { setU({ zTop: z, plugsHidden: false }); setU('pitchEd', ed => ed && { ...ed, z, ...(melody ? { melody } : {}) }); return; }
+  if (U.pitchEd?.clipId === id) { setU({ zTop: z }); setU('pitchEd', ed => ed && { ...ed, z, ...(melody ? { melody } : {}) }); return; }
   const w = Math.min(1180, window.innerWidth - 40), h = Math.min(600, window.innerHeight - 90);
-  setU({ zTop: z, plugsHidden: false, pitchEd: { clipId: id, x: Math.max(20, (window.innerWidth - w) / 2), y: Math.max(44, (window.innerHeight - h) / 2 - 20), w, h, z, melody }, sel: [id] });
+  setU({ zTop: z, pitchEd: { clipId: id, x: Math.max(20, (window.innerWidth - w) / 2), y: Math.max(44, (window.innerHeight - h) / 2 - 20), w, h, z, melody }, sel: [id] });
 }
 /** The pitch editor over the plugin / pattern windows (it is used last). */
 export function pitchFront() {
-  if (!U.pitchEd || (U.pitchEd.z ?? 0) === U.zTop) return;
+  if (!U.pitchEd || ((U.pitchEd.z ?? 0) === U.zTop && !tucked(U.pitchEd.z))) return;
   const z = U.zTop + 1;
   setU('zTop', z); setU('pitchEd', ed => ed && { ...ed, z });
 }
