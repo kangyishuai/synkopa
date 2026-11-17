@@ -110,7 +110,7 @@ pub fn sketch_project() -> Project {
     for c in p.channels.iter_mut().filter(|c| c.id == bass) {
         c.name = "Bass".into();
         if let ChannelSrc::Sample { sampler, .. } = &mut c.src {
-            sampler.gate = true;
+            sampler.env = true;
         }
     }
     let n = |c: Id, step: f32, len: f32, key: Option<u8>| Note::new(c, step, len, key);
@@ -180,6 +180,7 @@ pub fn sketch_project() -> Project {
         resample: false,
         pitch: 0.0,
         insert: None,
+        root: crate::model::CLIP_ROOT,
     };
     p.clips = vec![clip(1, 0, 0.0, 16.0, 1), clip(2, 0, 16.0, 16.0, 1), clip(3, 1, 8.0, 24.0, 2), clip(4, 2, 0.0, 32.0, 3)];
     // Vocal chain: EQ (custom) → comp → reverb, drum bus comp.
@@ -338,7 +339,7 @@ pub fn demo_project() -> Project {
     // 28 ms attack clears the front transient completely so every Kick slams hard in the chest before the 808 blooms
     let ch_808 = add_sample(&mut p, "bass-808-spin.flac", "808 Spin", "808", 0.78, 0.0, &|s| {
         s.attack = 28.0;
-        s.gate = true;
+        s.env = true;
         s.release = 75.0;
         s.cut = 2;
     });
@@ -686,6 +687,7 @@ pub fn demo_project() -> Project {
             resample: false,
             pitch: 0.0,
             insert: None,
+            root: SAMPLE_ROOT,
         });
         clips.len() - 1
     };

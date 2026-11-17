@@ -34,11 +34,11 @@ fn run(rt: &mut Rt, frames: usize) -> f32 {
     peak
 }
 
-/// A channel that sounds for as long as its key is held: the 808 bass sample in gate mode.
+/// A channel that sounds for as long as its key is held: the 808 bass sample with its envelope on.
 fn held_bass(p: &mut Project) -> Id {
     let id = p.factory_channel("bass-808.flac").unwrap();
     if let ChannelSrc::Sample { sampler, .. } = &mut p.channels.iter_mut().find(|c| c.id == id).unwrap().src {
-        sampler.gate = true;
+        sampler.env = true;
     }
     id
 }
@@ -241,6 +241,7 @@ fn live_keys_play_where_the_song_plays_the_channel_not_through_the_armed_track()
         resample: false,
         pitch: 0.0,
         insert: None,
+        root: 60,
     }];
     p.tracks[5].arm = true;
     let vocal = p.tracks[5].insert;

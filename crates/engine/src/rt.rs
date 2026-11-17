@@ -625,12 +625,18 @@ pub struct SmpRt {
     pub rate: f64,
     /// Level of "normalise" (1 when off).
     pub gain: f32,
-    pub gate: bool,
-    /// Seconds.
+    /// The volume envelope: on/off, stage times in seconds, the sustain level and each curved
+    /// segment's bend factor (see [`crate::synth::bend`]).
+    pub env: bool,
+    pub delay: f32,
     pub attack: f32,
+    pub hold: f32,
     pub decay: f32,
     pub sustain: f32,
     pub release: f32,
+    pub attack_bend: f32,
+    pub decay_bend: f32,
+    pub release_bend: f32,
     pub cut: u8,
     pub fade_in: f64,
     pub fade_out: f64,
@@ -655,11 +661,17 @@ impl SmpRt {
             reverse: s.reverse,
             rate: 2f64.powf((s.semi as f64 + s.fine as f64 / 100.0) / 12.0),
             gain,
-            gate: s.gate,
+            env: s.env,
+            delay: s.delay.max(0.0) / 1000.0,
             attack: s.attack.max(0.0) / 1000.0,
+            hold: s.hold.max(0.0) / 1000.0,
             decay: s.decay.max(0.0) / 1000.0,
             sustain: s.sustain.clamp(0.0, 1.0),
             release: s.release.max(1.0) / 1000.0,
+            // a rising attack bows up with a factor below 1, a falling decay or release above it
+            attack_bend: crate::synth::bend(-s.attack_tension),
+            decay_bend: crate::synth::bend(s.decay_tension),
+            release_bend: crate::synth::bend(s.release_tension),
             cut: s.cut,
             fade_in: s.fade_in_ms.clamp(0.0, SamplerState::FADE_MS.1) as f64 / 1000.0,
             fade_out: s.fade_out_ms.clamp(0.0, SamplerState::FADE_MS.1) as f64 / 1000.0,
@@ -716,6 +728,8 @@ pub struct Preview {
     pub fade_in: f64,
     pub fade_out: f64,
     pub start: f64,
+    /// Read speed: 1 = the audio's own pitch; 2 = an octave up (the sample editor's keyboard).
+    pub rate: f64,
 }
 
 // ------------------------------------------------------------------ messages
@@ -1858,7 +1872,7 @@ impl Rt {
             self.last = (out_l[at + n - 1], out_r[at + n - 1]);
         }
         if let Some(pv) = self.preview.as_mut() {
-            let rate = pv.audio.sr as f64 / sr as f64;
+            let rate = pv.rate * pv.audio.sr as f64 / sr as f64;
             for i in 0..n {
                 if pv.pos >= pv.end {
                     break;

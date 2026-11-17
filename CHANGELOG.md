@@ -4,6 +4,33 @@ What changed in each release of WAVE. The newest version comes first; its sectio
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **One sample editor with a keyboard, as in FL Studio.** The editor of an audio clip and of a
+  Channel Rack sampler now look and work the same: both end in a piano keyboard. Click a key
+  to hear the sample at that note; right-click a key to make it the root note (the note at
+  which the sample plays at its own pitch). The root key is lit and named, and the root shows
+  above the keyboard. An audio clip's root belongs to its sample (every clip of it shares it),
+  is saved with the project, and a sampler channel made from that sample starts on it. The
+  keyboards of WAVE Keys and plugin channels set their root the same way.
+- **A sampler's volume envelope, as in FL Studio.** A sampler's editor has two pages: Sample
+  (the waveform, its part, pitch, level and the sample's own fades) and Envelope, the FL
+  Channel settings ▸ Volume page. Switch the envelope on and every note gets delay, attack,
+  hold, decay, sustain and release, drawn as a graph: drag a point sideways to change its time,
+  the sustain point up and down for the level, and the dot in a curve up or down to bend the
+  attack, decay or release. The same values are on knobs, and each drag is one undo step.
+  Dragging a point or turning a knob switches the envelope on. With it on, a note fades over
+  the release from its note-off: a key let go or the end of a Piano Roll note. Off, the sample
+  plays as recorded. A Channel Rack step still has no note-off and holds the sustain.
+
+### Changed
+- **The sampler's One-shot / Gate switch is now the Envelope switch.** Envelope off plays the
+  sample as recorded, as One-shot did, and no longer applies attack, decay and sustain: those
+  belong to the envelope. Envelope on works like Gate, and a sized Piano Roll note now fades over
+  the release from its end instead of stopping there. Projects keep their sound: a sampler that
+  was in Gate mode or had an attack or a sustain below 100 % opens with its envelope on.
+
 ## 0.9.21 — 2026-11-17
 
 ### Added

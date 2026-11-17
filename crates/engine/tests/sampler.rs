@@ -72,6 +72,7 @@ fn engine(name: &str, set: impl Fn(&mut SamplerState), notes: &[(f32, f32, Optio
         resample: false,
         pitch: 0.0,
         insert: None,
+        root: 60,
     };
     e.apply(&[Op::PutChannel { channel, index: None }, Op::PutPattern { pattern }, Op::PutClips { clips: vec![clip] }], false, None)
         .unwrap();
@@ -98,13 +99,13 @@ fn one(set: impl Fn(&mut SamplerState), len_steps: f32) -> Vec<f32> {
 }
 
 #[test]
-fn a_sized_note_ends_on_time_in_both_modes_and_during_pattern_preview() {
-    for gate in [false, true] {
+fn a_sized_note_stops_at_its_end_or_releases_from_it_and_matches_pattern_preview() {
+    for env in [false, true] {
         for steps in [1.0, 3.0] {
             let (e, _) = engine(
                 "timed",
                 |s| {
-                    s.gate = gate;
+                    s.env = env;
                     s.release = 200.0;
                 },
                 &[(0.0, steps, None)],
@@ -112,8 +113,15 @@ fn a_sized_note_ends_on_time_in_both_modes_and_during_pattern_preview() {
             let out = render(&e, 4.0);
             let end = (steps * SR as f32 / 8.0) as usize; // 120 BPM: one step = 125 ms
             assert!((peak(&out[end - 1000..end - 100]) - 0.8).abs() < 0.01);
-            assert!(peak(&out[end - 24..end]) < 0.3, "declick before the note ends");
-            assert_eq!(peak(&out[end..]), 0.0, "the sampler must be silent at the note end");
+            if env {
+                // FL's envelope: the note-off starts a 200 ms release, half way down after 100 ms
+                let mid = peak(&out[end + 4700..end + 4900]);
+                assert!((mid - 0.4).abs() < 0.03, "half way through the release: {mid}");
+                assert_eq!(peak(&out[end + 9700..]), 0.0, "silent once the release is over");
+            } else {
+                assert!(peak(&out[end - 24..end]) < 0.3, "declick before the note ends");
+                assert_eq!(peak(&out[end..]), 0.0, "the sampler must be silent at the note end");
+            }
 
             let mut rt = e.create_rt(SR as f32, 256);
             e.pattern_play(Some(1), 0.0, None).unwrap();
@@ -137,12 +145,12 @@ fn a_sized_note_ends_on_time_in_both_modes_and_during_pattern_preview() {
 }
 
 #[test]
-fn legacy_sized_notes_keep_the_saved_sampler_mode() {
-    for gate in [false, true] {
+fn legacy_sized_notes_ring_out_or_release_with_the_envelope() {
+    for env in [false, true] {
         let (e, _) = engine(
             "legacy",
             |s| {
-                s.gate = gate;
+                s.env = env;
                 s.release = 200.0;
             },
             &[(0.0, 1.0, None)],
@@ -151,10 +159,10 @@ fn legacy_sized_notes_keep_the_saved_sampler_mode() {
         pattern.notes[0].trig = None;
         e.apply(&[Op::PutPattern { pattern }], false, None).unwrap();
         let out = render(&e, 4.0);
-        if gate {
+        if env {
             let after = peak_in(&out, 0.175, 0.195);
-            assert!(after > 0.05 && after < 0.5, "a 200 ms release is still fading 50 ms in: {after}");
-            assert_eq!(peak_in(&out, 0.425, 2.0), 0.0);
+            assert!(after > 0.05 && after < 0.7, "a 200 ms release is still fading 50 ms in: {after}");
+            assert_eq!(peak_in(&out, 0.326, 2.0), 0.0);
         } else {
             assert!((peak_in(&out, 0.55, 0.95) - 0.1).abs() < 0.01);
         }
@@ -162,8 +170,8 @@ fn legacy_sized_notes_keep_the_saved_sampler_mode() {
 }
 
 #[test]
-fn a_gate_step_rings_out_and_round_trips_without_changing_short_held_notes() {
-    let (e, ch) = engine("trigger", |s| s.gate = true, &[(0.0, 1.0, None)]);
+fn an_enveloped_step_rings_out_and_round_trips_without_changing_short_held_notes() {
+    let (e, ch) = engine("trigger", |s| s.env = true, &[(0.0, 1.0, None)]);
     let mut pattern = e.project().patterns[0].clone();
     pattern.notes[0].trig = None; // a file made before event kinds existed
     e.apply(&[Op::PutPattern { pattern: pattern.clone() }], false, None).unwrap();
@@ -198,7 +206,7 @@ fn sample_fades_follow_the_audible_edges_and_match_the_live_engine() {
                     s.start = 0.25;
                     s.end = 0.75;
                     s.reverse = reverse;
-                    s.gate = true;
+                    s.env = true;
                     s.fade_in_ms = 100.0;
                     s.fade_out_ms = 200.0;
                 },
@@ -268,7 +276,13 @@ fn reverse_plays_the_part_backwards() {
 #[test]
 fn the_envelope_shapes_the_level() {
     // attack: silent at first, full after it
-    let slow = one(|s| s.attack = 200.0, 16.0);
+    let slow = one(
+        |s| {
+            s.env = true;
+            s.attack = 200.0;
+        },
+        16.0,
+    );
     assert!(peak_in(&slow, 0.0, 0.01) < 0.05);
     let mid = peak_in(&slow, 0.099, 0.102);
     assert!((mid - 0.4).abs() < 0.03, "half way up the attack: {mid}");
@@ -276,6 +290,7 @@ fn the_envelope_shapes_the_level() {
     // decay to a sustain level
     let held = one(
         |s| {
+            s.env = true;
             s.decay = 100.0;
             s.sustain = 0.5;
         },
@@ -285,6 +300,7 @@ fn the_envelope_shapes_the_level() {
     // sustain 0: the decay is the whole sound, however long the file
     let pluck = one(
         |s| {
+            s.env = true;
             s.decay = 100.0;
             s.sustain = 0.0;
         },
@@ -292,6 +308,116 @@ fn the_envelope_shapes_the_level() {
     );
     assert!(peak_in(&pluck, 0.0, 0.01) > 0.7);
     assert_eq!(peak_in(&pluck, 0.101, 2.0), 0.0);
+}
+
+#[test]
+fn with_the_envelope_off_the_sample_plays_as_recorded() {
+    let shaped = |s: &mut SamplerState| {
+        s.attack = 200.0;
+        s.decay = 100.0;
+        s.sustain = 0.0;
+    };
+    // the stored shape is kept but not heard
+    let off = one(shaped, 16.0);
+    assert!(peak_in(&off, 0.0, 0.002) > 0.5);
+    assert!((peak_in(&off, 0.55, 0.95) - 0.1).abs() < 0.01);
+    assert_eq!(off, one(|_| {}, 16.0));
+}
+
+#[test]
+fn delay_and_hold_place_the_attack_and_the_decay() {
+    let out = one(
+        |s| {
+            s.env = true;
+            s.delay = 100.0;
+            s.hold = 100.0;
+            s.decay = 100.0;
+            s.sustain = 0.0;
+        },
+        16.0,
+    );
+    assert_eq!(peak_in(&out, 0.0, 0.099), 0.0, "silent through the delay");
+    assert!((peak_in(&out, 0.101, 0.199) - 0.8).abs() < 0.01, "full through the hold");
+    let mid = peak_in(&out, 0.249, 0.251);
+    assert!((mid - 0.4).abs() < 0.03, "half way down the decay: {mid}");
+    assert_eq!(peak_in(&out, 0.301, 2.0), 0.0);
+}
+
+#[test]
+fn tension_bends_each_segment_without_moving_its_ends() {
+    let attack_mid = |k: f32| {
+        let out = one(
+            |s| {
+                s.env = true;
+                s.attack = 200.0;
+                s.attack_tension = k;
+            },
+            16.0,
+        );
+        assert!((peak_in(&out, 0.21, 0.45) - 0.8).abs() < 0.01, "the attack still ends at full");
+        peak_in(&out, 0.099, 0.102) / 0.8
+    };
+    let (down, straight, up) = (attack_mid(-1.0), attack_mid(0.0), attack_mid(1.0));
+    assert!((straight - 0.5).abs() < 0.04);
+    // bent fully up the attack is at 8/9 half way; bent down at 1/9
+    assert!((up - 8.0 / 9.0).abs() < 0.04, "{up}");
+    assert!((down - 1.0 / 9.0).abs() < 0.04, "{down}");
+
+    // release: up keeps the level high for longer, down falls away fast
+    let release_mid = |k: f32| {
+        let (e, _) = engine(
+            "release-bend",
+            |s| {
+                s.env = true;
+                s.release = 200.0;
+                s.release_tension = k;
+            },
+            &[(0.0, 1.0, None)],
+        );
+        let out = render(&e, 4.0);
+        assert_eq!(peak_in(&out, 0.326, 2.0), 0.0, "the release still ends on time");
+        peak_in(&out, 0.2240, 0.2260) / 0.8
+    };
+    assert!(release_mid(1.0) > 0.85 && release_mid(-1.0) < 0.15);
+}
+
+#[test]
+fn a_note_off_during_the_attack_releases_from_where_it_was() {
+    // a one-step (125 ms) note with a 500 ms attack: released at a quarter of full, no jump up
+    let (e, _) = engine(
+        "early-off",
+        |s| {
+            s.env = true;
+            s.attack = 500.0;
+            s.release = 100.0;
+        },
+        &[(0.0, 1.0, None)],
+    );
+    let out = render(&e, 4.0);
+    let at_off = peak_in(&out, 0.120, 0.125);
+    assert!((at_off - 0.2).abs() < 0.02, "{at_off}");
+    assert!(peak_in(&out, 0.125, 0.3) <= at_off + 0.005, "the release never rises");
+    assert_eq!(peak_in(&out, 0.226, 2.0), 0.0);
+}
+
+#[test]
+fn files_from_before_the_envelope_switch_keep_their_sound() {
+    let doc = |sampler: serde_json::Value| {
+        let mut v = serde_json::to_value(Project::empty()).unwrap();
+        v["sources"] = serde_json::json!([]);
+        v["channels"] = serde_json::json!([{ "id": 900, "name": "S", "color": "#fff", "kind": "sample", "source": 3, "sampler": sampler }]);
+        let p = Project::from_json(v).unwrap();
+        let ChannelSrc::Sample { sampler, .. } = p.channel(900).unwrap().src else { panic!() };
+        sampler
+    };
+    // gated, or one-shot with a shape it always played: the envelope is on
+    assert!(doc(serde_json::json!({ "gate": true })).env);
+    assert!(doc(serde_json::json!({ "gate": false, "attack": 30.0 })).env);
+    assert!(doc(serde_json::json!({ "decay": 100.0, "sustain": 0.2 })).env);
+    // an untouched one-shot: off, as before; a new file's switch is read as written
+    assert!(!doc(serde_json::json!({ "gate": false, "decay": 100.0 })).env);
+    assert!(!doc(serde_json::json!({})).env);
+    assert!(!doc(serde_json::json!({ "env": false, "attack": 30.0 })).env);
 }
 
 #[test]
@@ -336,7 +462,7 @@ fn a_cut_group_silences_its_sounding_notes() {
     let (e, ch) = engine(
         "trigger-cut",
         |s| {
-            s.gate = true;
+            s.env = true;
             s.cut = 1;
         },
         &notes,
@@ -391,6 +517,10 @@ fn settings_out_of_range_are_refused() {
     assert!(with(&|s| s.attack = -1.0).is_err());
     assert!(with(&|s| s.sustain = 1.1).is_err());
     assert!(with(&|s| s.release = 0.0).is_err());
+    assert!(with(&|s| s.delay = 5001.0).is_err());
+    assert!(with(&|s| s.hold = -1.0).is_err());
+    assert!(with(&|s| s.release_tension = 1.5).is_err());
+    assert!(with(&|s| s.attack_tension = f32::NAN).is_err());
     assert!(with(&|s| s.fade_in_ms = -1.0).is_err());
     assert!(with(&|s| s.fade_out_ms = 5001.0).is_err());
     assert!(with(&|s| s.cut = 9).is_err());
@@ -411,8 +541,11 @@ fn settings_survive_a_save_and_files_without_them_get_the_defaults() {
             s.start = 0.25;
             s.reverse = true;
             s.semi = -5;
-            s.gate = true;
+            s.env = true;
+            s.delay = 5.0;
+            s.hold = 20.0;
             s.decay = 80.0;
+            s.decay_tension = 0.5;
             s.sustain = 0.4;
             s.cut = 3;
         },
@@ -504,6 +637,7 @@ fn a_new_project_does_not_inherit_audio_from_the_previous_one() {
         resample: false,
         pitch: 0.0,
         insert: None,
+        root: 60,
     };
     e.apply(&[Op::PutPattern { pattern }, Op::PutClips { clips: vec![clip] }], false, None).unwrap();
     let out = e.render(0.0, 4.0, 0.0, SR).unwrap();
@@ -623,4 +757,64 @@ fn the_mock_fixture_matches_the_engine() {
     // compare through JSON text: floats written and read back are not bit-identical to f32
     let norm = |v: &serde_json::Value| serde_json::from_str::<serde_json::Value>(&serde_json::to_string(v).unwrap()).unwrap();
     assert!(norm(&have) == norm(&want), "ui/src/api/factory.json is out of date: see this test's comment");
+}
+
+/// The sample editor's keyboard on an audio clip (FL's audio clip channel): a key plays the
+/// clip's sample transposed from the clip's root key, plus its pitch knob; the root is saved
+/// only when it is not the default and an out-of-range one is refused.
+#[test]
+fn an_audio_clip_plays_from_its_keyboard_relative_to_its_root() {
+    let mut p = Project::empty();
+    p.bpm = 120.0;
+    p.inserts[0].fx.clear();
+    let e = Engine::new(p, Arc::new(NoPlugins));
+    let (srcs, _) = e.import_audio(&[two_level_wav("cliproot")], None).unwrap();
+    let clip = |root: u8, pitch: f32| Clip {
+        id: 7,
+        track: 0,
+        start: 0.0,
+        len: 2.0,
+        offset: 0.0,
+        kind: ClipKind::Audio,
+        source: srcs[0],
+        muted: false,
+        gain: 0.0,
+        fade_in: 0.0,
+        fade_out: 0.0,
+        pan: 0.0,
+        norm: false,
+        rev: false,
+        tune: None,
+        stretch: 1.0,
+        resample: false,
+        pitch,
+        insert: None,
+        root,
+    };
+    let zero_crossings = |x: &[f32]| x.windows(2).filter(|w| w[0] <= 0.0 && w[1] > 0.0).count() as f64;
+    let hz = |root: u8, pitch: f32, key: u8| {
+        e.apply(&[Op::PutClips { clips: vec![clip(root, pitch)] }], false, None).unwrap();
+        let mut rt = e.create_rt(SR as f32, 256);
+        e.preview_clip_key(7, key, 1.0).unwrap();
+        let (mut left, mut right) = ([0.0; 256], [0.0; 256]);
+        let out: Vec<_> = (0..(SR as usize / 5 / 256))
+            .flat_map(|_| {
+                rt.process(&mut left, &mut right, None);
+                left
+            })
+            .collect();
+        zero_crossings(&out[SR as usize / 100..]) / (out.len() as f64 / SR as f64 - 0.01)
+    };
+    assert!((hz(60, 0.0, 60) - 440.0).abs() < 8.0, "the root key plays the sample as recorded");
+    assert!((hz(60, 0.0, 72) - 880.0).abs() < 12.0, "an octave above the root plays twice as fast");
+    assert!((hz(69, 0.0, 57) - 220.0).abs() < 6.0, "a moved root moves every key");
+    assert!((hz(60, -12.0, 72) - 440.0).abs() < 8.0, "the pitch knob adds to the key");
+
+    let json = serde_json::to_value(clip(60, 0.0)).unwrap();
+    assert!(json.get("root").is_none(), "the default root is not written");
+    let back: Clip = serde_json::from_value(json).unwrap();
+    assert_eq!(back.root, CLIP_ROOT, "a clip saved without a root gets C5");
+    assert_eq!(serde_json::to_value(clip(57, 0.0)).unwrap()["root"], 57);
+    assert!(e.apply(&[Op::PutClips { clips: vec![clip(128, 0.0)] }], false, None).is_err());
+    assert!(e.preview_clip_key(999, 60, 1.0).is_err());
 }
