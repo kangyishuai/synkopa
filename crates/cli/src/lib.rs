@@ -107,6 +107,7 @@ FILES
                                            one file per mixer insert with sound, plus the optional master mix
   WAV options: --wav-bits 16|24|32 (default 32-bit float); --dither (16/24-bit PCM only)
                --wrap-tail (carry effects into the start of the loop)
+  --pattern P: render pattern P alone, as PAT mode plays it (an empty Playlist is fine)
   save [--path FILE] | open <FILE>          (app; with -p the file is saved for you, --save-as copies)
   export-project --out FILE.zip            package the project and its audio sources for sharing
 
@@ -967,6 +968,7 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                     "format": a.get("format"), "mp3Kbps": a.num("kbps").map_err(u)?,
                     "wavBits": wav_bits, "dither": a.has("dither"), "wrapTail": a.has("wrap-tail"),
                     "stems": a.has("stems"), "master": !a.has("no-master"),
+                    "pattern": a.num("pattern").map_err(u)?,
                 }),
             )
         }

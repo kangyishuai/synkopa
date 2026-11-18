@@ -32,6 +32,7 @@ synkopa new song.synkopa --template demo                  # or --template empty 
 synkopa -p song.synkopa context                           # any read: nothing is written
 synkopa -p song.synkopa pattern --id 1 --ch kick --steps "x... x... x... x..."   # saved back to song.synkopa
 synkopa -p song.synkopa render --out song.wav             # or --stems --out stems/
+synkopa -p song.synkopa render --pattern 1 --out beat.wav # one pattern alone, as PAT mode plays it
 synkopa -p song.synkopa export-project --out song.zip      # without saving changes to song.synkopa
 synkopa -p song.synkopa bpm 150 --save-as song-150.synkopa   # song.synkopa stays as it was
 synkopa -p song.synkopa apply --file ops.json --dry-run   # try it: the reply has dryRun.changed, nothing is saved

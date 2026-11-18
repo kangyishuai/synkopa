@@ -454,6 +454,8 @@ pub struct Bounce {
     pub tail: f64,
     pub rate: u32,
     pub wrap: bool,
+    /// Render this pattern alone, as PAT mode plays it (`from..to` is then its range), not the song.
+    pub pattern: Option<u64>,
 }
 
 impl Bounce {
@@ -466,7 +468,9 @@ impl Bounce {
     ) -> R<Vec<f32>> {
         use wave_engine::RenderTail;
         let tail = if self.wrap { RenderTail::Wrap } else { RenderTail::Seconds(self.tail) };
-        engine.render_export_with(insert, self.from, self.to, tail, self.rate, cancel, &mut |p| tracker.on(p)).map_err(|e| e.to_string())
+        engine
+            .render_bounce(insert, self.pattern, self.from, self.to, tail, self.rate, cancel, &mut |p| tracker.on(p))
+            .map_err(|e| e.to_string())
     }
 
     fn tail_seconds(self) -> f64 {
@@ -511,6 +515,7 @@ pub fn render_to_file(
         "toBeat": bounce.to,
         "tail": bounce.tail_seconds(),
         "wrapTail": bounce.wrap,
+        "pattern": bounce.pattern,
         "format": fmt.extension(),
         "stats": stats(&audio, bounce.rate),
     }))
@@ -598,7 +603,10 @@ pub fn render_stems_to_dir(
     if bounce.to <= bounce.from {
         return Err("`to` must be after `from`".into());
     }
-    let project = engine.project();
+    let project = match bounce.pattern {
+        Some(id) => wave_engine::pattern_project(engine.project(), id),
+        None => engine.project(),
+    };
     // (insert id — None is the master mix, display name)
     let mut jobs: Vec<(Option<u64>, String)> = vec![];
     if include_master {
@@ -662,6 +670,7 @@ pub fn render_stems_to_dir(
         "toBeat": bounce.to,
         "tail": bounce.tail_seconds(),
         "wrapTail": bounce.wrap,
+        "pattern": bounce.pattern,
         "format": ext,
         "files": files,
         "skipped": skipped,
@@ -674,12 +683,19 @@ pub fn render(app: &dyn Host, a: &Value) -> R<Value> {
     let wrap = arg(a, "wrapTail").and_then(Value::as_bool).unwrap_or(false);
     let from = opt_f64(a, "from");
     let to = opt_f64(a, "to");
-    let (from, to) = match (wrap, p.loop_range) {
-        (true, Some(l)) if l.b > l.a => (from.unwrap_or(l.a), to.unwrap_or(l.b)),
-        (true, _) => from.zip(to).ok_or("wrap tail requires a project loop or both `from` and `to`")?,
-        (false, range) => (from.unwrap_or(0.0), to.unwrap_or_else(|| range.map_or_else(|| p.song_end(), |l| l.b))),
+    let pattern = opt_f64(a, "pattern").map(|v| v as u64);
+    let (from, to) = match (pattern, wrap, p.loop_range) {
+        (Some(_), true, _) => return Err("wrap tail is for a loop of the song, not a pattern export".into()),
+        (Some(id), false, _) => {
+            let (a0, b0) = wave_engine::Engine::pattern_range(&p, id).ok_or_else(|| format!("no pattern {id}"))?;
+            (from.unwrap_or(a0), to.unwrap_or(b0))
+        }
+        (None, true, Some(l)) if l.b > l.a => (from.unwrap_or(l.a), to.unwrap_or(l.b)),
+        (None, true, _) => from.zip(to).ok_or("wrap tail requires a project loop or both `from` and `to`")?,
+        (None, false, range) => (from.unwrap_or(0.0), to.unwrap_or_else(|| range.map_or_else(|| p.song_end(), |l| l.b))),
     };
-    let bounce = Bounce { from, to, tail: opt_f64(a, "tail").unwrap_or(2.0), rate: opt_f64(a, "rate").unwrap_or(48000.0) as u32, wrap };
+    let bounce =
+        Bounce { from, to, tail: opt_f64(a, "tail").unwrap_or(2.0), rate: opt_f64(a, "rate").unwrap_or(48000.0) as u32, wrap, pattern };
     let wav_bits = arg(a, "wavBits")
         .map(|value| match value.as_f64() {
             Some(16.0) => Ok(16),
@@ -1721,7 +1737,7 @@ mod tests {
     }
 
     fn bounce(to: f64) -> Bounce {
-        Bounce { from: 0.0, to, tail: 0.0, rate: 48_000, wrap: false }
+        Bounce { from: 0.0, to, tail: 0.0, rate: 48_000, wrap: false, pattern: None }
     }
 
     #[test]

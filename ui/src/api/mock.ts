@@ -31,7 +31,7 @@ import { synthVocal, vocalAt, vocalPeaks, type VocalSample } from './mockVocal';
 import type {
   AudioConfig, AudioStatus, LatencyReport, AnyBuiltinKind, AutoVocalPlan, AutoVocalStyle, Catalog, Clip, ExportAudioOptions, ExportResult, ExportStemsOptions, ExportStemsResult, F0ModelStatus, Fx, Id, KeysStatus, LibraryFiles, LibraryList, Melody, MelodyChannel, MidiDevice, MidiStatus, MusicAnalysis, Op, OpenResult, PitchAnalysis, PitchTarget, Project, RefTune, MidiBecomes, MidiExportResult, MidiImportArgs, MidiImportResult, MidiInfo, Channel, Note, Pattern, SaveResult, Source, StateDto, TransportDto, PluginInfo, PluginParam, PluginRef, PluginScan, PluginCrashSuspect, RelinkCandidate,
 } from './types';
-import { exportRange, exportSeconds, stemInserts, uniqueFileStems } from '../lib/export';
+import { exportRange, exportSeconds, patternProject, patternSilent, stemInserts, uniqueFileStems } from '../lib/export';
 import { MockUpdates } from './mockUpdates';
 import { MOCK_LV2 } from './mockPlugins';
 import { UNSAFE_PLUGIN } from './types';
@@ -1416,24 +1416,25 @@ export class MockBackend implements Backend {
   }
 
   // ---------- crash recovery (app/src/recovery.rs) ----------
-  /** This session's copy of a project that was never saved. */
-  private recovery: { project: Project; savedMs: number } | null = null;
-  /** Copies left by sessions that "crashed" (see `simulateCrash`). */
-  private orphans = new Map<string, { project: Project; savedMs: number }>();
+  /** This session's snapshot of the unsaved changes; `path`: the project file they belong to. */
+  private recovery: { project: Project; savedMs: number; path: string | null } | null = null;
+  /** Snapshots left by sessions that "crashed" (see `simulateCrash`). */
+  private orphans = new Map<string, { project: Project; savedMs: number; path: string | null }>();
+  /** Like recovery.rs: a snapshot whenever something is unsaved, saved project or not; the project's own file is never written. */
   async recoveryWrite() {
-    if (this.path || this.revision === this.savedRev) { this.recovery = null; return false; }
-    this.recovery = { project: JSON.parse(JSON.stringify(this.p)), savedMs: Date.now() };
+    if (this.revision === this.savedRev) { this.recovery = null; return false; }
+    this.recovery = { project: JSON.parse(JSON.stringify(this.p)), savedMs: Date.now(), path: this.path };
     return true;
   }
   async recoveryList() {
-    return [...this.orphans].map(([id, o]) => ({ id, savedMs: o.savedMs })).sort((a, b) => b.savedMs - a.savedMs);
+    return [...this.orphans].map(([id, o]) => ({ id, savedMs: o.savedMs, ...(o.path ? { project: o.path } : {}) })).sort((a, b) => b.savedMs - a.savedMs);
   }
   async recoveryRestore(id: string) {
     const o = this.orphans.get(id);
     if (!o) throw new Error(`no recovered project \`${id}\``);
     this.orphans.delete(id);
-    this.resetTo(o.project, null);
-    this.revision++; // unsaved changes: Save asks where to put it
+    this.resetTo(o.project, o.path);
+    this.revision++; // unsaved changes: Save writes them to the project (or asks where, for one never saved)
     this.recovery = o;
     this.emit('state', this.dto());
     return { state: this.dto(), warnings: [] };
@@ -1451,14 +1452,15 @@ export class MockBackend implements Backend {
   private exportAbort = false;
   async exportAudio(opts: ExportAudioOptions): Promise<ExportResult> {
     this.exportAbort = false;
-    const { from, to } = exportRange(this.p, opts.useLoop);
+    this.checkExportRange(opts);
+    const { from, to } = exportRange(this.p, opts.useLoop, opts.pattern);
     const tail = opts.format !== 'mp3' && opts.wrapTail ? 0 : opts.tail;
     const secs = exportSeconds(from, to, this.p.bpm, tail);
     const name = (this.path ? this.path.replace(/\.(synkopa|wave)$/i, '') : 'C:\\Users\\michal\\Music\\Song') + (opts.format === 'mp3' ? '.mp3' : '.wav');
     // a short offline bounce with the engine's progress reports, so the dialog's readout and cancel work
     if (!(await this.mockBounce(0, 1, name.split(/[\\/]/).pop()!, from, to, 12))) return { cancelled: true };
     this.emit('export-progress', { done: 1, total: 1, name: '', stage: 'done', frac: 1, beat: to, peak: 0, wave: [] });
-    const silent = this.p.clips.length === 0 || this.p.tracks.every(t => t.muted);
+    const silent = opts.pattern != null ? patternSilent(this.p, opts.pattern) : this.p.clips.length === 0 || this.p.tracks.every(t => t.muted);
     return {
       out: name,
       fromBeat: from,
@@ -1478,13 +1480,14 @@ export class MockBackend implements Backend {
   /** Like the engine: one file per insert with sound (+ Master), the same names, nothing written when cancelled. */
   async exportStems(opts: ExportStemsOptions): Promise<ExportStemsResult> {
     this.exportAbort = false;
-    const { from, to } = exportRange(this.p, opts.useLoop);
+    this.checkExportRange(opts);
+    const { from, to } = exportRange(this.p, opts.useLoop, opts.pattern);
     const format = opts.format ?? 'wav';
     const tail = opts.format !== 'mp3' && opts.wrapTail ? 0 : opts.tail;
     const secs = exportSeconds(from, to, this.p.bpm, tail);
     const jobs = [
       ...(opts.includeMaster ? [{ name: 'Master', master: true }] : []),
-      ...stemInserts(this.p).map(m => ({ name: m.name.trim() || `Insert ${m.id}`, master: false })),
+      ...stemInserts(opts.pattern != null ? patternProject(this.p, opts.pattern) : this.p).map(m => ({ name: m.name.trim() || `Insert ${m.id}`, master: false })),
     ];
     if (!jobs.length) throw new Error('nothing to export: every mixer track is muted or has no sound routed to it');
     const stems = uniqueFileStems(jobs.map(j => j.name));
@@ -1501,6 +1504,12 @@ export class MockBackend implements Backend {
     return { dir, fromBeat: from, toBeat: to, tail, format, files, skipped: [] };
   }
   async exportCancel() { this.exportAbort = true; }
+  /** The checks of lib.rs `export_span`: a pattern export names a pattern that exists and has no wrapped tail. */
+  private checkExportRange(opts: ExportAudioOptions) {
+    if (opts.pattern == null) return;
+    if (opts.format !== 'mp3' && opts.wrapTail) throw new Error('wrap tail is for a loop of the song, not a pattern export');
+    if (!this.p.patterns.some(x => x.id === opts.pattern)) throw new Error('that pattern no longer exists');
+  }
   /** One file of a mock export: prepare, `steps` render reports with a growing waveform, write. False when cancelled. */
   private async mockBounce(done: number, total: number, name: string, from: number, to: number, steps: number): Promise<boolean> {
     const SLICES = 240, wave: number[] = new Array(SLICES).fill(0);

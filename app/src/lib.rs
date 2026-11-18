@@ -795,6 +795,21 @@ async fn recovery_discard(app: St<'_>, id: String) -> R<()> {
     app.recovery.discard(&id)
 }
 
+/// The beat range of an export: pattern `pattern` alone (PAT mode's export, FL Studio's), the
+/// project loop (`use_loop`), or the song. A loop is needed to wrap the tail.
+fn export_span(project: &Project, use_loop: bool, wrap: bool, pattern: Option<u64>) -> R<(f64, f64)> {
+    if let Some(id) = pattern {
+        if wrap {
+            return Err("wrap tail is for a loop of the song, not a pattern export".into());
+        }
+        return Engine::pattern_range(project, id).ok_or_else(|| "that pattern no longer exists".into());
+    }
+    if wrap && (!use_loop || project.loop_range.is_none_or(|l| l.b <= l.a)) {
+        return Err("select a loop to wrap its tail".into());
+    }
+    Ok(Engine::export_range(project, use_loop))
+}
+
 /// Bounce the master mix to a 32-bit float or 16/24-bit PCM stereo WAV, or a CBR MP3 (`format: "mp3"`,
 /// `mp3_kbps` 128/192/256/320, default 320), song or loop + tail.
 ///
@@ -807,6 +822,7 @@ async fn export_audio(
     app: St<'_>,
     handle: AppHandle,
     use_loop: bool,
+    pattern: Option<u64>,
     tail: f64,
     sample_rate: u32,
     format: Option<String>,
@@ -826,11 +842,8 @@ async fn export_audio(
         return Err("tail must be 0, 2 or 8 seconds".into());
     }
     let st = app.engine.state();
-    if wrap && (!use_loop || st.project.loop_range.is_none_or(|l| l.b <= l.a)) {
-        return Err("select a loop to wrap its tail".into());
-    }
-    let (from, to) = Engine::export_range(&st.project, use_loop);
-    let bounce = actions::Bounce { from, to, tail, rate: sample_rate, wrap };
+    let (from, to) = export_span(&st.project, use_loop, wrap, pattern)?;
+    let bounce = actions::Bounce { from, to, tail, rate: sample_rate, wrap, pattern };
     let suggested = st
         .path
         .as_deref()
@@ -876,6 +889,7 @@ async fn export_stems(
     app: St<'_>,
     handle: AppHandle,
     use_loop: bool,
+    pattern: Option<u64>,
     tail: f64,
     sample_rate: u32,
     include_master: bool,
@@ -895,11 +909,8 @@ async fn export_stems(
         return Err("tail must be 0, 2 or 8 seconds".into());
     }
     let project = app.engine.project();
-    if wrap && (!use_loop || project.loop_range.is_none_or(|l| l.b <= l.a)) {
-        return Err("select a loop to wrap its tail".into());
-    }
-    let (from, to) = Engine::export_range(&project, use_loop);
-    let bounce = actions::Bounce { from, to, tail, rate: sample_rate, wrap };
+    let (from, to) = export_span(&project, use_loop, wrap, pattern)?;
+    let bounce = actions::Bounce { from, to, tail, rate: sample_rate, wrap, pattern };
     let Some(dir) = handle.dialog().file().blocking_pick_folder().and_then(|p| p.into_path().ok()) else {
         return Ok(json!({ "cancelled": true }));
     };

@@ -321,14 +321,15 @@ export async function offerRecovery() {
   let list: RecoveredProject[];
   try { list = await be().recoveryList(); } catch { return; }
   for (const r of list) {
-    const a = await confirmRecover(r.savedMs, S.path);
+    const a = await confirmRecover(r.savedMs, S.path, r.project ?? null);
     if (a === 'later') return;
     if (a === 'discard') { await be().recoveryDiscard(r.id).catch(e => say(t('d.act.err', { err: String(e) }))); continue; }
     if (!(await guardUnsaved(t('d.act.guard.open')))) return;
     try {
       const res = await enqueue(() => be().recoveryRestore(r.id));
       acceptReply(res.state); afterProjectLoad();
-      say(res.warnings.length ? t('d.act.openedwarn', { path: t('d.ui.unnamed'), n: res.warnings.length, first: res.warnings[0] }) : t('d.act.recovered'));
+      say(res.warnings.length ? t('d.act.openedwarn', { path: r.project ?? t('d.ui.unnamed'), n: res.warnings.length, first: res.warnings[0] })
+        : r.project ? t('d.act.recoveredNamed', { name: r.project.split(/[\\/]/).pop()! }) : t('d.act.recovered'));
       offerRelink();
     } catch (e) { say(t('d.act.recoverfail', { err: String(e) })); }
     return;

@@ -49,6 +49,38 @@ describe('standard library in the mock', () => {
   });
 });
 
+describe('pattern export in the mock (#125)', () => {
+  const opts = { useLoop: false, tail: 2, sampleRate: 48000 };
+  it('renders the current pattern with an empty Playlist, over the pattern, and leaves the project as it was', async () => {
+    const be = new MockBackend();
+    await be.projectNew();
+    const st = await be.getState();
+    const [kick] = st.project.channels!;
+    const pt = st.project.patterns[0];
+    await be.applyOps([{ op: 'putPattern', pattern: { ...pt, notes: [{ ch: kick.id, step: 0, len: 1, trig: true }] } }]);
+    const before = (await be.getState()).project;
+    expect(before.clips).toEqual([]);
+    const song = await be.exportAudio({ ...opts, format: 'wav', wavBits: 32 });
+    if (song.cancelled) throw new Error('cancelled');
+    expect(song.stats.silent).toBe(true); // what the issue saw: Song of an empty Playlist
+    const r = await be.exportAudio({ ...opts, pattern: pt.id, format: 'wav', wavBits: 32 });
+    if (r.cancelled) throw new Error('cancelled');
+    expect(r.stats.silent).toBe(false);
+    expect([r.fromBeat, r.toBeat]).toEqual([0, 4]);
+    expect((await be.getState()).project).toEqual(before);
+    // the starter kit plays into its own inserts: the kick's is a stem of the pattern
+    const stems = await be.exportStems({ ...opts, pattern: pt.id, includeMaster: false });
+    if (stems.cancelled) throw new Error('cancelled');
+    expect(stems.files.map(f => f.name)).toContain('Kick');
+  });
+  it('refuses a wrapped tail or a pattern that is gone', async () => {
+    const be = new MockBackend();
+    await expect(be.exportAudio({ ...opts, pattern: 999_999, format: 'wav' })).rejects.toThrow(/no longer exists/);
+    const pt = (await be.getState()).project.patterns[0];
+    await expect(be.exportAudio({ ...opts, pattern: pt.id, format: 'wav', wrapTail: true })).rejects.toThrow(/wrap/);
+  });
+});
+
 describe('stem export in the mock', () => {
   const opts = { useLoop: false, tail: 2, sampleRate: 48000, includeMaster: true };
   const done = (r: ExportStemsResult) => { if (r.cancelled) throw new Error('cancelled'); return r; };

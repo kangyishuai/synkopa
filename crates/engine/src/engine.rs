@@ -2255,8 +2255,8 @@ impl Engine {
 
     /// Writes the current project to `path` without making it the project's file: the
     /// path, the dirty flag and the sources stay as they are (recordings stay in the
-    /// scratch folder, paths are absolute). Crash recovery uses it for projects that
-    /// were never saved.
+    /// scratch folder, paths are absolute). Crash recovery uses it: the autosave never
+    /// writes over the project's own file.
     pub fn save_copy(&self, path: &Path) -> Result<(), EngineError> {
         let mut c = self.core.lock();
         self.snapshot_plugin_states(&mut c.project);
@@ -2289,9 +2289,16 @@ impl Engine {
     /// Opens a copy written by [`Engine::save_copy`] as an unsaved project with unsaved
     /// changes: Save asks where to put it instead of overwriting the copy.
     pub fn open_recovered(&self, path: &Path) -> Result<Vec<String>, EngineError> {
+        self.open_recovered_for(path, None)
+    }
+
+    /// [`Self::open_recovered`] of a copy of the project saved at `file`: the project is that
+    /// file again, with the copy's changes unsaved, so Save writes them there and closing asks
+    /// first. `None`: a project that was never saved (Save asks where to put it).
+    pub fn open_recovered_for(&self, path: &Path, file: Option<&Path>) -> Result<Vec<String>, EngineError> {
         let warnings = self.open(path)?;
         let mut c = self.core.lock();
-        c.path = None;
+        c.path = file.map(Path::to_path_buf);
         c.revision += 1;
         self.changed(c);
         Ok(warnings)
@@ -2460,11 +2467,45 @@ impl Engine {
         cancel: &AtomicBool,
         progress: &mut dyn FnMut(RenderProgress),
     ) -> Result<Vec<f32>, EngineError> {
-        let scope = move |p: Project| match stem {
-            Some(id) => stem_project(p, id),
-            None => p,
+        self.render_bounce(stem, None, from, to, tail, sample_rate, cancel, progress)
+    }
+
+    /// [`Self::render_export_with`] of one pattern alone (`pattern`: FL Studio's pattern export,
+    /// what PAT mode plays) or of the song (`None`). See [`pattern_project`] for what a pattern
+    /// bounce hears; [`Self::pattern_range`] is its range. The project itself is not changed.
+    #[allow(clippy::too_many_arguments)]
+    pub fn render_bounce(
+        &self,
+        stem: Option<Id>,
+        pattern: Option<Id>,
+        from: f64,
+        to: f64,
+        tail: RenderTail,
+        sample_rate: u32,
+        cancel: &AtomicBool,
+        progress: &mut dyn FnMut(RenderProgress),
+    ) -> Result<Vec<f32>, EngineError> {
+        if let Some(id) = pattern {
+            if !self.core.lock().project.patterns.iter().any(|p| p.id == id) {
+                return Err(EngineError::Msg(format!("no pattern {id}")));
+            }
+        }
+        let scope = move |p: Project| {
+            let p = match pattern {
+                Some(id) => pattern_project(p, id),
+                None => p,
+            };
+            match stem {
+                Some(id) => stem_project(p, id),
+                None => p,
+            }
         };
         self.render_scoped(&scope, from, to, tail, sample_rate, cancel, progress)
+    }
+
+    /// Beat range of a pattern export: the whole pattern from its first beat (`None`: no such pattern).
+    pub fn pattern_range(project: &Project, pattern: Id) -> Option<(f64, f64)> {
+        project.patterns.iter().find(|p| p.id == pattern).map(|p| (0.0, p.len.max(BAR_BEATS)))
     }
 
     /// Renders what `scope` makes of the current project (a stem, the selected clips alone …).
@@ -3753,6 +3794,62 @@ fn fresh_path(dir: &Path, stem: &str) -> PathBuf {
         p = dir.join(format!("{stem} ({k}).wav"));
         k += 1;
     }
+    p
+}
+
+/// The project as a pattern export hears it, like PAT mode plays it: pattern `id` once from beat 0
+/// and nothing else of the arrangement (no other clip, no automation clip, no take). Its channels play
+/// into their own inserts, or the master when they have none, never through a playlist track's insert.
+pub fn pattern_project(mut p: Project, id: Id) -> Project {
+    let len = p.patterns.iter().find(|x| x.id == id).map_or(BAR_BEATS, |x| x.len.max(BAR_BEATS));
+    p.clips.clear();
+    p.comps.clear();
+    p.loop_range = None;
+    if p.tracks.is_empty() {
+        p.tracks.push(Track {
+            id: 1,
+            name: "Pattern".into(),
+            color: "#4f8ef7".into(),
+            muted: false,
+            solo: false,
+            arm: false,
+            vol: VOL_UNITY,
+            h: 56.0,
+            insert: 0,
+            icon: None,
+        });
+    }
+    for (i, t) in p.tracks.iter_mut().enumerate() {
+        t.solo = false;
+        if i == 0 {
+            t.muted = false;
+            t.vol = VOL_UNITY;
+            t.insert = 0;
+        }
+    }
+    let cid = p.alloc_id();
+    p.clips.push(Clip {
+        id: cid,
+        track: 0,
+        start: 0.0,
+        len,
+        offset: 0.0,
+        kind: ClipKind::Pat,
+        source: id,
+        muted: false,
+        gain: 0.0,
+        fade_in: 0.0,
+        fade_out: 0.0,
+        pan: 0.0,
+        norm: false,
+        rev: false,
+        tune: None,
+        stretch: 1.0,
+        resample: false,
+        pitch: 0.0,
+        insert: None,
+        root: crate::model::CLIP_ROOT,
+    });
     p
 }
 

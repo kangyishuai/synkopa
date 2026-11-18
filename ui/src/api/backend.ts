@@ -173,12 +173,12 @@ export interface Backend {
   /** `version`: save beside the current file as the next `Name_N` and continue there (FL's save new version); a project never saved asks for a name. */
   projectSave(saveAs?: boolean, version?: boolean): Promise<SaveResult>;
   projectExportZip(ifRevision: number): Promise<SaveResult>;
-  /** Autosave tick for a project that was never saved: keeps its crash-recovery copy current
-   *  (removes it once the project has a file or nothing unsaved). True when a copy was written. */
+  /** Autosave tick: keeps the crash-recovery snapshot of the unsaved changes current, saved project
+   *  or not, without touching the project's file (removes it once nothing is unsaved). True when written. */
   recoveryWrite(): Promise<boolean>;
   /** Unsaved projects left behind by a Synkopa that crashed or was killed, newest first. */
   recoveryList(): Promise<RecoveredProject[]>;
-  /** Opens a recovered project as an unsaved project (Save asks where to put it). */
+  /** Opens a recovered project with its changes unsaved: as its own file again (Save writes there), or untitled. */
   recoveryRestore(id: string): Promise<{ state: StateDto; warnings: string[] }>;
   /** Deletes a recovered project the user does not want. */
   recoveryDiscard(id: string): Promise<void>;
