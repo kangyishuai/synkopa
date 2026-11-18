@@ -1211,7 +1211,12 @@ impl Engine {
                 clip_ids.push(cid);
             }
         }
-        push_undo(&mut c, before);
+        // An undo step only when the import placed clips. A file loaded for something else (a sampler
+        // channel, a replaced sample) is undone with that edit: on its own it was a step that changed
+        // nothing you could see, and Ctrl+Z after dropping a sample on the rack took two presses.
+        if !clip_ids.is_empty() {
+            push_undo(&mut c, before);
+        }
         c.revision += 1;
         self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
         self.changed(c);

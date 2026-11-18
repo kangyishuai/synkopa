@@ -818,3 +818,21 @@ fn an_audio_clip_plays_from_its_keyboard_relative_to_its_root() {
     assert!(e.apply(&[Op::PutClips { clips: vec![clip(128, 0.0)] }], false, None).is_err());
     assert!(e.preview_clip_key(999, 60, 1.0).is_err());
 }
+
+#[test]
+fn a_file_loaded_for_a_sampler_is_not_an_undo_step_of_its_own() {
+    let e = Engine::new(Project::empty(), Arc::new(NoPlugins));
+    let clips_before = e.project().clips.len();
+    // loaded for a sampler channel or a replaced sample: nothing to place, nothing to undo
+    let (srcs, clips) = e.import_audio(&[two_level_wav("noundo-a")], None).unwrap();
+    assert!(clips.is_empty());
+    assert!(!e.undo(), "an import that placed no clip must not add an undo step");
+    assert!(e.project().sources.iter().any(|s| s.id == srcs[0]), "the source stays for the edit that uses it");
+    // placed on a track it is one step, undone together with its clip
+    let (_, clips) = e.import_audio(&[two_level_wav("noundo-b")], Some((0, 0.0))).unwrap();
+    assert_eq!(clips.len(), 1);
+    assert_eq!(e.project().clips.len(), clips_before + 1);
+    assert!(e.undo());
+    assert_eq!(e.project().clips.len(), clips_before);
+    assert!(!e.undo(), "one import, one step");
+}

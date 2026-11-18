@@ -477,7 +477,7 @@ const shortcuts = (): [string, string][] => [
   [t('a.sc.85'), t('a.sc.86')],
   ['Velocity', t('a.sc.87')],
   [t('a.sc.88'), 'P · B · E · D'],
-  [t('a.sc.89'), '↑ ↓ · Ctrl + ↑ ↓'],
+  [t('a.sc.89'), 'Shift + ↑ ↓ · Ctrl + ↑ ↓'],
   [t('a.sc.90'), 'Ctrl+B'],
   [t('a.sc.91'), 'Ctrl+C · X · V'],
   [t('a.sc.112'), t('a.sc.113')],
