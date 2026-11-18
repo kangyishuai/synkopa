@@ -1061,7 +1061,9 @@ fn build_output(
         };
     }
     let s = match fmt {
-        cpal::SampleFormat::F32 => stream!(f32, |x: f32| x),
+        // Clipped at full scale like every fixed-point export: a float device would pass overs on to
+        // the OS mixer, whose own limiter (WASAPI shared mode) hides distortion the bounce has.
+        cpal::SampleFormat::F32 => stream!(f32, |x: f32| x.clamp(-1.0, 1.0)),
         cpal::SampleFormat::I16 => stream!(i16, |x: f32| (x.clamp(-1.0, 1.0) * 32767.0) as i16),
         cpal::SampleFormat::I32 => stream!(i32, |x: f32| (x.clamp(-1.0, 1.0) as f64 * 2147483647.0) as i32),
         cpal::SampleFormat::U16 => stream!(u16, |x: f32| ((x.clamp(-1.0, 1.0) * 32767.0) as i32 + 32768) as u16),

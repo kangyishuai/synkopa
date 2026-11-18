@@ -274,6 +274,8 @@ a { color: var(--blue); }
 .strip .mute { width: 22px; }
 .meter { position: relative; width: 4px; border-radius: 1px; overflow: hidden; background: linear-gradient(0deg, #3f9e72, #4ec08a 62%, #f0c25a 88%, #e05263 97%); }
 .meter > div { position: absolute; left: 0; right: 0; top: 0; height: 100%; background: var(--bg0); transform-origin: top; }
+.clipcap { align-self: center; min-width: 30px; height: 14px; margin: 2px 0 1px; padding: 0 4px; border: 1px solid var(--line); border-radius: 3px; background: transparent; color: var(--fg6); font: 700 8px var(--mono); cursor: default; }
+.clipcap.on { border-color: var(--red); background: var(--red); color: #fff; cursor: pointer; }
 .fader { position: relative; width: 24px; margin-left: 4px; cursor: ns-resize; touch-action: none; }
 .fader .fslot { position: absolute; left: 11px; top: 7px; bottom: 7px; width: 2px; background: var(--bg0); border-radius: 1px; }
 .fader .unity { position: absolute; left: 3px; right: 3px; height: 1px; background: var(--fg6); }
@@ -685,6 +687,17 @@ select option { background: var(--bg4); color: var(--fg); }
 .tbmid { min-width: 0; display: flex; align-items: center; gap: 8px; overflow: hidden; }
 .tbmid > * { flex-shrink: 0; }
 .mainvol { display: flex; align-items: center; height: 30px; padding: 0 3px; }
+.masterout { display: flex; align-items: center; justify-content: center; min-width: 38px; height: 28px; box-sizing: border-box; padding: 0 4px; border: 1px solid transparent; border-radius: 5px; background: transparent; cursor: default; }
+.masterout .mobars { position: relative; display: flex; flex-direction: column; gap: 2px; width: 30px; }
+/* clipped, the readout takes the bars' place: the bar keeps its width budget (toolbar_fit) */
+.masterout.clip .mobars { display: none; }
+/* green, yellow from −6 dB, red only past 0 dBFS (the --full tick): the meter's red means clipping */
+.masterout .mobar { position: relative; height: 4px; border-radius: 1px; overflow: hidden; background: linear-gradient(90deg, #3f9e72, #4ec08a 70%, #f0c25a 82%, #f0c25a calc(var(--full) * 100%), #e05263 calc(var(--full) * 100%)); }
+.masterout .mobar > span { position: absolute; inset: 0; background: var(--bg0); transform-origin: right; transform: scaleX(1); }
+.masterout .mobars::after { content: ''; position: absolute; left: calc(var(--full) * 100%); top: -2px; bottom: -2px; width: 1px; background: var(--fg5); }
+.masterout.clip { border-color: var(--red); background: var(--red); cursor: pointer; }
+.masterout.clip:hover { filter: brightness(1.12); }
+.masterout .moclip { font: 700 10px var(--mono); color: #fff; letter-spacing: 0.02em; white-space: nowrap; }
 .tbright { min-width: 0; align-self: stretch; display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
 .tbright .dragfill { flex: 1 1 0; min-width: 0; align-self: stretch; }
 /* one height for every control in the bar */
@@ -695,22 +708,24 @@ select option { background: var(--bg4); color: var(--fg); }
 /* One row, like FL Studio's bar. As the window narrows, the least needed controls step aside
    in this order, never half-clipped (perf/toolbar_fit.mjs checks it). Each stays reachable: loop on the
    timeline, BPM label/TAP in the tempo's right-click menu and keys, transport toggles and
-   panels in the View menu (F5-F9), tools on their keys (T C E), Ask on F1. */
+   panels in the View menu (F5-F9), tools on their keys (T C E), Ask on F1. The master output
+   meter never steps aside: the widths leave room for it with its clip readout. */
 .toolbar { container: toolbar / inline-size; }
-@container toolbar (max-width: 1740px) { .toolbar .loopText { display: none; } }
-@container toolbar (max-width: 1630px) { .toolbar .clockbox .tag9, .toolbar .typoct { display: none; } }
-@container toolbar (max-width: 1600px) { .toolbar .count, .toolbar .monbtn { display: none; } }
-@container toolbar (max-width: 1520px) { .toolbar .metrobtn, .toolbar .typkb, .toolbar .hinttxt { display: none; } }
-@container toolbar (max-width: 1450px) { .toolbar .panelbtn { display: none; } }
-@container toolbar (max-width: 1300px) { .toolbar .tapbtn, .toolbar .mainvol, .toolbar .projName { display: none; } }
-@container toolbar (max-width: 1230px) {
+@container toolbar (max-width: 1812px) { .toolbar .loopText { display: none; } }
+@container toolbar (max-width: 1702px) { .toolbar .clockbox .tag9, .toolbar .typoct { display: none; } }
+@container toolbar (max-width: 1672px) { .toolbar .count, .toolbar .monbtn { display: none; } }
+@container toolbar (max-width: 1592px) { .toolbar .metrobtn, .toolbar .typkb, .toolbar .hinttxt { display: none; } }
+@container toolbar (max-width: 1522px) { .toolbar .panelbtn { display: none; } }
+@container toolbar (max-width: 1372px) { .toolbar .tapbtn, .toolbar .mainvol, .toolbar .projName { display: none; } }
+@container toolbar (max-width: 1302px) {
   .toolbar .tools > button:nth-child(n+4), .toolbar .patselnew { display: none; }
   .toolbar .patselbtn { min-width: 80px; max-width: 120px; }
   .toolbar .snapsel { width: 80px; }
   .tbmid, .tbright { gap: 5px; }
 }
-@container toolbar (max-width: 1080px) { .toolbar .askbtn { display: none; } .toolbar .clockbox { gap: 6px; padding: 0 7px; } .toolbar .patselbtn { min-width: 64px; max-width: 96px; } }
-@container toolbar (max-width: 1050px) { .toolbar .tools { display: none; } }
+@container toolbar (max-width: 1152px) { .toolbar .askbtn { display: none; } .toolbar .clockbox { gap: 6px; padding: 0 7px; } .toolbar .patselbtn { min-width: 64px; max-width: 96px; } }
+@container toolbar (max-width: 1122px) { .toolbar .tools { display: none; } }
+@container toolbar (max-width: 1000px) { .toolbar .masterout .cliplbl { display: none; } }
 /* (the bar's own columns follow the window: a container query cannot style its container) */
 @media (max-width: 1070px) { .toolbar { grid-template-columns: minmax(170px, 1fr) minmax(0, auto) minmax(max-content, 1fr); column-gap: 10px; } }
 .winbtns > button { width: 46px; border: 0; background: transparent; color: var(--fg2); cursor: default; display: flex; align-items: center; justify-content: center; padding: 0; }
