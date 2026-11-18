@@ -81,7 +81,13 @@ export function paramMenu(x: number, y: number, target: AutoTarget, reset: (() =
   const label = targetLabel(S.project, S.catalog, target, opts?.paramLabel);
   // typing needs the value in the project (a hosted plugin keeps its own) and a control that is not driven by a clip
   const cur = readTarget(S.project, target);
-  const canType = cur != null && writeTargetOps(S.project, target, cur) != null;
+  // … and a value whose text reads back as itself: a choice ("Off"), a beat fraction ("3/4 beat") or a
+  // centred pan ("C") would be parsed as something else, or not at all. An audio clip's gain and pan
+  // are shared by every clip of its sample (the knob sees to that), which one clip's op would break.
+  const shown = cur == null ? null : normalize(S.project, S.catalog, target, cur);
+  const back = shown == null ? null : parseAutoValue(S.project, S.catalog, target, autoValueText(S.project, S.catalog, target, shown).replace(/−/g, '-'));
+  const canType = cur != null && target.kind !== 'clipGain' && target.kind !== 'clipPan'
+    && back != null && Math.abs(back - shown!) < 0.02 && writeTargetOps(S.project, target, cur) != null;
   const typeIn = () => {
     const now = readTarget(S.project, target); if (now == null) return;
     const text = autoValueText(S.project, S.catalog, target, normalize(S.project, S.catalog, target, now));

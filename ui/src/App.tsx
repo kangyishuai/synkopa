@@ -199,7 +199,7 @@ function onKey(e: KeyboardEvent) {
   const clipKey = (m && !e.altKey && 'abdcxv'.includes(k) && k.length === 1) || e.key === 'Delete' || e.key === 'Backspace' || (e.shiftKey && e.key.startsWith('Arrow')) || (e.altKey && !m && e.code === 'KeyM');
   if (clipKey && (U.mixView || clipKeysBlocked())) {
     e.preventDefault(); // also stops Ctrl+D / Ctrl+B reaching the browser (bookmarks)
-    if (!U.mixView && U.sel.length && (e.key === 'Delete' || e.key === 'Backspace' || (m && 'xvb'.includes(k)))) say(tl('a.app.clipKeysAway'));
+    if (!U.mixView && (U.sel.length || (m && (k === 'v' || k === 'a')))) say(tl('a.app.clipKeysAway'));
     return;
   }
   if (m && k === 'a') { e.preventDefault(); return A.selectAll(); }
@@ -244,6 +244,14 @@ const onKeyUp = (e: KeyboardEvent) => {
 const onBlur = () => { if (U.alt) setU('alt', false); releaseAll(); };
 
 export function App() {
+  // Clips selected by something other than a press in the Playlist (Automate from a mixer fader, a
+  // dropped file, a finished take) are what the user now looks at: the clip keys go back to them
+  let selSeen = U.sel.join(',');
+  createEffect(() => {
+    const s = U.sel.join(',');
+    if (s !== selSeen && s) clipKeysAway = null;
+    selSeen = s;
+  });
   onMount(() => {
     startMidi();
     // the gear in a plugin window's header: Synkopa's own window for that plugin channel or effect

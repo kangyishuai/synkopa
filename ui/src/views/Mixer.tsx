@@ -239,7 +239,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   };
   return (
     <div class="strip" data-ins={m().id} onPointerDown={select}
-      classList={{ on: U.mixSel === m().id, multi: U.mixMulti.includes(m().id) && U.mixSel !== m().id, dimmed: !audible(), 'rt-ok': dropHere() === 'ok', 'rt-no': dropHere() === 'no', 'rt-to': sendsHere() }}>
+      classList={{ on: U.mixSel === m().id, multi: U.mixSel !== m().id && A.selectedInserts().includes(m().id), dimmed: !audible(), 'rt-ok': dropHere() === 'ok', 'rt-no': dropHere() === 'no', 'rt-to': sendsHere() }}>
       <div class="bar" style={{ background: m().color }} />
       {/* one row: the insert's number and name (a default "Insert 7" is just its number), the effect count on the right */}
       <div class="nmrow" title={tName(label().full) + ' — ' + tr('c.mix.nameTip')} onDblClick={rename}>
@@ -490,7 +490,7 @@ function RouteLane() {
     if (e.button === 2) { e.preventDefault(); return cableMenu(e.clientX, e.clientY, from, to); }
     if (e.button !== 0) return;
     e.preventDefault();
-    if (dblCheck('rt' + from + ':' + to)) { const op = sendGainOp(from, to, 1); if (op) commit([op], tr('c.rt.undoLevel')); return say(levelText(from, to, 1)); }
+    if (e.altKey || dblCheck('rt' + from + ':' + to)) { const op = sendGainOp(from, to, 1); if (op) commit([op], tr('c.rt.undoLevel')); return say(levelText(from, to, 1)); }
     const g = new Gesture(tr('c.rt.undoLevel'));
     let v = sendsOf(S.project.inserts.find(m => m.id === from)!).find(s => s.to === to)?.gain ?? 1, ly = e.clientY;
     track(ev => {

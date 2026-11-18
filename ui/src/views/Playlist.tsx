@@ -1434,7 +1434,7 @@ function LaneHeader(props: { t: Track; i: number }) {
     if (e.button === 2) { e.preventDefault(); e.stopPropagation(); paramMenu(e.clientX, e.clientY, volTarget(), () => A.setTrack(props.i, { vol: VOL_UNITY }, tl('a.pl.volume')), t().color); return; }
     if (e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
-    if (dblCheck('lvol' + props.i)) { A.setTrack(props.i, { vol: VOL_UNITY }, tl('a.pl.volume')); say(t().name + ' · 0.0 dB'); return; }
+    if (e.altKey || dblCheck('lvol' + props.i)) { A.setTrack(props.i, { vol: VOL_UNITY }, tl('a.pl.volume')); say(t().name + ' · 0.0 dB'); return; }
     const w = (e.currentTarget as HTMLElement).getBoundingClientRect().width;
     const g = new Gesture(tl('a.pl.trackVolume'));
     let v = t().vol, lx = e.clientX;

@@ -78,7 +78,7 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
     if (e.button === 2) { e.preventDefault(); paramMenu(e.clientX, e.clientY, target('g'), resetGain, col()); return; }
     if (e.button !== 0) return;
     e.preventDefault();
-    if (dblCheck('eqfader' + fxId() + i())) { resetGain(); return; }
+    if (e.altKey || dblCheck('eqfader' + fxId() + i())) { resetGain(); return; }
     const h = Math.max(40, slot.getBoundingClientRect().height), r0 = range();
     let v = b().g, ly = e.clientY;
     const g = new Gesture(tr('c.eq.gain'));
@@ -155,7 +155,7 @@ function OutStrip(props: { fx: Fx }) {
     if (e.button === 2) { e.preventDefault(); paramMenu(e.clientX, e.clientY, target(), reset); return; }
     if (e.button !== 0) return;
     e.preventDefault();
-    if (dblCheck('eqout' + props.fx.id)) { reset(); return; }
+    if (e.altKey || dblCheck('eqout' + props.fx.id)) { reset(); return; }
     const h = Math.max(40, slot.getBoundingClientRect().height);
     let v = val(), ly = e.clientY;
     const g = new Gesture(label());

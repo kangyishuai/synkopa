@@ -393,9 +393,13 @@ function Roll(props: { z: number; docked?: boolean }) {
     if (key == null || !prefs().noteAudition) return;
     if (S.transport.rec) { audition(ch().id, key, vel); return; }
     held = { ch: ch().id, key };
-    be().typingNote({ ch: ch().id, key, vel, on: true }).catch(err => { held = null; console.warn(err); });
+    const mine = held;
+    be().typingNote({ ch: ch().id, key, vel, on: true }).catch(err => { if (held === mine) held = null; console.warn(err); });
   };
-  onCleanup(() => holdNote(null));
+  // the button can be let go over another app (Alt+Tab mid-drag): no pointerup arrives here, so let go on blur
+  const dropHeld = () => holdNote(null);
+  window.addEventListener('blur', dropHeld);
+  onCleanup(() => { window.removeEventListener('blur', dropHeld); holdNote(null); });
   const ctx: RollCtx = {
     pt: () => pt(), ch: () => unwrap(ch()), notes: notesRaw, chanNotes: () => chanNotes(), chans: chansMap,
     geo, snap: () => rollSnap(),
@@ -569,7 +573,8 @@ function Roll(props: { z: number; docked?: boolean }) {
     // Ctrl+Shift+X: cut the selection out to a new pattern, in place (the playlist keeps it)
     if (m && e.shiftKey && k === 'x') { stop(); if (s.length) moveSelToPattern(); else say(t('b.pe.noSel')); return; }
     if (m && (k === 'c' || k === 'x') && !e.shiftKey) {
-      stop(); const w = orAll(); if (!w.length) return;
+      // copy takes every note when nothing is selected (FL); cut only ever removes a selection
+      stop(); const w = k === 'x' ? s : orAll(); if (!w.length) { if (k === 'x') say(t('b.pe.noSel')); return; }
       setNoteClip(w.map(i => notesRaw()[i]));
       if (k === 'x') { const del = new Set(w); commitNotes(notesRaw().filter((_, i) => !del.has(i)), t('b.pe.cutNotes')); setSel(new Set<number>()); }
       say(t(k === 'x' ? 'b.pe.cutX' : 'b.pe.copiedX', { x: notesText(w.length) }));
@@ -614,8 +619,9 @@ function Roll(props: { z: number; docked?: boolean }) {
       commitNotes(nudgeNotes(notesRaw(), w, (e.key === 'ArrowLeft' ? -1 : 1) * (rollSnap() || 1 / 32)), t('b.pe.gestMove'));
       return;
     }
+    // Delete only ever removes a selection: F7 then Delete, meant for a clip in the Playlist, must not empty the channel
     if (e.key === 'Delete' || e.key === 'Backspace') {
-      stop(); const w = orAll(); if (!w.length) return;
+      stop(); const w = s; if (!w.length) { say(t('b.pe.noSel')); return; }
       const del = new Set(w);
       commitNotes(notesRaw().filter((_, i) => !del.has(i)), t('b.pe.gestDelNotes')); setSel(new Set<number>());
       say(t('b.pe.deleted', { x: notesText(w.length) }));

@@ -559,8 +559,10 @@ export const addTrack = () => insertTrack(S.project.tracks.length);
 export function moveTrack(i: number, d: -1 | 1) {
   const ops = swapTrackOps(plain(S.project), i, i + d);
   if (!ops.length) return;
+  const a = S.project.tracks[i].id, b = S.project.tracks[i + d].id, open = { a: U.takesOpen[a], b: U.takesOpen[b] };
   commit(ops, t('d.act.op.movetrack'));
-  // the selection is by clip id and follows; the takes panel is keyed by slot id, so it trades places too
+  // ids stay with their slots, so what is keyed by a slot's id trades places with the lanes: the open take lanes
+  setU('takesOpen', { ...U.takesOpen, [a]: open.b, [b]: open.a });
   say(t(d < 0 ? 'd.act.trackUp' : 'd.act.trackDown', { name: S.project.tracks[i + d]?.name ?? '' }));
 }
 
@@ -574,20 +576,30 @@ export function setInsert(id: Id, patch: Partial<Insert>, label = t('d.act.mixer
 export function selectInsert(id: Id) {
   const m = S.project.inserts.find(x => x.id === id);
   // a plain click on a strip outside the group drops the group; inside it, the group stays (to drag its faders)
-  const group = selectedInserts();
-  if (group.length > 1) setU('mixMulti', group.includes(id) ? group.filter(x => x !== id) : []);
-  else if (U.mixMulti.length) setU('mixMulti', []);
+  if (U.mixMulti.length && !U.mixMulti.includes(id)) setU('mixMulti', []);
   if (m && U.mixSel !== id) setU({ mixSel: id, fxSel: m.fx[0]?.id ?? null });
 }
-/** The selected mixer strips: the current one first, then the ones added with Ctrl+Shift+click. */
+/**
+ * The selected mixer strips: the current one first, then the rest of its group (Ctrl+Shift+click).
+ * `mixMulti` holds every member of the group, and the group only counts while the current strip is
+ * one of them: when something else moves the selection (a rack channel followed to its insert, an
+ * effect opened), that strip is alone and never drags a stale group with it.
+ */
 export function selectedInserts(): Id[] {
   const ids = new Set(S.project.inserts.map(m => m.id));
-  return [U.mixSel, ...U.mixMulti.filter(id => id !== U.mixSel && ids.has(id))];
+  const g = U.mixMulti.filter(id => ids.has(id));
+  return g.length > 1 && g.includes(U.mixSel) ? [U.mixSel, ...g.filter(id => id !== U.mixSel)] : [U.mixSel];
 }
 /** Ctrl+Shift+click on a strip (FL): add it to the selection, or take it out. */
 export function toggleInsertSelected(id: Id) {
-  if (id === U.mixSel) { const rest = selectedInserts().slice(1); if (rest.length) setU({ mixSel: rest[0], mixMulti: rest.slice(1) }); return; }
-  setU('mixMulti', U.mixMulti.includes(id) ? U.mixMulti.filter(x => x !== id) : [...U.mixMulti, id]);
+  const cur = selectedInserts();
+  if (!cur.includes(id)) setU('mixMulti', [...cur, id]);
+  else {
+    const rest = cur.filter(x => x !== id);
+    if (!rest.length) return; // the only selected strip stays selected
+    const next = S.project.inserts.find(m => m.id === rest[0]);
+    setU({ mixMulti: rest.length > 1 ? rest : [], ...(id === U.mixSel ? { mixSel: rest[0], fxSel: next?.fx[0]?.id ?? null } : {}) });
+  }
   say(t('d.act.stripsSel', { n: selectedInserts().length }));
 }
 export function addInsert() {
