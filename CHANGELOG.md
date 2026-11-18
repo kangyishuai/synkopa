@@ -7,6 +7,14 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Auto vocal from the command line.** `synkopa auto-vocal --clip N` measures a vocal take and puts
+  the tuned chain on its mixer insert in one call — the same chain the app's Auto vocal button
+  builds (pitch correction, vocal rider rendered into the audio, compressors, de-esser, reverb,
+  limiter), with `--style hard` for rap tuning, `--beat-clip` to take key and level from the
+  beat, and `--plan` to only print the proposal. It works without the app open
+  (`synkopa -p song.synkopa …`), so scripts and agents can tune vocals too. `synkopa f0-model --install`
+  downloads the RMVPE pitch model (after printing its licence note) and switches the pitch
+  detector to it.
 - **Add a playlist sound to the Channel Rack from its clip.** Dragging a sample into the Playlist
   plays it there directly (as before, without a rack entry); the audio clip's menu now offers
   "Add as sampler channel" to put the same sound on the rack and the keyboard in one click. The

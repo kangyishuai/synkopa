@@ -93,6 +93,9 @@ impl actions::Host for App {
     fn model_error(&self) -> Option<String> {
         self.model_error.lock().clone()
     }
+    fn set_model_error(&self, e: Option<String>) {
+        *self.model_error.lock() = e;
+    }
     fn wait_keys(&self) -> R<()> {
         keys::wait(self);
         Ok(())
@@ -355,7 +358,8 @@ async fn auto_vocal_plan(
 #[tauri::command]
 async fn bake_rider(app: St<'_>, clip_id: u64, params: std::collections::BTreeMap<String, f64>) -> R<Value> {
     let e = app.engine.clone();
-    let (source, clip) = tauri::async_runtime::spawn_blocking(move || e.bake_rider(clip_id, &params)).await.map_err(es)?.map_err(es)?;
+    let (source, clip) =
+        tauri::async_runtime::spawn_blocking(move || e.bake_rider(clip_id, &params, None)).await.map_err(es)?.map_err(es)?;
     Ok(json!({ "sourceId": source, "clipId": clip }))
 }
 
