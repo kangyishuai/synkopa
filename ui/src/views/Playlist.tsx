@@ -105,6 +105,9 @@ const EDGE_IN = 8, EDGE_OUT = 6;
 /** A take lane under a track. `cb` = comp beat under the pointer. */
 interface LaneHit extends TakeRow { ti: number; k: number; take: Take; cb: number }
 
+/** The shortest and tallest a lane gets (Alt+wheel, the vertical zoom scrollbar). */
+const LANE_H_MIN = 28, LANE_H_MAX = 220;
+
 export function Playlist() {
   let scrollEl!: HTMLDivElement, gridEl!: HTMLDivElement, gridCv!: HTMLCanvasElement, fadeCv!: HTMLCanvasElement, rulerCv!: HTMLCanvasElement;
   let phGrid!: HTMLDivElement, phRuler!: HTMLDivElement;
@@ -446,7 +449,7 @@ export function Playlist() {
     } else if (e.altKey) {
       e.preventDefault();
       const d = e.deltaY < 0 ? 6 : -6;
-      wheelEdit('heights', tl('a.pl.trackHeights'), S.project.tracks.map(t => ({ op: 'putTrack', track: { ...plain(t), h: clamp(t.h + d, 28, 220) } }) as Op));
+      wheelEdit('heights', tl('a.pl.trackHeights'), S.project.tracks.map(t => ({ op: 'putTrack', track: { ...plain(t), h: clamp(t.h + d, LANE_H_MIN, LANE_H_MAX) } }) as Op));
     }
   };
 
@@ -1311,6 +1314,22 @@ export function Playlist() {
     scrollEl.scrollLeft = Math.max(0, r.pos * bw);
     syncScroll();
   };
+  // FL: the vertical scrollbar zooms the lanes too — drag it to scroll, drag an end to make every
+  // lane taller or shorter (they keep their proportions), Ctrl+wheel over it zooms. Its unit is the
+  // average lane, so a position stays put while the lanes change height. Heights are view state
+  // (no undo step), like Alt+wheel.
+  const laneAvg = () => { const t = S.project.tracks; return t.length ? t.reduce((a, x) => a + x.h, 0) / t.length : 56; };
+  const vRange = (): ZRange => { const a = laneAvg(); return { pos: scroll().y / a, len: ch() / a }; };
+  const vLimits = () => { const a = laneAvg(); return { total: Math.max(gridH() + 40, ch()) / a, minLen: ch() / LANE_H_MAX, maxLen: ch() / LANE_H_MIN }; };
+  const setV = (r: ZRange) => {
+    const a = laneAvg(), want = clamp(ch() / r.len, LANE_H_MIN, LANE_H_MAX);
+    if (S.project.tracks.length && Math.abs(want - a) > 0.25) {
+      const f = want / a;
+      wheelEdit('heights', tl('a.pl.trackHeights'), S.project.tracks.map(t => ({ op: 'putTrack', track: { ...plain(t), h: clamp(t.h * f, LANE_H_MIN, LANE_H_MAX) } }) as Op));
+    }
+    const place = () => { scrollEl.scrollTop = Math.max(0, r.pos * laneAvg()); syncScroll(); };
+    place(); requestAnimationFrame(place); // the taller lanes are laid out by the next frame
+  };
   function paintOverview(g: CanvasRenderingContext2D, W: number, H: number, span: number) {
     const P = unwrap(S.project), n = Math.max(1, P.tracks.length);
     const lh = Math.max(1, (H - 4) / n);
@@ -1328,6 +1347,7 @@ export function Playlist() {
         <ZoomScrollbar orient="h" class="ov" range={ovView} limits={ovLimits} onChange={ovChange} title={tl('a.pl.ovTip')}
           paint={paintOverview} paintKey={ovVer} />
       </div>
+      <div class="plbody">
       <div ref={scrollEl} class="plscroll" onPointerDown={panDown} onMouseDown={e => { if (e.button === 1) e.preventDefault(); }}
         onPointerMove={e => { lastPtr = { x: e.clientX, y: e.clientY }; }} onPointerLeave={() => { lastPtr = null; }}>
         <div style={{ width: U.headW + gridW() + 'px', position: 'relative' }}>
@@ -1363,6 +1383,8 @@ export function Playlist() {
             </div>
           </div>
         </div>
+      </div>
+        <ZoomScrollbar orient="v" class="plv" range={vRange} limits={vLimits} onChange={setV} title={tl('a.pl.vbarTip')} />
       </div>
       <Show when={U.dragOver}>
         <div class="dropHint"><span>{tl('a.pl.dropHint')}</span></div>
