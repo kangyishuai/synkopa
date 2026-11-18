@@ -847,3 +847,25 @@ fn a_file_loaded_for_a_sampler_is_not_an_undo_step_of_its_own() {
     e.import_audio_with(&[two_level_wav("noundo-d")], None, false).unwrap();
     assert!(!e.redo(), "redo must be cleared when a new source came in");
 }
+
+/// A sample dropped on the Channel Rack (loaded without a step, then the channel): one Ctrl+Z
+/// takes both back out, so the file does not stay in the project's audio list for good.
+#[test]
+fn undoing_a_sampler_made_from_a_file_also_removes_the_file() {
+    let e = Engine::new(Project::empty(), Arc::new(NoPlugins));
+    let sources = e.project().sources.len();
+    let channels = e.project().channels.len();
+    let (srcs, _) = e.import_audio_with(&[two_level_wav("fold-a")], None, false).unwrap();
+    let id = e.project().next_id + 1;
+    let ch = Channel::sampler(id, "Drop", "#69c3d6", srcs[0]);
+    e.apply(&[Op::PutChannel { channel: ch, index: None }], false, None).unwrap();
+    assert_eq!(e.project().channels.len(), channels + 1);
+    assert!(e.undo());
+    assert_eq!(e.project().channels.len(), channels);
+    assert_eq!(e.project().sources.len(), sources, "the dropped file goes with its channel");
+    assert!(!e.undo(), "one drop, one step");
+    // redo brings both back
+    assert!(e.redo());
+    assert_eq!(e.project().sources.len(), sources + 1);
+    assert_eq!(e.project().channels.len(), channels + 1);
+}

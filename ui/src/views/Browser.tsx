@@ -536,10 +536,11 @@ function FileList(props: { k: string }) {
 function LibraryTab() {
   let contentEl: HTMLDivElement | undefined;
   onMount(() => {
-    if (!lib.loaded) void refreshLib();
     void ensure(STD);
-    // kits and folders left open last time load their lists again (one that is gone simply shows nothing)
-    for (const [key, open] of Object.entries(lib.open)) if (open) void ensure(key);
+    // kits and folders left open last time load their lists again; a folder only while it is
+    // still in the library (one removed is never walked again), so folders wait for the list
+    const reopen = () => { for (const [key, open] of Object.entries(lib.open)) if (open && (!key.startsWith('f:') || lib.folders.includes(key.slice(2)))) void ensure(key); };
+    if (lib.loaded) reopen(); else void refreshLib().then(reopen);
     // back where the list was: the rows come in over a few frames, so try until it fits
     if (libScroll > 0) {
       const want = libScroll; let tries = 0;
@@ -583,7 +584,7 @@ function LibraryTab() {
     be().libraryInstall(k.id).catch(e => { setLib('progress', k.id, undefined); say(t('d.br.insterr', { err: String(e) })); });
   };
   const addFolder = async () => { try { setLib('folders', await be().libraryAddFolder()); if (searching()) loadAll(); } catch (e) { say(String(e)); } };
-  const removeFolder = async (p: string) => { try { setLib('folders', await be().libraryRemoveFolder(p)); setLib('files', 'f:' + p, undefined); setLib('trunc', 'f:' + p, undefined); } catch (e) { say(String(e)); } };
+  const removeFolder = async (p: string) => { try { setLib('folders', await be().libraryRemoveFolder(p)); setLib('files', 'f:' + p, undefined); setLib('trunc', 'f:' + p, undefined); setLib('open', 'f:' + p, false); saveBrowserOpen(); } catch (e) { say(String(e)); } };
   // browsing: every kit and folder; searching: the installed ones the search found something in
   const kits = () => lib.kits.filter(k => k.id !== STD_KIT && (!searching() || (k.installed && matchCount('k:' + k.id) > 0)));
   const folders = () => lib.folders.filter(f => !searching() || matchCount('f:' + f) > 0);

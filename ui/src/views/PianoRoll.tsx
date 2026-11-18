@@ -586,7 +586,12 @@ function Roll(props: { z: number; docked?: boolean }) {
       // FL: copied notes keep their time, so a bar copied to another pattern or channel lands on the same
       // bar (out of view: on the first bar shown) and arrives selected, to drag. Notes handed over by the
       // pitch editor (`at` set) still start where it says and chain on.
-      const at = noteClip.at ?? pasteStart(a, hRange().pos, hRange().len);
+      let at = noteClip.at ?? pasteStart(a, hRange().pos, hRange().len);
+      // a paste exactly onto the notes it copied (Ctrl+C, Ctrl+V in place) would stack invisible doubles:
+      // it goes a whole bar on past the block instead, like FL's paste after its source
+      const same = (x: Note, y: Note) => x.ch === y.ch && Math.abs(x.step - y.step) < 1e-6 && Math.abs(x.len - y.len) < 1e-6 && (x.p ?? null) === (y.p ?? null);
+      const lands = (from: number) => clip.every(n => notesRaw().some(o => same(o, { ...n, ch: ch().id, step: n.step - a + from })));
+      for (let guard = 0; guard < 64 && lands(at); guard++) at += Math.max(1, Math.ceil((b - a) / 16 - 1e-9)) * 16;
       const copies = clip.map(n => ({ ...n, ch: ch().id, step: n.step - a + at }));
       const base = notesRaw().length;
       commitNotes([...notesRaw(), ...copies], t('b.pe.pasteNotes')); setSel(new Set(copies.map((_, j) => base + j)));

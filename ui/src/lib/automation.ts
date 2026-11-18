@@ -357,7 +357,11 @@ export function autoValueText(p: Project, cat: Catalog | null, t: AutoTarget, v:
 export function parseAutoValue(p: Project, cat: Catalog | null, t: AutoTarget, text: string): number | null {
   const vol = t.kind === 'insertVol' || t.kind === 'trackVol' || t.kind === 'chanVol';
   if (vol && /-?inf|∞/i.test(text)) return 0;
-  const m = /^\s*([-+]?\d*[.,]?\d+)\s*(k)?/i.exec(text);
+  const pan = t.kind === 'insertPan' || t.kind === 'chanPan' || t.kind === 'clipPan';
+  // a centred pan reads "C" (panText): typing C, centre or center means the middle
+  if (pan && /^\s*(c|cent(er|re))\s*$/i.test(text)) return normalize(p, cat, t, 0);
+  // a label in front of the number (an EQ band's "Q 0.71") is read past
+  const m = /^\s*(?:[a-z]+\s+)?([-+]?\d*[.,]?\d+)\s*(k)?/i.exec(text);
   if (!m) return null;
   let x = parseFloat(m[1].replace(',', '.')) * (m[2] ? 1000 : 1);
   if (!isFinite(x)) return null;

@@ -296,6 +296,11 @@ struct Core {
     gesture: Option<Project>,
     /// A transient edit inside the open gesture was not reported to listeners yet.
     gesture_unreported: bool,
+    /// A file imported on the way to another edit (`import_audio_with`, `step` false): the
+    /// project before it, and the revision the import left. The next undo step taken while the
+    /// project is still at that revision starts from here, so undoing that edit takes the
+    /// imported source back out too.
+    import_base: Option<(u64, Project)>,
     sources: SourceStore,
     path: Option<PathBuf>,
     saved_revision: u64,
@@ -442,6 +447,7 @@ impl Engine {
                 revision: 1,
                 gesture: None,
                 gesture_unreported: false,
+                import_base: None,
                 sources,
                 path: None,
                 saved_revision: 1,
@@ -733,11 +739,22 @@ impl Engine {
         // height is saved with the song, so it is carried into the history instead: undoing an
         // older edit keeps the lanes as they are now.
         if only_track_heights(ops, &before, &c.project) {
-            let heights: HashMap<Id, f32> = c.project.tracks.iter().map(|t| (t.id, t.h)).collect();
+            // only the lanes whose height changed, and only into the same lane: a track's id stays with
+            // its slot when lanes swap (Move up / down), so the name tells whether the snapshot's lane
+            // at that id holds the same track; one that held another track keeps its own height
+            let heights: HashMap<Id, (f32, String)> = c
+                .project
+                .tracks
+                .iter()
+                .filter(|t| before.tracks.iter().any(|b| b.id == t.id && b.h != t.h))
+                .map(|t| (t.id, (t.h, t.name.clone())))
+                .collect();
             let carry = |p: &mut Project| {
                 for t in &mut p.tracks {
-                    if let Some(h) = heights.get(&t.id) {
-                        t.h = *h;
+                    if let Some((h, name)) = heights.get(&t.id) {
+                        if *name == t.name {
+                            t.h = *h;
+                        }
                     }
                 }
             };
@@ -1235,12 +1252,25 @@ impl Engine {
                 clip_ids.push(cid);
             }
         }
-        if step || !clip_ids.is_empty() {
+        let added = c.project.sources.len() != before.sources.len();
+        let fold = if step || !clip_ids.is_empty() {
             push_undo(&mut c, before);
-        } else if c.project.sources.len() != before.sources.len() {
+            None
+        } else if added {
             c.redo.clear();
-        }
+            Some(before)
+        } else {
+            None
+        };
         c.revision += 1;
+        if let Some(before) = fold {
+            // the edit that follows (the sampler channel) is the step, and it takes the source with it
+            let base = match c.import_base.take() {
+                Some((r, b)) if r + 1 == c.revision => b,
+                _ => before,
+            };
+            c.import_base = Some((c.revision, base));
+        }
         self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
         self.changed(c);
         Ok((src_ids, clip_ids))
@@ -3597,6 +3627,11 @@ fn only_track_heights(ops: &[Op], before: &Project, after: &Project) -> bool {
 }
 
 fn push_undo(c: &mut Core, before: Project) {
+    // a file imported for this edit (and nothing else since) is undone with it
+    let before = match c.import_base.take() {
+        Some((r, b)) if r == c.revision => b,
+        _ => before,
+    };
     c.undo.push(before);
     if c.undo.len() > UNDO_LIMIT {
         c.undo.remove(0);

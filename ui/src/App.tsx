@@ -196,7 +196,9 @@ function onKey(e: KeyboardEvent) {
   if (m && !e.altKey && !e.shiftKey && k === 'm') { e.preventDefault(); return void A.setTransportFlag('metro', !S.transport.metro); }
   // the clip keys edit the Playlist only while you work there: not in the Mix view (which hides it), nor
   // right after a press in an effect window, the Mixer or an editor (FL: keys go to the focused window)
-  const clipKey = (m && !e.altKey && 'abdcxv'.includes(k) && k.length === 1) || e.key === 'Delete' || e.key === 'Backspace' || (e.shiftKey && e.key.startsWith('Arrow')) || (e.altKey && !m && e.code === 'KeyM');
+  const clipKey = (m && !e.altKey && 'abdcxv'.includes(k) && k.length === 1) || e.key === 'Delete' || e.key === 'Backspace' || (e.shiftKey && e.key.startsWith('Arrow')) || (e.altKey && !m && e.code === 'KeyM')
+    // Ctrl+Up/Down swaps the take of the selected comp clip: a clip edit too
+    || (m && !e.shiftKey && !e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown'));
   if (clipKey && (U.mixView || clipKeysBlocked())) {
     e.preventDefault(); // also stops Ctrl+D / Ctrl+B reaching the browser (bookmarks)
     if (!U.mixView && (U.sel.length || (m && (k === 'v' || k === 'a')))) say(tl('a.app.clipKeysAway'));

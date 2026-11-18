@@ -342,7 +342,15 @@ describe('import as an undo step (engine import_audio_with)', () => {
     const s = await be.getState();
     expect(s.project.sources).toHaveLength(n + 1);
     expect(s.canUndo).toBe(false);
-    expect(s.canRedo).toBe(false);
+    expect(s.canRedo).toBe(false);    // the channel made from it is the step, and undoing it takes the file out too
+    const src = s.project.sources.at(-1)!.id;
+    const ch = { ...s.project.channels![0], id: s.project.nextId + 5, name: 'Drop', source: src, insert: null };
+    await be.applyOps([{ op: 'putChannel', channel: ch }]);
+    await be.undo();
+    const u = await be.getState();
+    expect(u.project.sources).toHaveLength(n);
+    expect(u.project.channels!.some(c => c.name === 'Drop')).toBe(false);
+    expect(u.canUndo).toBe(false);
   });
   it('a lane-height gesture reports its state when it ends, though it adds no undo step', async () => {
     const be = new MockBackend();

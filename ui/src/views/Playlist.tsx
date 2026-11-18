@@ -823,11 +823,12 @@ export function Playlist() {
     let lastBeat = first.start, lastTrack = first.track;
     trackEdge(ev => {
       const q = pt(ev), tr = q.track < 0 ? lastTrack : q.track, add: Clip[] = [];
-      // every cell between the last pointer sample and this one, so a fast sweep leaves no gaps
-      const steps = Math.max(1, Math.ceil(Math.abs(q.beat - lastBeat) / first.len));
+      // every cell along the line from the last pointer sample to this one (beat and lane both), so a
+      // fast sweep leaves no gaps and a diagonal one paints the lanes it crosses, not only the last
+      const steps = Math.max(1, Math.ceil(Math.abs(q.beat - lastBeat) / first.len), Math.abs(tr - lastTrack));
       for (let k = 1; k <= steps; k++) {
-        const b = lastBeat + (q.beat - lastBeat) * k / steps;
-        for (const cell of paintCells(first, b, tr, S.project.tracks.length, TOTAL, taken)) {
+        const b = lastBeat + (q.beat - lastBeat) * k / steps, lane = Math.round(lastTrack + (tr - lastTrack) * k / steps);
+        for (const cell of paintCells(first, b, lane, S.project.tracks.length, TOTAL, taken)) {
           taken.add(cell.key);
           add.push({ ...first, id: allocId(), start: cell.start, track: cell.track });
         }

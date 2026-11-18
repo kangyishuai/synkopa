@@ -1021,3 +1021,28 @@ fn lane_heights_are_view_state_not_undo_steps() {
     assert!(e.undo());
     assert_eq!(e.project().tracks[0].h, 140.0);
 }
+
+/// Lanes swapped (Move up / down keeps ids with their slots and swaps what they hold), then one
+/// resized: undoing the swap must not hand that height to the other track.
+#[test]
+fn a_lane_resized_after_a_move_keeps_its_height_with_its_track_on_undo() {
+    let e = Engine::new(Project::sketch(), Arc::new(NoPlugins));
+    let p0 = e.project();
+    let (a, b) = (p0.tracks[0].clone(), p0.tracks[1].clone());
+    assert_ne!(a.name, b.name);
+    e.apply(
+        &[Op::PutTrack { track: Track { id: a.id, ..b.clone() } }, Op::PutTrack { track: Track { id: b.id, ..a.clone() } }],
+        false,
+        None,
+    )
+    .unwrap();
+    // the moved track (now in slot 1) is resized
+    let moved = e.project().tracks[1].clone();
+    assert_eq!(moved.name, a.name);
+    e.apply(&[Op::PutTrack { track: Track { h: 200.0, ..moved } }], false, None).unwrap();
+    assert!(e.undo(), "the move is undone (the resize was no step)");
+    let p = e.project();
+    assert_eq!(p.tracks[0].name, a.name);
+    assert_eq!(p.tracks[1].name, b.name);
+    assert_eq!(p.tracks[1].h, b.h, "the other track does not take the resized height");
+}

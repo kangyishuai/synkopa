@@ -737,7 +737,8 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
                 <Show when={p.options?.length} fallback={
                   <Show when={p.toggle} fallback={
                     <input type="range" min="0" max="1" step={sliderStep(p)} value={p.value} onInput={e => set(p.id, +e.currentTarget.value)}
-                      onDblClick={() => set(p.id, p.def)} aria-label={p.name} />
+                      onDblClick={() => set(p.id, p.def)} aria-label={p.name}
+                      onPointerDown={e => { if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); } }} />
                   }>
                     <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p.value >= 0.5} onChange={e => set(p.id, e.currentTarget.checked ? 1 : 0)} aria-label={p.name} />
                   </Show>

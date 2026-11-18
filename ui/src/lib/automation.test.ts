@@ -160,6 +160,16 @@ describe('point values in the control\'s unit', () => {
     expect(autoValueText(p, cat, f, parseAutoValue(p, cat, f, '1.2k')!)).toBe('1.20 kHz');
     expect(parseAutoValue(p, cat, f, 'loud')).toBeNull();
   });
+  it('reads back what a centred pan and an EQ band Q show, so they can be typed in', () => {
+    const pan: AutoTarget = { kind: 'insertPan', id: p.inserts[1].id };
+    expect(parseAutoValue(p, cat, pan, 'C')).toBeCloseTo(0.5);
+    expect(parseAutoValue(p, cat, pan, 'centre')).toBeCloseTo(0.5);
+    const fx = p.inserts.flatMap(m => m.fx).find(f => f.type === 'eq')!;
+    const q: AutoTarget = { kind: 'fx', fxId: fx.id, param: 'band:0:q' };
+    const shown = autoValueText(p, cat, q, 0.4);
+    expect(shown.startsWith('Q ')).toBe(true);
+    expect(autoValueText(p, cat, q, parseAutoValue(p, cat, q, shown)!)).toBe(shown);
+  });
 });
 
 describe('a target outside its automation clips (engine drive_value)', () => {

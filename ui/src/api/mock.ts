@@ -222,7 +222,12 @@ export class MockBackend implements Backend {
     setTimeout(() => ls.forEach(cb => cb(payload)), 0);
   }
   private changed() { this.revision++; this.emit('state', this.dto()); }
-  private pushUndo(prev: Project) { this.undoStack.push(prev); if (this.undoStack.length > 300) this.undoStack.shift(); this.redoStack = []; }
+  /** engine.rs `import_base`: a file loaded for the next edit (and the revision it left) is undone with that edit. */
+  private importBase: { rev: number; p: Project } | null = null;
+  private pushUndo(prev: Project) {
+    const base = this.importBase; this.importBase = null;
+    if (base && base.rev === this.revision) prev = base.p;
+    this.undoStack.push(prev); if (this.undoStack.length > 300) this.undoStack.shift(); this.redoStack = []; }
 
   async getState() { return this.dto(); }
   async applyOps(ops: Op[], opts?: { label?: string; transient?: boolean }) {
@@ -250,8 +255,9 @@ export class MockBackend implements Backend {
     const heightsOnly = ops.every(op => op.op === 'putTrack') && prev.tracks.length === next.tracks.length
       && prev.tracks.every((t, i) => projectEq({ ...t, h: next.tracks[i].h } as unknown as Json, next.tracks[i] as unknown as Json));
     if (heightsOnly) {
-      const h = new Map(next.tracks.map(t => [t.id, t.h]));
-      const carry = (p: Project): Project => ({ ...p, tracks: p.tracks.map(t => (h.has(t.id) ? { ...t, h: h.get(t.id)! } : t)) });
+      // only the lanes that changed, and only into the same track (ids stay with their slots when lanes swap)
+      const h = new Map(next.tracks.filter((t, i) => prev.tracks[i].h !== t.h).map(t => [t.id, t]));
+      const carry = (p: Project): Project => ({ ...p, tracks: p.tracks.map(t => { const n = h.get(t.id); return n && n.name === t.name ? { ...t, h: n.h } : t; }) });
       this.undoStack = this.undoStack.map(carry); this.redoStack = this.redoStack.map(carry);
       if (this.gesture) this.gesture = carry(this.gesture);
       if (opts?.transient && this.gesture) { this.revision++; this.gestureUnreported = true; } else this.changed();
@@ -701,9 +707,13 @@ export class MockBackend implements Backend {
     });
     // like the engine (import_audio_with): one undo step, unless the caller loads the files for an edit
     // that follows; a new source then still clears redo
-    if (a.step !== false || clipIds.length) this.pushUndo(prev);
-    else if (this.p.sources.length !== prev.sources.length) this.redoStack = [];
+    const added = this.p.sources.length !== prev.sources.length;
+    const fold = a.step === false && !clipIds.length && added;
+    if (!fold && (a.step !== false || clipIds.length)) this.pushUndo(prev);
+    else if (added) this.redoStack = [];
     this.changed();
+    // the edit that follows (the sampler channel) is the step, and it takes the source with it
+    if (fold) this.importBase = { rev: this.revision, p: this.importBase && this.importBase.rev + 1 === this.revision ? this.importBase.p : prev };
     return { sourceIds, clipIds };
   }
   async pickAudioFiles(): Promise<string[] | null> {
