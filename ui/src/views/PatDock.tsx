@@ -62,6 +62,18 @@ export function Workspace() {
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation();
     const id = v.panes[0].p.id, d = dim(v.edge), sx = e.clientX, sy = e.clientY, s0 = sizeOf(v), max = maxOf(v), min = minOf(v);
     const mixOnly = v.panes.length === 1 && id === 'mix';
+    // past what the Playlist can give, the strips between it and this one give way, the nearest first
+    // (dragging the splitter between two docked panels trades their sizes, as in FL Studio)
+    const f = fitOf(v), inner = f.vs.map((x, i) => ({ x, px: f.px[i] })).filter(o => o.x.edge === v.edge && o.x.si < v.si).reverse()
+      .map(o => ({ id: o.x.panes[0].p.id, px: o.px, min: minOf(o.x) }));
+    const spare = inner.reduce((a, o) => a + Math.max(0, o.px - o.min), 0);
+    let lent = false; // the inner strips keep their wanted sizes untouched until the drag needs them
+    const borrow = (over: number) => {
+      if (over <= 0 && !lent) return;
+      lent = true;
+      let left = clamp(over, 0, spare);
+      for (const o of inner) { const take = Math.min(left, Math.max(0, o.px - o.min)); setSize(o.id, d, o.px - take); left -= take; }
+    };
     track(ev => {
       const g = grow(v.edge, ev.clientX - sx, ev.clientY - sy);
       if (mixOnly) {
@@ -71,7 +83,8 @@ export function Workspace() {
         if (!r.min) setSize('mix', d, r.h);
         return;
       }
-      setSize(id, d, clamp(s0 + g, min, Math.max(min, max)));
+      if (inner.length) borrow(s0 + g - Math.max(min, max));
+      setSize(id, d, clamp(s0 + g, min, Math.max(min, max) + spare));
     }, null, side(v.edge) ? 'col-resize' : 'row-resize');
   };
   const stripKey = (v: StripView) => (e: KeyboardEvent) => {
