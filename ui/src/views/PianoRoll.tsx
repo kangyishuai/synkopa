@@ -49,6 +49,8 @@ import { buildTransformOp, TOOL_META, type ToolId } from './roll/noteTools';
 import { STAMP_INVS, STAMP_TYPES } from './roll/stamp';
 
 const LANE_H = 76;
+/** Below this much room for the grid and the velocity lane together, the lane hides so the notes keep the space (Alt+wheel still sets velocity). */
+const LANE_SHOW_AT = 300;
 /** Steps past the pattern's end the roll lets you scroll to and draw in (the pattern grows). */
 const ROOM = 64;
 /** Key height (px): default (about FL's density) and the vertical zoom's limits. */
@@ -103,6 +105,9 @@ function Roll(props: { z: number; docked?: boolean }) {
   const notesRaw = () => unwrap(pt()).notes;
   const size = useSize(() => wrap);
   const laneSize = useSize(() => laneWrap);
+  // grid + lane together stay the same height whether the lane shows or not, so this does not flip back and forth
+  const [laneOn, setLaneOn] = createSignal(true);
+  createEffect(() => { const h = size().h; if (h > 0) setLaneOn(h + (untrack(laneOn) ? LANE_H : 0) >= LANE_SHOW_AT); });
   const data = useDataVersion();
   const layer = new Layer();
   const [sel, setSel] = createSignal<Set<number>>(new Set());
@@ -810,7 +815,7 @@ function Roll(props: { z: number; docked?: boolean }) {
         </div>
         <ZoomScrollbar orient="v" range={vRange} limits={vLimits} onChange={setV} title={t('b.pr.vbarTip')} />
       </div>
-      <div class="lanerow" style={{ height: LANE_H + 'px' }}>
+      <div class="lanerow" style={{ height: LANE_H + 'px', display: laneOn() ? undefined : 'none' }}>
         <div ref={laneWrap} class="lanecv">
           <canvas ref={laneCv} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', 'touch-action': 'none', cursor: 'ns-resize' }}
             onPointerDown={laneDown} onContextMenu={e => e.preventDefault()} />
