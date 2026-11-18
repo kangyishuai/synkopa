@@ -2,6 +2,7 @@
 // Only edges (play/stop, preview on/off) are written into the reactive UI store.
 import { be } from '../api/backend';
 import { TelemetryDecoder, type FxFrame } from '../api/telemetry';
+import { noteMasterPeak } from './masterClip';
 import { setU, U } from './ui';
 
 /** A frame can be older than the last play/stop/pattern command the UI sent (it was produced
@@ -39,6 +40,8 @@ function onFrame() {
     const ls = fxListeners.get(id), a = tele.fx.get(id);
     if (ls && a) for (const cb of ls) { try { cb(a, teleClock.lastAt); } catch (e) { console.error(e); } }
   }
+  const master = f.ins.get(0);
+  if (master) noteMasterPeak(master.l, master.r, f.beat, f.patBeat);
   const settled = teleClock.lastAt - cmdAt > SETTLE_MS;
   if (settled && f.playing !== U.playing) setU('playing', f.playing);
   if (f.previewing !== U.previewing) setU('previewing', f.previewing);

@@ -3,6 +3,7 @@ import { PLUGIN_FORMAT_LABEL, unsafeReason, VOL_UNITY, type Fx, type Id, type In
 import { clamp, panText, volText } from '../lib/format';
 import { stripLabel } from '../lib/mixer';
 import { t as tr, tName } from '../lib/i18n';
+import { masterClip, masterClipTip, resetMasterClip } from '../state/masterClip';
 import { channels, routeSelectedChannels, selectedChannels } from '../state/pattern';
 import { hideMixer, mixFront, revealed, toggleMixView } from '../state/mixView';
 import { openDockMenu, paneDock, paneHeadDown } from '../state/docking';
@@ -294,6 +295,12 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
           <button class="mini s mute" classList={{ on: m().solo }} title={tr('c.mix.soloTip')} onPointerDown={stop} onClick={e => A.toggleInsertSolo(m().id, e.ctrlKey || e.metaKey)}>S</button>
         </Show>
       </div>
+      {/* the master's clip LED (its meter's red cap): latched over 0 dBFS, where an export clips */}
+      <Show when={m().id === 0}>
+        <button class="clipcap" classList={{ on: !!masterClip() }} onPointerDown={stop}
+          title={masterClipTip()}
+          onClick={() => resetMasterClip()}>{masterClip() ? '+' + masterClip()!.overDb.toFixed(1) : 'CLIP'}</button>
+      </Show>
       {/* docked, the fader keeps one height (a taller mixer shows effect rows above the knobs instead,
           StripFx); maximized, the effect rows have a fixed room (five and "+ effect") and the fader
           takes all the rest, for fine moves */}

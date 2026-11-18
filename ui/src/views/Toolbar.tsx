@@ -5,7 +5,7 @@ import { t, type TranslationKey } from '../lib/i18n';
 import { setTypingOn, typingBase, typingOn } from '../state/typingKeys';
 import { noteName } from '../lib/pitch';
 import { prefs } from '../state/prefs';
-import { createEffect, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from 'solid-js';
 import { be } from '../api/backend';
 import { baseName, clamp, fmtClock, fmtPos, TapTracker } from '../lib/format';
 import { autoSnap, SNAPS, snapLabel, snapName } from '../lib/snap';
@@ -29,6 +29,7 @@ import { MiniKnob } from '../ui/Knob';
 import { VOL_UNITY } from '../api/types';
 import { volText } from '../lib/format';
 import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
+import { masterClip, masterClipTip, resetMasterClip } from '../state/masterClip';
 
 export const TOOLS: [Tool, string, TranslationKey][] = [
   ['draw', 'P', 'a.tb.toolDraw'], ['paint', 'B', 'a.tb.toolPaint'], ['erase', 'D', 'a.tb.toolErase'], ['mute', 'T', 'a.tb.toolMute'], ['slice', 'C', 'a.tb.toolSlice'], ['select', 'E', 'a.tb.toolSelect'],
@@ -196,6 +197,7 @@ export function Toolbar() {
         <button class="count" classList={{ on: T().countIn }} title={t('a.tb.countTip')} onClick={() => void A.setTransportFlag('countIn', !T().countIn)}>1 BAR</button>
       </div>
       <MainVolume />
+      <MasterOut />
       <div class="seg patsong" title={t('a.tb.patSongTip')}>
         <button class="pat" classList={{ on: patMode() }} onClick={() => A.switchMode(true)}>PAT</button>
         <button class="song" classList={{ on: !patMode() }} onClick={() => A.switchMode(false)}>SONG</button>
@@ -531,6 +533,38 @@ export function Help() {
  * the mixer's Master fader, saved with the project and undone like it). Drag ↕ (Shift = fine),
  * wheel, double-click = unity, right-click = automation menu.
  */
+/** Meter position (0..1) of a linear peak: −60 … +6 dBFS, the mixer meters' scale. */
+const meterPos = (v: number) => clamp(((v > 1e-5 ? 20 * Math.log10(v) : -90) + 60) / 66, 0, 1);
+/** Where 0 dBFS sits on that scale. */
+const FULL_POS = meterPos(1);
+
+/** The master's output level (FL Studio's toolbar peak meter) and its clip latch: red with how far
+ *  over 0 dBFS the mix went, until clicked, because an export clips exactly there. */
+function MasterOut() {
+  let l!: HTMLDivElement, r!: HTMLDivElement;
+  let hl = -1, hr = -1;
+  onMount(() => onCleanup(addFrameTask(() => {
+    const e = tele.frame.ins.get(0);
+    const nl = Math.max(e?.l ?? 0, hl * 0.9), nr = Math.max(e?.r ?? 0, hr * 0.9);
+    if (nl === hl && nr === hr) return;
+    hl = nl < 1e-5 ? 0 : nl; hr = nr < 1e-5 ? 0 : nr;
+    l.style.transform = `scaleX(${1 - meterPos(hl)})`;
+    r.style.transform = `scaleX(${1 - meterPos(hr)})`;
+  })));
+  // a clip belongs to the mix it happened in
+  createEffect(on(() => S.path, () => resetMasterClip(), { defer: true }));
+  return (
+    <button class="masterout" classList={{ clip: !!masterClip() }} title={masterClipTip()} aria-label={masterClipTip()}
+      onClick={() => { if (masterClip()) { resetMasterClip(); say(t('a.tb.clipReset')); } }}>
+      <span class="mobars" style={{ '--full': FULL_POS }}>
+        <span class="mobar"><span ref={l} /></span>
+        <span class="mobar"><span ref={r} /></span>
+      </span>
+      <Show when={masterClip()}>{c => <span class="moclip"><span class="cliplbl">{t('a.tb.clip')} </span>+{c().overDb.toFixed(1)}</span>}</Show>
+    </button>
+  );
+}
+
 function MainVolume() {
   const master = () => S.project.inserts.find(m => m.id === 0);
   const target = { kind: 'insertVol' as const, id: 0 };
