@@ -4,21 +4,37 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
-## 0.9.24 — 2026-11-18
+## 0.9.25 — 2026-11-18
 
 ### Added
+- **Trap hats, snares and claps in the Standard library.** Nine closed hats and three open hats
+  (Trap Hat Crisp, Tight, Metal…, Trap Open Hat Smooth…), fourteen snares (Trap Snare Punch, Hard,
+  Rage, Low, Clap…) and twelve claps (Trap Clap Thick, Warm, Gritty, Click…), chosen to sit with
+  the trap kicks and 808s. The library also takes 2 MB less space, with the same sound.
+- **A clip light for the Master.** A meter next to Main volume in the toolbar, and a cap above the
+  Master strip's meter in the Mixer, turn solid red when the output goes over 0 dBFS and show the
+  highest over (CLIP +5.0) until you click them. The tooltip says where it first clipped.
 - **Fixed velocity for the MIDI keyboard.** Settings → MIDI → Velocity: "Fixed" plays and
   records every key at one velocity (100 by default, any 1–127) however hard it is pressed —
   for keyboards without velocity or when you do not want it. "From keyboard" is the default.
+
+### Changed
+- **What you hear clips where the export does.** A mix over 0 dBFS used to sound clean in the app
+  (Windows hid the overs) and distort in the exported MP3. Playback now clips at full scale too,
+  so you hear the problem before you export.
+- **The splitter between two docked bottom panels trades their sizes.** With the Playlist already
+  as small as it goes, dragging the splitter between the docked Channel rack and Piano roll now
+  shrinks the panels in between, nearest first, as in FL. A short Piano roll hides its velocity
+  lane so the notes keep the room.
+
+## 0.9.24 — 2026-11-18
+
+### Added
 - **Trap kicks and an 808 section in the Standard library.** Fourteen new trap kicks (Brick, Clean,
   Clip, Dark, Hard, Heavy, Knock, Phonk, Punch, Rack, Stomp, Tight, Top…) and fifteen new 808s
   (Zay Warm, Opium Growl, Drill Glide, Sub Pure, Plugg Short…) in a Browser section of their own
   between Percussion and Tonal. Every 808 is pitched at its measured root key, so they swap and layer
   on the same notes.
-- **Trap hats, snares and claps in the Standard library.** Nine closed hats and three open hats
-  (Trap Hat Crisp, Tight, Metal…, Trap Open Hat Smooth…), fourteen snares (Trap Snare Punch, Hard,
-  Rage, Low, Clap…) and twelve claps (Trap Clap Thick, Warm, Gritty, Click…), chosen to sit with
-  the trap kicks and 808s. The library also takes 2 MB less space, with the same sound.
 - **Double-click an empty mixer box to give a channel its own insert** (as in FL). On a channel
   with no insert ("—") it routes the channel to the first unused mixer insert, else a new one,
   named and coloured after the channel, in one undo step. An insert you muted, renamed, set up or
