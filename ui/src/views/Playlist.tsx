@@ -463,6 +463,9 @@ export function Playlist() {
     scrollEl.scrollLeft = x0 + dx; scrollEl.scrollTop = y0 + dy;
     const moved = scrollEl.scrollLeft !== x0 || scrollEl.scrollTop !== y0;
     if (moved) syncScroll();
+    // a drag that carries the view along (edge auto-scroll) is the user moving it: follow pauses.
+    // A plain click or edit on the grid does not (FL keeps following).
+    if (scrollEl.scrollLeft !== x0) holdFollow();
     return moved;
   };
   /**
@@ -644,7 +647,6 @@ export function Playlist() {
   // ---------- pointer interactions ----------
   const gridDown = (e: PointerEvent) => {
     if (e.button === 1) return; // the scroll view pans
-    holdFollow();
     const modK = e.ctrlKey || e.metaKey;
     if (e.button === 2 && modK) return zoomBoxDrag(e);
     const p = pt(e), h = hit(p.x, p.y), id = h?.c.id ?? null;
