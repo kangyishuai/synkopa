@@ -243,6 +243,18 @@ export class MockBackend implements Backend {
       return { revision: this.revision };
     }
     this.p = next;
+    // like the engine (engine.rs only_track_heights): lane heights are view state — no undo step, and
+    // the history takes the new heights so undoing an older edit keeps the lanes as they are now
+    const heightsOnly = ops.every(op => op.op === 'putTrack') && prev.tracks.length === next.tracks.length
+      && prev.tracks.every((t, i) => projectEq({ ...t, h: next.tracks[i].h } as unknown as Json, next.tracks[i] as unknown as Json));
+    if (heightsOnly) {
+      const h = new Map(next.tracks.map(t => [t.id, t.h]));
+      const carry = (p: Project): Project => ({ ...p, tracks: p.tracks.map(t => (h.has(t.id) ? { ...t, h: h.get(t.id)! } : t)) });
+      this.undoStack = this.undoStack.map(carry); this.redoStack = this.redoStack.map(carry);
+      if (this.gesture) this.gesture = carry(this.gesture);
+      if (opts?.transient && this.gesture) this.revision++; else this.changed();
+      return { revision: this.revision };
+    }
     // like the engine: no state event per transient batch of a gesture (endGesture reports it)
     if (opts?.transient && this.gesture) this.revision++;
     else { this.pushUndo(prev); this.changed(); }

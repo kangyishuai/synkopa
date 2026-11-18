@@ -728,7 +728,22 @@ impl Engine {
             return Ok(c.revision);
         }
         let in_gesture = transient && c.gesture.is_some();
-        if !in_gesture {
+        // Lane heights are how the Playlist is viewed, not what the song is: zooming the tracks
+        // is not an undo step (Ctrl+Z after it must take back the last edit, not the zoom). The
+        // height is saved with the song, so it is carried into the history instead: undoing an
+        // older edit keeps the lanes as they are now.
+        if only_track_heights(ops, &before, &c.project) {
+            let heights: Vec<(Id, f32)> = c.project.tracks.iter().map(|t| (t.id, t.h)).collect();
+            let carry = |p: &mut Project| {
+                for t in &mut p.tracks {
+                    if let Some((_, h)) = heights.iter().find(|(id, _)| *id == t.id) {
+                        t.h = *h;
+                    }
+                }
+            };
+            let core = &mut *c;
+            core.undo.iter_mut().chain(core.redo.iter_mut()).chain(core.gesture.iter_mut()).for_each(carry);
+        } else if !in_gesture {
             push_undo(&mut c, before);
         }
         c.revision += 1;
@@ -3516,6 +3531,20 @@ fn missing_sources(c: &Core) -> HashMap<Id, String> {
         .filter(|s| c.sources.get(s.id).is_none())
         .map(|s| (s.id, c.source_errors.get(&s.id).cloned().unwrap_or_else(|| format!("{}: not loaded", s.path))))
         .collect()
+}
+
+/// True when `ops` changed nothing but lane heights: every op puts a track, and `after` is
+/// `before` with other heights.
+fn only_track_heights(ops: &[Op], before: &Project, after: &Project) -> bool {
+    if ops.is_empty() || !ops.iter().all(|op| matches!(op, Op::PutTrack { .. })) || before.tracks.len() != after.tracks.len() {
+        return false;
+    }
+    let same_but_height = |a: &Track, b: &Track| {
+        let mut a = a.clone();
+        a.h = b.h;
+        a == *b
+    };
+    before.tracks.iter().zip(&after.tracks).all(|(a, b)| same_but_height(a, b))
 }
 
 fn push_undo(c: &mut Core, before: Project) {

@@ -969,7 +969,7 @@ export const pl: Record<keyof typeof en, string> = {
   'b.pr.chTitle': 'Edytowany kanał (ghost notes pokazują pozostałe; 2× PPM na nucie przełącza)',
   'b.pr.switched': 'Piano roll · {name}',
   'b.pr.hbarTip': 'Cały pattern · przeciągnij = przewiń · przeciągnij koniec = zoom czasu · klik = skocz · Ctrl+kółko = zoom',
-  'b.pr.rulerTip': 'Klik = start (SONG: piosenka skacze do tego miejsca patternu) · przeciągnij = zakres pętli patternu · krawędź = zmień · Shift+przeciągnij w środku = przesuń · 2× klik = cały pattern · Alt = poza siatką',
+  'b.pr.rulerTip': 'Klik = start (SONG: piosenka skacze do tego miejsca patternu) · przeciągnij = przesuwaj start · Ctrl+przeciągnij = zakres pętli patternu · krawędź = zmień · Shift+przeciągnij w środku = przesuń · 2× klik = cały pattern · Alt = poza siatką',
   'b.pr.startAt': 'Pętla patternu startuje od {pos}',
   'b.pr.loopSet': 'Pętla patternu {a} – {b}',
   'b.pr.loopAll': 'Pętla patternu · cały pattern',

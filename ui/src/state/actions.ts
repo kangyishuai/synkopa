@@ -4,7 +4,7 @@ import { shownFloating } from './winOrder';
 import { be } from '../api/backend';
 import { t, tName } from '../lib/i18n';
 import { PLUGIN_FORMAT_LABEL, VOL_UNITY, type AnyBuiltinKind, type PluginInfo, type Clip, type Fx, type Id, type Insert, type Op, type RecoveredProject, type Track } from '../api/types';
-import { clampMove, duplicateSpan, insertTrackOps, moveClips, muteOps, pasteClips, sliceClip, TOTAL } from '../lib/clipOps';
+import { clampMove, duplicateSpan, insertTrackOps, moveClips, muteOps, pasteClips, sliceClip, swapTrackOps, TOTAL } from '../lib/clipOps';
 import { clamp, fmtPos } from '../lib/format';
 import { loadPreset as loadPresetFx, newFx, presetInfo, presetList } from '../lib/presets';
 import { snapName, snapRes } from '../lib/snap';
@@ -542,6 +542,14 @@ export function insertTrack(i: number) {
   commit(insertTrackOps(plain(S.project), i, allocId()), t('d.act.op.addtrack'));
 }
 export const addTrack = () => insertTrack(S.project.tracks.length);
+/** Move lane `i` one place up (`d` −1) or down (+1), with its clips. */
+export function moveTrack(i: number, d: -1 | 1) {
+  const ops = swapTrackOps(plain(S.project), i, i + d);
+  if (!ops.length) return;
+  commit(ops, t('d.act.op.movetrack'));
+  // the selection is by clip id and follows; the takes panel is keyed by slot id, so it trades places too
+  say(t(d < 0 ? 'd.act.trackUp' : 'd.act.trackDown', { name: S.project.tracks[i + d]?.name ?? '' }));
+}
 
 // ---------- mixer ----------
 export function insertOp(id: Id, patch: Partial<Insert>): Op | null {
