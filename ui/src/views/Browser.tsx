@@ -300,10 +300,6 @@ function startPreview(f: LibFile) {
   be().previewFile(f.path).catch(e => say(t('d.br.preverr', { err: String(e) })));
   say(t('d.br.prev', { name: f.name }));
 }
-function previewFile(f: LibFile) {
-  if (U.previewing && U.previewPath === f.path) { void be().previewStop(); setU('previewPath', null); return; }
-  startPreview(f);
-}
 
 /** ↑ ↓ walk the drawn rows (open groups, the search's matches) and play each; Enter makes a sampler channel. Works past the window: the walk follows the flat models, the lists scroll what is picked. */
 function onListKey(e: KeyboardEvent) {
@@ -318,6 +314,9 @@ function onListKey(e: KeyboardEvent) {
     setLib('sel', r.f.path);
     revealAt(i);
     startPreview(r.f);
+  } else if (e.key === 'Escape' && U.previewing) {
+    e.preventDefault(); e.stopPropagation();
+    void be().previewStop(); setU('previewPath', null);
   } else if (e.key === 'Enter' && lib.sel) {
     const r = walk.find(x => x.f.path === lib.sel);
     if (!r) return;
@@ -431,7 +430,9 @@ function FileRow(props: { f: LibFile; sub: boolean }) {
       onPointerDown={e => {
         if (e.button !== 0) return;
         e.preventDefault(); setLib('sel', f.path); listEl?.focus({ preventScroll: true });
-        dragGhost(e, f.name, color ?? '#47b8a8', () => previewFile(f), (x, y, alt) => dropFiles([f], x, y, alt), sampleOver);
+        // FL: the press itself plays the sample, from the top every time (a second click never stops it; Esc does)
+        startPreview(f);
+        dragGhost(e, f.name, color ?? '#47b8a8', () => {}, (x, y, alt) => dropFiles([f], x, y, alt), sampleOver);
       }}>
       <span class="fico" style={{ color: color ?? 'var(--fg4)' }}><Glyph g={libFileGlyph(f)} size={11} /></span>
       <span class="ell nm">{f.name.replace(/\.[^.]+$/, '')}</span>
