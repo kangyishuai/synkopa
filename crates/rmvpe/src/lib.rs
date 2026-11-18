@@ -38,8 +38,13 @@ pub fn model_path() -> PathBuf {
     if let Some(p) = std::env::var_os("WAVE_RMVPE_MODEL") {
         return PathBuf::from(p);
     }
+    models_dir().join("rmvpe.onnx")
+}
+
+/// `<data>/Models`: where every downloaded model lives (RMVPE, the stem separator).
+pub fn models_dir() -> PathBuf {
     let scratch = wave_engine::engine::scratch_dir();
-    scratch.parent().unwrap_or(&scratch).join("Models").join("rmvpe.onnx")
+    scratch.parent().unwrap_or(&scratch).join("Models")
 }
 
 /// The ONNX Runtime library on Linux (`ort` loads it at run time): `ORT_DYLIB_PATH`, else the
@@ -62,13 +67,13 @@ pub fn ort_library() -> Option<PathBuf> {
 }
 
 #[cfg(target_os = "linux")]
-fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
+pub fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
     let lib = ort_library().ok_or("ONNX Runtime is not installed with this build of Synkopa (libonnxruntime.so.1)")?;
     ort::init_from(&lib).map_err(|e| format!("{}: {e}", lib.display()))
 }
 
 #[cfg(not(target_os = "linux"))]
-fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
+pub fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
     Ok(ort::init())
 }
 
