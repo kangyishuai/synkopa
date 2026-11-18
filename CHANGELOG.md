@@ -7,6 +7,9 @@ shown in the app after an update and is published as the release notes (see
 ## 0.9.24 — 2026-11-18
 
 ### Added
+- **Fixed velocity for the MIDI keyboard.** Settings → MIDI → Velocity: "Fixed" plays and
+  records every key at one velocity (100 by default, any 1–127) however hard it is pressed —
+  for keyboards without velocity or when you do not want it. "From keyboard" is the default.
 - **Trap kicks and an 808 section in the Standard library.** Fourteen new trap kicks (Brick, Clean,
   Clip, Dark, Hard, Heavy, Knock, Phonk, Punch, Rack, Stomp, Tight, Top…) and fifteen new 808s
   (Zay Warm, Opium Growl, Drill Glide, Sub Pure, Plugg Short…) in a Browser section of their own
