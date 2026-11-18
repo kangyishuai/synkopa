@@ -294,3 +294,35 @@ describe('lane heights are view state (engine.rs only_track_heights)', () => {
     expect((await be.getState()).project.tracks[0]).toMatchObject({ h: t0.h, name: t0.name });
   });
 });
+
+describe('import as an undo step (engine import_audio_with)', () => {
+  it('into the audio list it is one step; loaded for an edit that follows it is none, and redo is dropped', async () => {
+    const be = new MockBackend();
+    await be.projectNew();
+    const n = (await be.getState()).project.sources.length;
+    await be.importAudio({ paths: ['C:\\loops\\a.wav'] });
+    expect((await be.getState()).canUndo).toBe(true);
+    await be.undo();
+    expect((await be.getState()).project.sources).toHaveLength(n);
+    expect((await be.getState()).canRedo).toBe(true);
+    // for a sampler channel: no step of its own, and the stale redo (a project without the source) goes
+    await be.importAudio({ paths: ['C:\\loops\\b.wav'], step: false });
+    const s = await be.getState();
+    expect(s.project.sources).toHaveLength(n + 1);
+    expect(s.canUndo).toBe(false);
+    expect(s.canRedo).toBe(false);
+  });
+  it('a lane-height gesture reports its state when it ends, though it adds no undo step', async () => {
+    const be = new MockBackend();
+    await be.projectNew(true);
+    const states: number[] = [];
+    await be.on('state', s => states.push(s.revision));
+    const t0 = (await be.getState()).project.tracks[0];
+    await be.beginGesture();
+    await be.applyOps([{ op: 'putTrack', track: { ...t0, h: t0.h + 30 } }], { transient: true });
+    await be.endGesture();
+    await new Promise(r => setTimeout(r, 5));
+    expect(states.length).toBeGreaterThan(0);
+    expect((await be.getState()).canUndo).toBe(false);
+  });
+});

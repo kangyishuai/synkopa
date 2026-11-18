@@ -49,7 +49,8 @@ export interface Backend {
   subscribeTelemetry(onFrame: (buf: ArrayBuffer) => void): Promise<void>;
   watchFx(ids: Id[]): Promise<void>;
   fxCatalog(): Promise<Catalog>;
-  importAudio(args: { paths: string[]; track?: number; beat?: number }): Promise<ImportResult>;
+  /** `step: false`: the files are loaded for an edit that follows (a sampler channel made from them), which is the undo step. */
+  importAudio(args: { paths: string[]; track?: number; beat?: number; step?: boolean }): Promise<ImportResult>;
   /** Native "open files" dialog for audio; null when cancelled. */
   pickAudioFiles(): Promise<string[] | null>;
   sourcePeaks(id: Id, norm?: boolean, rev?: boolean): Promise<Float32Array>;
@@ -290,7 +291,7 @@ export function tauriBackend(): Backend {
     },
     watchFx: ids => invoke('watch_fx', { ids }),
     fxCatalog: () => invoke('fx_catalog'),
-    importAudio: a => invoke('import_audio', { paths: a.paths, track: a.track ?? null, beat: a.beat ?? null }),
+    importAudio: a => invoke('import_audio', { paths: a.paths, track: a.track ?? null, beat: a.beat ?? null, step: a.step ?? true }),
     async pickAudioFiles() {
       // tauri-plugin-dialog's command, invoked directly so the UI needs no extra npm dependency.
       const r = await invoke<string | string[] | null>('plugin:dialog|open', {

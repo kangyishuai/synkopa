@@ -817,7 +817,9 @@ pub fn import(app: &dyn Host, a: &Value) -> R<Value> {
         (None, Some(b)) => Some((0, b)),
         _ => None,
     };
-    let (s, c) = app.engine().import_audio(&paths, place).map_err(|e| e.to_string())?;
+    // `step: false`: the file is loaded for an edit that follows (a sampler channel), which is the undo step
+    let step = arg(a, "step").and_then(Value::as_bool).unwrap_or(true);
+    let (s, c) = app.engine().import_audio_with(&paths, place, step).map_err(|e| e.to_string())?;
     Ok(json!({ "sourceIds": s, "clipIds": c }))
 }
 
@@ -919,7 +921,7 @@ pub fn channels(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value>
             .or_else(|| files.iter().find(|f| stem(f).starts_with(&want) || f.name.to_lowercase().starts_with(&want)))
             .ok_or(format!("no standard-library sample `{k}`: try kick-808, snare-studio, hat-808-open, bass-808, marimba ... (the browser's Library tab lists them all)"))?;
         // the import adds the project source (or finds the one already there)
-        let (srcs, _) = e.import_audio(&[PathBuf::from(factory::lib_path(f.file))], None).map_err(|x| x.to_string())?;
+        let (srcs, _) = e.import_audio_with(&[PathBuf::from(factory::lib_path(f.file))], None, false).map_err(|x| x.to_string())?;
         p = e.project();
         let mut ch = Channel::sampler(p.next_id, f.name, factory::color(f), srcs[0]);
         ch.root = f.root;

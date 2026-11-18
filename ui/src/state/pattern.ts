@@ -444,7 +444,7 @@ export function replaceChannel(c: Channel, pick: InstrumentPick) {
 export type SampleFile = Pick<LibFile, 'path'> & { root?: number };
 /** Imports files and waits until their sources are in the store (the import's state event may still be in flight). */
 async function importSources(paths: string[]): Promise<Id[]> {
-  const r = await be().importAudio({ paths });
+  const r = await be().importAudio({ paths, step: false }); // the channel made from them is the undo step
   for (let k = 0; k < 50 && !r.sourceIds.every(id => S.project.sources.some(s => s.id === id)); k++) await new Promise(res => setTimeout(res, 20));
   return r.sourceIds;
 }
