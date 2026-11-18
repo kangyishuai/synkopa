@@ -254,9 +254,11 @@ async fn watch_fx(app: St<'_>, ids: Vec<u64>) -> R<()> {
 #[tauri::command]
 async fn import_audio(app: St<'_>, paths: Vec<String>, track: Option<u32>, beat: Option<f64>, step: Option<bool>) -> R<Value> {
     let a = app.inner().clone();
-    tauri::async_runtime::spawn_blocking(move || actions::import(&*a, &json!({ "paths": paths, "track": track, "beat": beat, "step": step.unwrap_or(true) })))
-        .await
-        .map_err(es)?
+    tauri::async_runtime::spawn_blocking(move || {
+        actions::import(&*a, &json!({ "paths": paths, "track": track, "beat": beat, "step": step.unwrap_or(true) }))
+    })
+    .await
+    .map_err(es)?
 }
 
 #[tauri::command]
