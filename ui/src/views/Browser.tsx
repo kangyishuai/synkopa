@@ -303,7 +303,7 @@ function startPreview(f: LibFile) {
 
 /** ↑ ↓ walk the drawn rows (open groups, the search's matches) and play each; Enter makes a sampler channel. Works past the window: the walk follows the flat models, the lists scroll what is picked. */
 function onListKey(e: KeyboardEvent) {
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return; // Shift+arrows nudge clips: not this list's
   if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
     const cur = walk.findIndex(r => r.f.path === lib.sel);
     e.preventDefault(); e.stopPropagation();

@@ -169,7 +169,8 @@ export interface Backend {
   /** Project paths received at launch or forwarded by another instance. */
   takeProjectOpenRequests(): Promise<string[]>;
   /** The save dialog when the project has no path yet or `saveAs`. */
-  projectSave(saveAs?: boolean): Promise<SaveResult>;
+  /** `version`: save beside the current file as the next `Name_N` and continue there (FL's save new version); a project never saved asks for a name. */
+  projectSave(saveAs?: boolean, version?: boolean): Promise<SaveResult>;
   projectExportZip(ifRevision: number): Promise<SaveResult>;
   /** Autosave tick for a project that was never saved: keeps its crash-recovery copy current
    *  (removes it once the project has a file or nothing unsaved). True when a copy was written. */
@@ -368,7 +369,7 @@ export function tauriBackend(): Backend {
     projectNew: demo => invoke('project_new', { demo: !!demo }),
     projectOpen: (path, ifRevision) => invoke('project_open', { path: path ?? null, ifRevision }),
     takeProjectOpenRequests: () => invoke('take_project_open_requests'),
-    projectSave: saveAs => invoke('project_save', { saveAs: !!saveAs }),
+    projectSave: (saveAs, version) => invoke('project_save', { saveAs: !!saveAs, version: !!version }),
     projectExportZip: ifRevision => invoke('project_export_zip', { ifRevision }),
     recoveryWrite: () => invoke('recovery_write'),
     recoveryList: () => invoke('recovery_list'),

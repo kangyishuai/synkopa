@@ -42,7 +42,7 @@ export function useDataVersion() {
 
 /**
  * Keys typed while a pattern window has the focus never edit the playlist behind it: selection,
- * delete, clipboard and nudge shortcuts stop here (Space, Ctrl+Z, F-keys and Esc stay global).
+ * delete, clipboard, mute (Alt+M) and nudge shortcuts stop here (Space, Ctrl+Z, Ctrl+M = metronome, F-keys and Esc stay global).
  * `own` handles the window's own keys first.
  */
 export function guardKeys(e: KeyboardEvent, own?: (e: KeyboardEvent) => void) {
@@ -50,7 +50,7 @@ export function guardKeys(e: KeyboardEvent, own?: (e: KeyboardEvent) => void) {
   own?.(e);
   if (e.cancelBubble) return;
   const m = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
-  if (e.key === 'Delete' || e.key === 'Backspace' || e.key.startsWith('Arrow') || (m && !e.shiftKey && 'abcdxvm'.includes(k) && k.length === 1)) { e.preventDefault(); e.stopPropagation(); }
+  if (e.key === 'Delete' || e.key === 'Backspace' || e.key.startsWith('Arrow') || (m && !e.shiftKey && 'abcdxv'.includes(k) && k.length === 1) || (e.altKey && !m && e.code === 'KeyM')) { e.preventDefault(); e.stopPropagation(); }
   // the playlist's tool letters: a window that does not use one must not switch the tool behind it
   else if (!m && !e.altKey && k.length === 1 && 'pbdtce'.includes(k)) e.stopPropagation();
 }

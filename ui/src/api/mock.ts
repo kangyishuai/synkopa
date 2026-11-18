@@ -1372,7 +1372,12 @@ export class MockBackend implements Backend {
     return { state: this.dto(), warnings: [] };
   }
   async takeProjectOpenRequests(): Promise<string[]> { return []; }
-  async projectSave(saveAs?: boolean): Promise<SaveResult> {
+  async projectSave(saveAs?: boolean, version?: boolean): Promise<SaveResult> {
+    // save new version: Name → Name_2 → Name_3 beside the current file (actions.rs next_version_path)
+    if (this.path && !saveAs && version) {
+      const m = /^(.*[\\/])?(.+?)(\.[^.\\/]+)$/.exec(this.path)!, v = /^(.+)_(\d{1,6})$/.exec(m[2]);
+      this.path = (m[1] ?? '') + (v ? v[1] + '_' + (+v[2] + 1) : m[2] + '_2') + m[3];
+    }
     if (!this.path || saveAs) {
       if (!this.dialog()) return { cancelled: true };
       this.path = 'C:\\Users\\michal\\Music\\Projekt ' + (1 + (this.revision % 9)) + '.synkopa';

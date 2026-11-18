@@ -280,10 +280,10 @@ export async function midiExport(pattern?: Id) {
     say(t('d.midi.exported', { path: r.out, n: r.notes, tracks: r.tracks }));
   } catch (e) { say(t('d.midi.fail', { err: String(e) })); }
 }
-export async function projectSave(saveAs = false): Promise<boolean> {
+export async function projectSave(saveAs = false, version = false): Promise<boolean> {
   flushNotebook();
   try {
-    const r = await enqueue(() => be().projectSave(saveAs));
+    const r = await enqueue(() => be().projectSave(saveAs, version));
     if (r.cancelled) return false; // the save dialog was dismissed: nothing was written
     say(t('d.act.saved', { path: r.path })); await resync(); return true;
   } catch (e) { say(t('d.act.savefail', { err: String(e) })); return false; }

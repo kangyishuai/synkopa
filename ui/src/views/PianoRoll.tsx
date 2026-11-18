@@ -571,7 +571,9 @@ function Roll(props: { z: number; docked?: boolean }) {
       say(t('b.pe.pastedX', { x: notesText(copies.length) }));
       return;
     }
-    if (m && (k === 'b' || k === 'd')) {
+    // FL: Ctrl+D deselects (Ctrl+B duplicates)
+    if (m && k === 'd') { stop(); setSel(new Set<number>()); return; }
+    if (m && k === 'b') {
       stop(); if (!s.length) return;
       const r = duplicateRight(notesRaw(), s);
       commitNotes(r.notes, t('b.pe.dupNotes')); setSel(new Set(r.idx));
