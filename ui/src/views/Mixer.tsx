@@ -1,5 +1,5 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
-import { PLUGIN_FORMAT_LABEL, unsafeReason, VOL_UNITY, type Fx, type Id, type Insert } from '../api/types';
+import { PLUGIN_FORMAT_LABEL, unsafeReason, VOL_UNITY, type Fx, type Id, type Insert, type Op } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
 import { stripLabel } from '../lib/mixer';
 import { t as tr, tName } from '../lib/i18n';
@@ -175,6 +175,8 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   };
   const select = (e: PointerEvent) => {
     if (e.button === 2) { e.preventDefault(); return openStripMenu(e.clientX, e.clientY, m().id); }
+    // FL: Ctrl+Shift+click selects several mixer tracks; their faders and mutes then move together
+    if (e.button === 0 && (e.ctrlKey || e.metaKey) && e.shiftKey) return A.toggleInsertSelected(m().id);
     A.selectInsert(m().id);
   };
   const panDown = (e: PointerEvent) => {
@@ -190,7 +192,13 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
     if (e.altKey || dblCheck('vol' + m().id)) return A.setInsert(m().id, { vol: VOL_UNITY }, tr('c.mix.volume'));
     const h = Math.max(40, (e.currentTarget as HTMLElement).getBoundingClientRect().height - 14);
     const g = new Gesture(tr('c.mix.volume')); let v = m().vol, ly = e.clientY;
-    track(ev => { v = clamp(v + (ly - ev.clientY) / h * fineMul(ev), 0, 1); ly = ev.clientY; g.update([put({ vol: v })]); say(tr('c.mix.volume') + ' ' + volText(v)); }, () => g.end(), 'ns-resize');
+    // the other selected strips move by the same fader travel, each from where it was
+    const v0 = v, group = A.selectedInserts().includes(m().id) ? A.selectedInserts().filter(id => id !== m().id).map(id => ({ id, vol: S.project.inserts.find(x => x.id === id)?.vol ?? VOL_UNITY })) : [];
+    track(ev => {
+      v = clamp(v + (ly - ev.clientY) / h * fineMul(ev), 0, 1); ly = ev.clientY;
+      const linked = group.map(o => A.insertOp(o.id, { vol: clamp(o.vol + (v - v0), 0, 1) })).filter((o): o is Op => !!o);
+      g.update([put({ vol: v }), ...linked]); say(tr('c.mix.volume') + ' ' + volText(v) + (group.length ? ' · +' + group.length : ''));
+    }, () => g.end(), 'ns-resize');
   };
   const wheel = (k: 'pan' | 'vol') => (e: WheelEvent) => {
     const d = e.deltaY || e.deltaX; if (!d) return;
@@ -231,7 +239,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   };
   return (
     <div class="strip" data-ins={m().id} onPointerDown={select}
-      classList={{ on: U.mixSel === m().id, dimmed: !audible(), 'rt-ok': dropHere() === 'ok', 'rt-no': dropHere() === 'no', 'rt-to': sendsHere() }}>
+      classList={{ on: U.mixSel === m().id, multi: U.mixMulti.includes(m().id) && U.mixSel !== m().id, dimmed: !audible(), 'rt-ok': dropHere() === 'ok', 'rt-no': dropHere() === 'no', 'rt-to': sendsHere() }}>
       <div class="bar" style={{ background: m().color }} />
       {/* one row: the insert's number and name (a default "Insert 7" is just its number), the effect count on the right */}
       <div class="nmrow" title={tName(label().full) + ' — ' + tr('c.mix.nameTip')} onDblClick={rename}>
@@ -277,7 +285,11 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
       </div>
       </div>
       <div class="row" style={{ gap: '2px', 'justify-content': 'center' }}>
-        <button class="mini m mute" classList={{ on: m().muted }} title={tr('c.mix.muteTip')} onPointerDown={stop} onClick={() => A.toggleInsertMute(m().id)}>M</button>
+        <button class="mini m mute" classList={{ on: m().muted }} title={tr('c.mix.muteTip')}
+          // FL: a right-click, Ctrl+click or Alt+click on the mute switch solos
+          onPointerDown={e => { e.stopPropagation(); if (e.button === 2) { e.preventDefault(); A.toggleInsertSolo(m().id); } }}
+          onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={e => (e.ctrlKey || e.metaKey || e.altKey ? A.toggleInsertSolo(m().id) : A.toggleInsertMute(m().id))}>M</button>
         <Show when={m().id !== 0}>
           <button class="mini s mute" classList={{ on: m().solo }} title={tr('c.mix.soloTip')} onPointerDown={stop} onClick={e => A.toggleInsertSolo(m().id, e.ctrlKey || e.metaKey)}>S</button>
         </Show>

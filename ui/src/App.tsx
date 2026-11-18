@@ -11,7 +11,7 @@ import { snapRes } from './lib/snap';
 import * as A from './state/actions';
 import { findFx, S } from './state/store';
 import { swapTake } from './state/comp';
-import { closeMenu, docked, say, setU, tucked, U } from './state/ui';
+import { closeMenu, docked, openRename, say, setU, tucked, U } from './state/ui';
 import { ContextMenu } from './ui/Menu';
 import { osDragEnd, osDragOver, osDrop } from './views/Browser';
 import { FxWindow } from './views/FxWindow';
@@ -166,7 +166,15 @@ function onKey(e: KeyboardEvent) {
   if (e.key === 'F6') { e.preventDefault(); return toggleRack(); }
   // the pattern selector: F4 next empty pattern, F2 rename, numpad 1–9 / + / − pick
   if (e.key === 'F4') { e.preventDefault(); return nextEmptyPattern(); }
-  if (e.key === 'F2') { e.preventDefault(); const r = document.querySelector('[data-patsel]')?.getBoundingClientRect(); return renameCurrent(r?.left ?? window.innerWidth / 2, r ? r.bottom + 4 : 80); }
+  if (e.key === 'F2') {
+    e.preventDefault();
+    // FL: F2 renames what you are working on — the selected mixer track after a press in the Mixer, else the pattern
+    if (U.mixView || (clipKeysBlocked() && clipKeysAway!.closest('.mixdock, .mixview, .mixwin'))) {
+      const m = S.project.inserts.find(x => x.id === U.mixSel), r = document.querySelector('.strip[data-ins="' + U.mixSel + '"]')?.getBoundingClientRect();
+      if (m) return openRename(r?.left ?? window.innerWidth / 2, r ? r.top + 24 : 120, m.name, v => A.setInsert(m.id, { name: v }, tl('c.mix.undoName')));
+    }
+    const r = document.querySelector('[data-patsel]')?.getBoundingClientRect(); return renameCurrent(r?.left ?? window.innerWidth / 2, r ? r.bottom + 4 : 80);
+  }
   if (!m && !e.altKey && e.code === 'NumpadAdd') { e.preventDefault(); return stepPattern(1); }
   if (!m && !e.altKey && e.code === 'NumpadSubtract') { e.preventDefault(); return stepPattern(-1); }
   if (!m && !e.altKey && /^Numpad[1-9]$/.test(e.code)) { e.preventDefault(); return pickPatternNum(+e.code.slice(6)); }

@@ -1469,7 +1469,11 @@ function LaneHeader(props: { t: Track; i: number }) {
               <button class="mini route" title={tl('a.pl.routeTip', { out: 'Insert ' + routeIdx() })} onPointerDown={stop} onClick={e => openRouteMenu(props.i, e.clientX, e.clientY)}
                 onDblClick={() => { closeMenu(); showInsert(t().insert ?? 0); }}>{'Ins ' + routeIdx()}</button>
             </Show>
-            <button class="mini m" classList={{ on: t().muted }} title={tl('a.pl.muteTip')} onPointerDown={stop} onClick={() => A.toggleTrackMute(props.i)}>M</button>
+            <button class="mini m" classList={{ on: t().muted }} title={tl('a.pl.muteTip')}
+          // FL: a right-click, Ctrl+click or Alt+click on the mute switch solos
+          onPointerDown={e => { e.stopPropagation(); if (e.button === 2) { e.preventDefault(); A.toggleTrackSolo(props.i); } }}
+          onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={e => (e.ctrlKey || e.metaKey || e.altKey ? A.toggleTrackSolo(props.i) : A.toggleTrackMute(props.i))}>M</button>
             <button class="mini s" classList={{ on: t().solo }} title={tl('a.pl.soloTip')} onPointerDown={stop} onClick={e => A.toggleTrackSolo(props.i, e.ctrlKey || e.metaKey)}>S</button>
             {/* recordings go to the first free track (FL); only a track picked with "Record into this track" shows it */}
             <Show when={t().arm}>

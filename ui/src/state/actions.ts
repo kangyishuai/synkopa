@@ -5,6 +5,7 @@ import { be } from '../api/backend';
 import { t, tName } from '../lib/i18n';
 import { PLUGIN_FORMAT_LABEL, VOL_UNITY, type AnyBuiltinKind, type PluginInfo, type Clip, type Fx, type Id, type Insert, type Op, type RecoveredProject, type Track } from '../api/types';
 import { clampMove, duplicateSpan, insertTrackOps, moveClips, muteOps, pasteClips, sliceClip, swapTrackOps, TOTAL } from '../lib/clipOps';
+import { parseViews, rememberView, viewFor } from '../lib/projView';
 import { clamp, fmtPos } from '../lib/format';
 import { loadPreset as loadPresetFx, newFx, presetInfo, presetList } from '../lib/presets';
 import { snapName, snapRes } from '../lib/snap';
@@ -285,6 +286,7 @@ export async function projectSave(saveAs = false, version = false): Promise<bool
   try {
     const r = await enqueue(() => be().projectSave(saveAs, version));
     if (r.cancelled) return false; // the save dialog was dismissed: nothing was written
+    if (r.path) rememberProjView(r.path);
     say(t('d.act.saved', { path: r.path })); await resync(); return true;
   } catch (e) { say(t('d.act.savefail', { err: String(e) })); return false; }
 }
@@ -345,14 +347,21 @@ export function cancelExportOrClose() {
   }
   setU({ exportOpen: false, exportBusy: false });
 }
+const PROJ_VIEWS_KEY = 'wave.projViews';
+function loadProjViews() { try { return parseViews(localStorage.getItem(PROJ_VIEWS_KEY)); } catch { return []; } }
+/** Remember where the user is in the project just saved at `path` (see lib/projView.ts). */
+function rememberProjView(path: string) {
+  try { localStorage.setItem(PROJ_VIEWS_KEY, JSON.stringify(rememberView(loadProjViews(), path, { pat: U.pat, selCh: U.selCh, start: U.start }))); } catch { /* private window */ }
+}
 function afterProjectLoad() {
   clearPeaks();
   batch(() => {
-    setU({ sel: [], chSel: [], plugs: [], editor: null, start: 0, menu: null });
+    // back where this project was last saved (FL): its pattern, channel and start marker; else the first ones
+    const v = viewFor(loadProjViews(), S.path, S.project, TOTAL);
+    setU({ sel: [], chSel: [], plugs: [], editor: null, start: v.start, menu: null, mixMulti: [] });
     const m = S.project.inserts[1] ?? S.project.inserts[0];
     if (m) setU({ mixSel: m.id, fxSel: m.fx[0]?.id ?? null });
-    const p = S.project.patterns[0];
-    setU({ cur: p ? { kind: 'pat', ref: p.id, clipId: null } : null, pat: p?.id ?? null, selCh: S.project.channels?.[0]?.id ?? null });
+    setU({ cur: v.pat != null ? { kind: 'pat', ref: v.pat, clipId: null } : null, pat: v.pat, selCh: v.selCh });
   });
 }
 
@@ -526,7 +535,11 @@ export function toggleTrackSolo(i: number, add = false) {
 }
 export function toggleInsertMute(id: Id) {
   const m = S.project.inserts.find(x => x.id === id); if (!m) return;
-  setInsert(id, m.muted ? { muted: false } : { muted: true, solo: false }, 'Mute');
+  // a strip of the selected group mutes or unmutes the whole group
+  const group = selectedInserts(), ids = group.length > 1 && group.includes(id) ? group : [id];
+  const patch = m.muted ? { muted: false } : { muted: true, solo: false };
+  const ops = ids.map(x => insertOp(x, patch)).filter((o): o is Op => !!o);
+  commit(ops, 'Mute');
 }
 export function toggleInsertSolo(id: Id, add = false) {
   const m = S.project.inserts.find(x => x.id === id); if (!m || id === 0) return;
@@ -560,7 +573,22 @@ export function insertOp(id: Id, patch: Partial<Insert>): Op | null {
 export function setInsert(id: Id, patch: Partial<Insert>, label = t('d.act.mixer')) { const op = insertOp(id, patch); if (op) commit([op], label); }
 export function selectInsert(id: Id) {
   const m = S.project.inserts.find(x => x.id === id);
+  // a plain click on a strip outside the group drops the group; inside it, the group stays (to drag its faders)
+  const group = selectedInserts();
+  if (group.length > 1) setU('mixMulti', group.includes(id) ? group.filter(x => x !== id) : []);
+  else if (U.mixMulti.length) setU('mixMulti', []);
   if (m && U.mixSel !== id) setU({ mixSel: id, fxSel: m.fx[0]?.id ?? null });
+}
+/** The selected mixer strips: the current one first, then the ones added with Ctrl+Shift+click. */
+export function selectedInserts(): Id[] {
+  const ids = new Set(S.project.inserts.map(m => m.id));
+  return [U.mixSel, ...U.mixMulti.filter(id => id !== U.mixSel && ids.has(id))];
+}
+/** Ctrl+Shift+click on a strip (FL): add it to the selection, or take it out. */
+export function toggleInsertSelected(id: Id) {
+  if (id === U.mixSel) { const rest = selectedInserts().slice(1); if (rest.length) setU({ mixSel: rest[0], mixMulti: rest.slice(1) }); return; }
+  setU('mixMulti', U.mixMulti.includes(id) ? U.mixMulti.filter(x => x !== id) : [...U.mixMulti, id]);
+  say(t('d.act.stripsSel', { n: selectedInserts().length }));
 }
 export function addInsert() {
   const id = allocId();
