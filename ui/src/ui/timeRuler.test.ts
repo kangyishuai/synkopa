@@ -41,24 +41,32 @@ describe('ruler presses (FL)', () => {
     expect(r.rec.seeks).toEqual([4]);
     expect(r.rec.sets).toEqual([]);
   });
-  it('a plain drag moves the start position with the pointer instead of drawing a loop', () => {
+  it('Ctrl+drag moves the start position with the pointer instead of drawing a loop', () => {
     const r = host();
-    rulerDown(r.h, r.ev(40));
+    rulerDown(r.h, r.ev(40, { ctrlKey: true }));
     r.move(52); r.move(58); r.move(81); r.up(81);
     expect(r.rec.seeks).toEqual([4, 5, 6, 8]);
     expect(r.rec.sets).toEqual([]);
     expect(r.rec.ended).toBe(0);
   });
-  it('Ctrl+drag draws the loop, as one edit', () => {
+  it('a drag draws the loop, as one edit (FL)', () => {
     const r = host();
-    rulerDown(r.h, r.ev(40, { ctrlKey: true }));
+    rulerDown(r.h, r.ev(40));
     r.move(80); r.move(120); r.up(120);
     expect(r.rec.sets.at(-1)).toEqual({ a: 4, b: 12 });
     expect(r.rec.ended).toBe(1);
     expect(r.rec.drawn).toBe(1);
     expect(r.rec.seeks).toEqual([]);
   });
-  it('an existing loop\'s edge still drags without Ctrl', () => {
+  it('a sloppy click that moves a few pixels draws no loop and adds no undo step', () => {
+    const r = host();
+    rulerDown(r.h, r.ev(40));
+    r.move(42); r.move(43); r.up(43);
+    expect(r.rec.sets).toEqual([]);
+    expect(r.rec.ended).toBe(0);
+    expect(r.rec.seeks).toEqual([4]);
+  });
+  it('an existing loop\'s edge drags too', () => {
     const r = host({ a: 4, b: 12 });
     rulerDown(r.h, r.ev(120));
     r.move(160); r.up(160);

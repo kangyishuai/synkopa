@@ -124,9 +124,10 @@ export function rulerDown(h: RulerHost, e: PointerEvent) {
     }, () => { if (g) g.end(); else h.seek(b0); }, edge === 'body' ? 'grabbing' : 'ew-resize');
     return;
   }
-  // FL: a plain press or drag moves the start position (it follows the pointer); a loop is drawn with
-  // Ctrl. A sloppy click used to leave a loop behind, as an undo step in the Playlist.
-  if (!(e.ctrlKey || e.metaKey)) {
+  // FL: a click sets the start position, a drag draws the loop. Ctrl+drag scrubs the start position
+  // with the pointer instead. A sloppy click leaves no loop (nor an undo step): the loop starts only
+  // after a real drag that spans a grid unit.
+  if (e.ctrlKey || e.metaKey) {
     let at = b0;
     h.seek(b0);
     tr(ev => { const b = snapAt(ev); if (b !== at) { at = b; h.seek(b); } }, () => {}, 'ew-resize');
@@ -134,8 +135,8 @@ export function rulerDown(h: RulerHost, e: PointerEvent) {
   }
   let last: BeatRange | null = lp;
   tr(ev => {
-    if (!g && Math.abs(ev.clientX - e.clientX) > 4) g = h.edit(t('a.pl.loop'));
     const r = drawnLoop(b0, snapAt(ev));
+    if (!g && r && Math.abs(ev.clientX - e.clientX) > 4) g = h.edit(t('a.pl.loop'));
     if (g && r && !sameRange(r, last)) { last = r; g.set(r); }
   }, () => {
     if (!g) { h.seek(b0); return; }
