@@ -673,13 +673,15 @@ export function tuckBelow(z: number) {
   setU({ plugsHidden: true, tuckZ: U.plugsHidden ? Math.max(U.tuckZ, z) : z });
 }
 /**
- * A plain click in the workspace (Browser, a docked Mixer / Channel Rack / Piano roll) sends the floating
+ * A plain click in the workspace (Browser, a docked Channel Rack / Piano roll) sends the floating
  * windows behind it, like a click on the Playlist. It acts on release and only without a drag, so dragging
  * a sample from the Browser onto a floating Channel Rack keeps the rack; a window the click itself opens
  * (an effect slot) comes after `z` and stays in front.
  */
 export function tuckOnClick(e: PointerEvent) {
   if (e.button !== 0) return;
+  // the docked Mixer's effect windows belong to it: muting, selecting or adjusting a strip keeps the EQ you are listening to
+  if ((e.target as Element | null)?.closest?.('.mixdock')) return;
   const sx = e.clientX, sy = e.clientY, z = U.zTop;
   const done = (ev: PointerEvent) => {
     window.removeEventListener('pointerup', done, true); window.removeEventListener('pointercancel', done, true);

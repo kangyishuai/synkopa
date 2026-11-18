@@ -16,7 +16,7 @@ import { MiniKnob } from '../ui/Knob';
 import { heardInserts, insName, S } from '../state/store';
 import { tele } from '../state/telemetry';
 import { openMenu, openRename, say, setU, U, type MenuItem } from '../state/ui';
-import { dblCheck, dragCursor, track } from '../ui/drag';
+import { dblCheck, dragCursor, fineMul, track } from '../ui/drag';
 import { addFrameTask } from '../ui/frameLoop';
 import { FXMETA, FxTile, Icon, ICONS } from '../ui/icons';
 import { guessIcon, InstIcon, trackIcon } from '../ui/instIcons';
@@ -164,9 +164,9 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   const widText = (w: number) => (w <= 0.005 ? 'mono' : Math.round(w * 100) + '%');
   const widDown = (e: PointerEvent) => {
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); A.selectInsert(m().id);
-    if (dblCheck('wid' + m().id)) return A.setInsert(m().id, { width: 1 }, tr('c.mix.width'));
+    if (e.altKey || dblCheck('wid' + m().id)) return A.setInsert(m().id, { width: 1 }, tr('c.mix.width'));
     const g = new Gesture(tr('c.mix.width')); let v = wid(), ly = e.clientY;
-    track(ev => { v = clamp(v + (ly - ev.clientY) / 70 * (ev.shiftKey ? 0.2 : 1) * 2, 0, 2); if (Math.abs(v - 1) < 0.03) v = 1; ly = ev.clientY; g.update([put({ width: Math.round(v * 100) / 100 })]); say(tr('c.mix.sayWidth', { v: widText(v) })); }, () => g.end(), 'ns-resize');
+    track(ev => { v = clamp(v + (ly - ev.clientY) / 70 * fineMul(ev) * 2, 0, 2); if (Math.abs(v - 1) < 0.03) v = 1; ly = ev.clientY; g.update([put({ width: Math.round(v * 100) / 100 })]); say(tr('c.mix.sayWidth', { v: widText(v) })); }, () => g.end(), 'ns-resize');
   };
   const widWheel = (e: WheelEvent) => {
     const d = e.deltaY || e.deltaX; if (!d) return; e.preventDefault(); e.stopPropagation();
@@ -180,17 +180,17 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   const panDown = (e: PointerEvent) => {
     if (e.button === 2) { e.preventDefault(); e.stopPropagation(); return paramMenu(e.clientX, e.clientY, panT(), () => A.setInsert(m().id, { pan: 0 }, tr('c.mix.pan')), m().color); }
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); A.selectInsert(m().id);
-    if (dblCheck('pan' + m().id)) return A.setInsert(m().id, { pan: 0 }, tr('c.mix.pan'));
+    if (e.altKey || dblCheck('pan' + m().id)) return A.setInsert(m().id, { pan: 0 }, tr('c.mix.pan'));
     const g = new Gesture(tr('c.mix.pan')); let v = m().pan, ly = e.clientY;
-    track(ev => { v = clamp(v + (ly - ev.clientY) / 70 * (ev.shiftKey ? 0.2 : 1), -1, 1); ly = ev.clientY; g.update([put({ pan: v })]); say('Pan ' + panText(v)); }, () => g.end(), 'ns-resize');
+    track(ev => { v = clamp(v + (ly - ev.clientY) / 70 * fineMul(ev), -1, 1); ly = ev.clientY; g.update([put({ pan: v })]); say('Pan ' + panText(v)); }, () => g.end(), 'ns-resize');
   };
   const faderDown = (e: PointerEvent) => {
     if (e.button === 2) { e.preventDefault(); e.stopPropagation(); return paramMenu(e.clientX, e.clientY, volT(), () => A.setInsert(m().id, { vol: VOL_UNITY }, tr('c.mix.volume')), m().color); }
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); A.selectInsert(m().id);
-    if (dblCheck('vol' + m().id)) return A.setInsert(m().id, { vol: VOL_UNITY }, tr('c.mix.volume'));
+    if (e.altKey || dblCheck('vol' + m().id)) return A.setInsert(m().id, { vol: VOL_UNITY }, tr('c.mix.volume'));
     const h = Math.max(40, (e.currentTarget as HTMLElement).getBoundingClientRect().height - 14);
     const g = new Gesture(tr('c.mix.volume')); let v = m().vol, ly = e.clientY;
-    track(ev => { v = clamp(v + (ly - ev.clientY) / h * (ev.shiftKey ? 0.2 : 1), 0, 1); ly = ev.clientY; g.update([put({ vol: v })]); say(tr('c.mix.volume') + ' ' + volText(v)); }, () => g.end(), 'ns-resize');
+    track(ev => { v = clamp(v + (ly - ev.clientY) / h * fineMul(ev), 0, 1); ly = ev.clientY; g.update([put({ vol: v })]); say(tr('c.mix.volume') + ' ' + volText(v)); }, () => g.end(), 'ns-resize');
   };
   const wheel = (k: 'pan' | 'vol') => (e: WheelEvent) => {
     const d = e.deltaY || e.deltaX; if (!d) return;
@@ -482,7 +482,7 @@ function RouteLane() {
     const g = new Gesture(tr('c.rt.undoLevel'));
     let v = sendsOf(S.project.inserts.find(m => m.id === from)!).find(s => s.to === to)?.gain ?? 1, ly = e.clientY;
     track(ev => {
-      v = clamp(v + (ly - ev.clientY) / 100 * (ev.shiftKey ? 0.2 : 1), 0, 2); if (Math.abs(v - 1) < 0.03) v = 1; ly = ev.clientY;
+      v = clamp(v + (ly - ev.clientY) / 100 * fineMul(ev), 0, 2); if (Math.abs(v - 1) < 0.03) v = 1; ly = ev.clientY;
       const op = sendGainOp(from, to, v); if (op) g.update([op]);
       say(levelText(from, to, v));
     }, () => g.end(), 'ns-resize');
@@ -587,8 +587,6 @@ function FxChain() {
   );
 }
 
-/** FL: a right-click on the mixer sends the floating windows behind (like a click on the playlist). */
-const hideWins = (e: PointerEvent) => { if (e.button === 2) A.playlistFront(); };
 
 const MIX_ICON = 'M6 4v16 M12 4v16 M18 4v16 M4 14h4 M10 8h4 M16 12h4';
 /** Height of the Mixer's title bar (px). */
@@ -659,7 +657,7 @@ const ICON_W = 14;
  */
 export function MixDockPane() {
   return (
-    <div class="mixdock" on:pointerdown={{ capture: true, handleEvent: hideWins }}>
+    <div class="mixdock">
       <MixBar docked />
       {/* on a side edge the mixer is narrow and tall: the effect chain goes under the strips */}
       <div class="mixer docked" classList={{ side: findPane(U.dock, 'mix')?.edge !== 'bottom' }}>
@@ -677,7 +675,7 @@ export function MixerWindow(props: { z: number }) {
   return (
     <PanelFrame geom={() => U.mixWin} setGeom={g => setU('mixWin', w => ({ ...w, ...g }))} z={props.z} class="mixwin" dockId="mix" minW={480} minH={260}
       front={mixFront} onHeadDbl={toggleMixView} head={<MixHead />} controls={<MixControls />}>
-      <div class="mixer floating" on:pointerdown={{ capture: true, handleEvent: hideWins }}>
+      <div class="mixer floating">
         <Show when={!U.mixView}>
           <Strips full={false} />
           <FxChain />
@@ -690,7 +688,7 @@ export function MixerWindow(props: { z: number }) {
 /** The Mixer maximized over the whole workspace (its title bar's maximize, or a double-click on it). */
 export function MixView() {
   return (
-    <div class="mixview" role="region" aria-label={tr('c.mv.title')} on:pointerdown={{ capture: true, handleEvent: hideWins }}>
+    <div class="mixview" role="region" aria-label={tr('c.mv.title')}>
       <MixBar />
       <div class="mixer full">
         <Strips full />

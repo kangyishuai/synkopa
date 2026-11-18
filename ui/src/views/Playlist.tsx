@@ -18,7 +18,7 @@ import { curBeat, recState, tele } from '../state/telemetry';
 import { recTarget, recUntil } from '../lib/recTarget';
 import { closeMenu, openMenu, openRename, revealReq, say, setU, U, type MenuItem } from '../state/ui';
 import { showInsert } from '../state/mixView';
-import { dblCheck, dragCursor, edgeScroller, panDrag, track } from '../ui/drag';
+import { dblCheck, dragCursor, edgeScroller, fineMul, panDrag, track } from '../ui/drag';
 import { fitSpan, zoomScroll, zoomToRange } from '../lib/viewNav';
 import { barsText } from '../lib/pattern';
 import { addFrameTask, fitCanvas, fonts, shiftCanvas } from '../ui/frameLoop';
@@ -1396,7 +1396,7 @@ function LaneHeader(props: { t: Track; i: number }) {
     const g = new Gesture(tl('a.pl.trackVolume'));
     let v = t().vol, lx = e.clientX;
     track(ev => {
-      v = clamp(v + (ev.clientX - lx) / w * (ev.shiftKey ? 0.2 : 1), 0, 1); lx = ev.clientX;
+      v = clamp(v + (ev.clientX - lx) / w * fineMul(ev), 0, 1); lx = ev.clientX;
       g.update([{ op: 'putTrack', track: { ...plain(t()), vol: v } }]);
       say(t().name + ' · ' + volText(v));
     }, () => g.end(), 'ew-resize');
