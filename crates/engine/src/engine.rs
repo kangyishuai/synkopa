@@ -31,6 +31,7 @@ mod takes;
 pub use analysis::PitchView;
 pub use graph::playback_latency;
 use graph::{build_graph, build_timeline, c_watch, comp_audio, live_audition, mix_state, monitor_of, playback_latency_with, sample_audio};
+pub use import::{ImportFileError, Imported};
 pub(crate) use project_files::project_document;
 use project_files::{audio_dir, fresh_path, load_library_sources, sanitize};
 pub use project_files::{backup_path, scratch_dir};
@@ -116,6 +117,11 @@ pub struct StateDto {
     pub revision: u64,
     pub can_undo: bool,
     pub can_redo: bool,
+    /// What the step Ctrl+Z would take back was called (the UI's drag name, a script's
+    /// `--label`): "Move clips", "synkopa watch: song.rs" — for the Edit menu.
+    pub undo_label: Option<String>,
+    /// Same for the step Ctrl+Shift+Z would redo.
+    pub redo_label: Option<String>,
     pub transport: TransportDto,
     pub path: Option<String>,
     pub dirty: bool,
@@ -253,6 +259,9 @@ struct RecBuf {
     peaks: Vec<f32>,
     peaks_sent: usize,
     acc: (f32, f32, usize),
+    /// The take reached [`TAKE_MAX_SECONDS`]: input is dropped from here on and the take
+    /// ends at the next housekeeping tick.
+    full: bool,
 }
 
 impl RecBuf {
@@ -280,6 +289,13 @@ impl RecBuf {
         }
     }
     fn push(&mut self, x: f32) {
+        if self.full {
+            return;
+        }
+        if self.frames() >= TAKE_MAX_SECONDS * self.sr as usize {
+            self.full = true;
+            return;
+        }
         if x.is_nan() {
             self.nans += 1;
             if self.nans.is_multiple_of(2) {
@@ -317,12 +333,22 @@ struct Wires {
     max_block: usize,
 }
 
+/// One undo step: the project before the edit, and what the edit was called (the UI's drag
+/// name, a script's `--label`) — the Edit menu shows it.
+#[derive(Clone, PartialEq)]
+pub struct UndoStep {
+    pub project: Project,
+    pub label: Option<String>,
+}
+
 pub(crate) struct Core {
     project: Project,
-    undo: Vec<Project>,
-    redo: Vec<Project>,
+    undo: Vec<UndoStep>,
+    redo: Vec<UndoStep>,
     revision: u64,
     gesture: Option<Project>,
+    /// What the open gesture is called (the drag's label).
+    gesture_label: Option<String>,
     /// A transient edit inside the open gesture was not reported to listeners yet.
     gesture_unreported: bool,
     /// A file imported on the way to another edit (`import_audio_with`, `step` false): the
@@ -470,6 +496,13 @@ pub struct Engine {
 }
 
 const UNDO_LIMIT: usize = 200;
+/// Counter for half-written trim/flatten side files (`.tmp-<pid>-<n>.wav`): the final name is
+/// only chosen under the commit lock, so two runs of the same operation cannot share a file.
+static SIDE_FILE: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+/// Longest take kept in RAM (decoding an import stops at the same 30 minutes): recording
+/// buffers in memory, so an hour would hold ~1.4 GB. When a take reaches it, the take ends
+/// (as when the song reaches its end) and what was captured lands as the clip.
+const TAKE_MAX_SECONDS: usize = 30 * 60;
 
 impl Engine {
     pub fn new(mut project: Project, factory: Arc<dyn PluginFactory>) -> Arc<Self> {
@@ -480,6 +513,7 @@ impl Engine {
             core: Mutex::new(Core {
                 project,
                 undo: vec![],
+                gesture_label: None,
                 redo: vec![],
                 revision: 1,
                 gesture: None,
@@ -671,6 +705,8 @@ impl Engine {
             revision: c.revision,
             can_undo: !c.undo.is_empty(),
             can_redo: !c.redo.is_empty(),
+            undo_label: c.undo.last().and_then(|s| s.label.clone()),
+            redo_label: c.redo.last().and_then(|s| s.label.clone()),
             transport: c.transport.clone(),
             path: c.path.as_ref().map(|p| p.display().to_string()),
             dirty: c.revision != c.saved_revision,
@@ -719,6 +755,12 @@ impl Engine {
     /// Applies a batch. `transient` edits (inside a gesture) do not create undo steps.
     /// With `if_revision`, fails if the project changed since that revision.
     pub fn apply(&self, ops: &[Op], transient: bool, if_revision: Option<u64>) -> Result<u64, EngineError> {
+        self.apply_labeled(ops, transient, if_revision, None)
+    }
+
+    /// [`Engine::apply`] where the edit is named: the name lands on the undo step and the
+    /// Edit menu shows it ("Move clips", a script's `--label`).
+    pub fn apply_labeled(&self, ops: &[Op], transient: bool, if_revision: Option<u64>, label: Option<&str>) -> Result<u64, EngineError> {
         let added: Vec<(&PluginRef, bool)> = ops
             .iter()
             .filter_map(|op| match op {
@@ -730,7 +772,7 @@ impl Engine {
         if !added.is_empty() {
             self.factory.vet(&added);
         }
-        self.apply_locked(self.core.lock(), ops, transient, if_revision)
+        self.apply_locked(self.core.lock(), ops, transient, if_revision, label.map(str::to_owned))
     }
 
     /// [`PluginFactory::vet`] for every hosted plugin of `p` (outside the lock).
@@ -749,13 +791,21 @@ impl Engine {
         ops: &[Op],
         transient: bool,
         if_revision: Option<u64>,
+        label: Option<String>,
     ) -> Result<u64, EngineError> {
         if let Some(r) = if_revision {
             if r != c.revision {
                 return Err(EngineError::Msg(format!("{ERR_REVISION_CONFLICT} project is at revision {}, not {r}", c.revision)));
             }
         }
-        let before = c.project.clone();
+        let in_gesture = transient && c.gesture.is_some();
+        // Inside a gesture the undo base is the snapshot begin_gesture took, so a frame does
+        // not push undo and skips the whole-project copy: a no-op frame is detected against
+        // that snapshot (an equality walk, no copy) and a batch of lane-height edits
+        // snapshots just the (small) track list, to carry heights into the history below.
+        let track_before =
+            if !ops.is_empty() && ops.iter().all(|op| matches!(op, Op::PutTrack { .. })) { Some(c.project.tracks.clone()) } else { None };
+        let before = if in_gesture { None } else { Some(c.project.clone()) };
         // plugin automation targets are validated here, not in `ops::apply_all`:
         // whether a parameter id exists is knowledge the plugin factory holds
         for op in ops {
@@ -771,31 +821,41 @@ impl Engine {
             }
         }
         let d = ops::apply_all(&mut c.project, ops)?;
-        if c.project == before {
+        let unchanged = match (&before, c.gesture.as_ref()) {
+            (Some(b), _) => c.project == *b,
+            // a frame that returns the drag to where it started (fader A → B → A) matches the
+            // gesture snapshot again — but the live graph was left at B, so it still has to sync
+            (None, Some(g)) => c.project == *g && !c.gesture_unreported,
+            (None, None) => false,
+        };
+        if unchanged {
             return Ok(c.revision);
         }
-        let in_gesture = transient && c.gesture.is_some();
         // Lane heights are how the Playlist is viewed, not what the song is: zooming the tracks
         // is not an undo step (Ctrl+Z after it must take back the last edit, not the zoom). The
         // height is saved with the song, so it is carried into the history instead: undoing an
         // older edit keeps the lanes as they are now.
-        if only_track_heights(ops, &before, &c.project) {
+        let height_only = track_before.as_deref().filter(|tb| only_track_heights(ops, tb, &c.project.tracks));
+        if ops.iter().any(|op| matches!(op, Op::RemoveSource { .. })) {
+            gc_sources(&mut c);
+        }
+        if let Some(tb) = height_only {
             // only the lanes whose height changed, and only into the same track: a track's id stays
             // with its slot when lanes swap (Move up / down), so the history is walked step by step
             // from now, and the carry stops at the first step where the lane at that id became
             // another track (see `same_lane`: a rename keeps it the same track)
             let changed: Vec<Track> =
-                c.project.tracks.iter().filter(|t| before.tracks.iter().any(|b| b.id == t.id && b.h != t.h)).cloned().collect();
+                c.project.tracks.iter().zip(tb).filter(|(t, b)| t.id == b.id && t.h != b.h).map(|(t, _)| t.clone()).collect();
             let core = &mut *c;
             for now in &changed {
                 // undo: the newest snapshot is last; redo: the next state is last
                 for stack in [&mut core.undo, &mut core.redo] {
-                    carry_height(now, stack.iter_mut().rev());
+                    carry_height(now, stack.iter_mut().rev().map(|s| &mut s.project));
                 }
                 carry_height(now, core.gesture.iter_mut());
             }
-        } else if !in_gesture {
-            push_undo(&mut c, before);
+        } else if let Some(before) = before {
+            push_undo(&mut c, before, label);
         }
         c.revision += 1;
         self.sync(&mut c, d);
@@ -811,22 +871,24 @@ impl Engine {
         Ok(rev)
     }
 
-    pub fn begin_gesture(&self) {
+    pub fn begin_gesture(&self, label: Option<String>) {
         let mut c = self.core.lock();
         if c.gesture.is_none() {
             c.gesture = Some(c.project.clone());
+            c.gesture_label = label;
         }
     }
 
     pub fn end_gesture(&self) {
         let mut c = self.core.lock();
         let unreported = std::mem::take(&mut c.gesture_unreported);
+        let label = c.gesture_label.take();
         if let Some(g) = c.gesture.take() {
             if g != c.project {
                 // the gesture's start predates any file imported during it: that start is the
                 // state Ctrl+Z returns to, not the import's base (taken mid-gesture)
                 c.import_base = None;
-                push_undo(&mut c, g);
+                push_undo(&mut c, g, label);
                 // renders skipped during the drag (pitch edits) happen now
                 self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
                 self.changed(c);
@@ -838,20 +900,31 @@ impl Engine {
     }
 
     pub fn undo(&self) -> bool {
+        let need = {
+            let mut c = self.core.lock();
+            c.gesture = None;
+            c.gesture_label = None;
+            c.gesture_unreported = false;
+            let Some(step) = c.undo.pop() else { return false };
+            let cur = std::mem::replace(&mut c.project, step.project);
+            c.redo.push(UndoStep { project: cur, label: step.label });
+            let need = {
+                let Core { sources, project, .. } = &mut *c;
+                sources.reconcile(&project.sources)
+            };
+            gc_sources(&mut c);
+            c.revision += 1;
+            need
+        };
+        // a relink undone after its parked audio aged out: the file is decoded again, without
+        // the lock (a long file must not stall the engine)
+        let loaded = self.decode_again(need);
         let mut c = self.core.lock();
-        c.gesture = None;
-        c.gesture_unreported = false;
-        let Some(p) = c.undo.pop() else { return false };
-        let cur = std::mem::replace(&mut c.project, p);
-        c.redo.push(cur);
-        let Core { sources, project, .. } = &mut *c;
-        sources.reconcile(&project.sources);
-        c.revision += 1;
+        self.adopt_redecoded(&mut c, loaded);
         self.sync(&mut c, Dirty { timeline: true, mixer: true, params: true });
         self.changed(c);
         true
     }
-
     /// Replaces the whole project with `project` as one undo step, without stopping the
     /// transport (`synkopa watch`: a script's result, made on a copy, applied in one go). Audio
     /// already loaded for a source of the same id and file is kept; a new source's file is
@@ -860,7 +933,7 @@ impl Engine {
     /// effects keep their DSP state by id, as after an undo. `Ok(revision)`; a project equal to
     /// the current one changes nothing. Refused while recording, or when `if_revision` is not
     /// the current revision.
-    pub fn set_project(&self, project: Project, if_revision: Option<u64>) -> Result<u64, EngineError> {
+    pub fn set_project(&self, project: Project, if_revision: Option<u64>, label: Option<&str>) -> Result<u64, EngineError> {
         let mut project = project;
         project.migrate();
         if project.inserts.first().map(|m| m.id) != Some(0) {
@@ -906,7 +979,8 @@ impl Engine {
         c.gesture = None;
         c.gesture_unreported = false;
         let before = std::mem::replace(&mut c.project, project);
-        push_undo(&mut c, before);
+        push_undo(&mut c, before, label.map(str::to_owned));
+        gc_sources(&mut c);
         c.revision += 1;
         self.sync(&mut c, Dirty { timeline: true, mixer: true, params: true });
         let rev = c.revision;
@@ -915,18 +989,59 @@ impl Engine {
     }
 
     pub fn redo(&self) -> bool {
+        let need = {
+            let mut c = self.core.lock();
+            c.gesture = None;
+            c.gesture_label = None;
+            c.gesture_unreported = false;
+            let Some(step) = c.redo.pop() else { return false };
+            let cur = std::mem::replace(&mut c.project, step.project);
+            c.undo.push(UndoStep { project: cur, label: step.label });
+            let need = {
+                let Core { sources, project, .. } = &mut *c;
+                sources.reconcile(&project.sources)
+            };
+            gc_sources(&mut c);
+            c.revision += 1;
+            need
+        };
+        let loaded = self.decode_again(need);
         let mut c = self.core.lock();
-        c.gesture = None;
-        c.gesture_unreported = false;
-        let Some(p) = c.redo.pop() else { return false };
-        let cur = std::mem::replace(&mut c.project, p);
-        c.undo.push(cur);
-        let Core { sources, project, .. } = &mut *c;
-        sources.reconcile(&project.sources);
-        c.revision += 1;
+        self.adopt_redecoded(&mut c, loaded);
         self.sync(&mut c, Dirty { timeline: true, mixer: true, params: true });
         self.changed(c);
         true
+    }
+
+    /// Decodes the (id, path) pairs [`SourceStore::reconcile`] could not restore from its
+    /// parking (the parked copy aged out of the budget) — without the engine lock. The
+    /// project may move on while a file decodes: [`Self::adopt_redecoded`] keeps only what
+    /// the project still wants.
+    fn decode_again(&self, need: Vec<(u64, String)>) -> Vec<(u64, String, Result<Audio, String>)> {
+        need.into_iter()
+            .map(|(id, path)| {
+                let r = Audio::load_path(&path, Path::new("."));
+                (id, path, r)
+            })
+            .collect()
+    }
+
+    /// Adopts what [`Self::decode_again`] brought back: the source plays the file again, or
+    /// (a file that no longer decodes) stays missing with the error surfaced.
+    fn adopt_redecoded(&self, c: &mut Core, loaded: Vec<(u64, String, Result<Audio, String>)>) {
+        for (id, path, r) in loaded {
+            if !c.project.sources.iter().any(|s| s.id == id && s.path == path) {
+                continue;
+            }
+            match c.sources.adopt(id, r) {
+                Ok(()) => {
+                    c.source_errors.remove(&id);
+                }
+                Err(e) => {
+                    c.source_errors.insert(id, e);
+                }
+            }
+        }
     }
 
     // ------------------------------------------------------------ transport
@@ -1129,7 +1244,7 @@ impl Engine {
         self.send_monitor(c);
         let Some(id) = c.rec_added.take() else { return };
         for snap in c.undo.iter_mut() {
-            drop_empty_track(snap, id);
+            drop_empty_track(&mut snap.project, id);
         }
         if drop_empty_track(&mut c.project, id) {
             c.revision += 1;
@@ -1170,6 +1285,7 @@ impl Engine {
             peaks: vec![],
             peaks_sent: 0,
             acc: (0.0, 0.0, 0),
+            full: false,
         })
     }
 
@@ -1208,28 +1324,54 @@ impl Engine {
         c.sources.variant(id, norm, rev).map(|a| a.peaks.clone())
     }
 
-    /// Replaces the clip's source by a new file holding only the clip's region.
+    /// Replaces the clip's source by a new file holding only the clip's region. The copy
+    /// and the WAV write run without the engine lock (a long region can take a while on
+    /// disk), so the UI keeps moving while the file is written; when the lock comes back,
+    /// the clip, the bpm and the source's audio are re-checked and the trim refuses ("try
+    /// again") if any of them changed in the meantime. The id and the final name are only
+    /// taken then, from the project as it stands then, so an undo that rewinds ids while
+    /// the write is running cannot make a second trim collide with this one.
     pub fn trim_clip(&self, clip_id: Id) -> Result<Id, EngineError> {
-        let mut c = self.core.lock();
-        let clip = c.project.clips.iter().find(|x| x.id == clip_id).cloned().ok_or(EngineError::Msg("no such clip".into()))?;
-        if clip.kind != ClipKind::Audio {
-            return Err(EngineError::Msg("only audio clips can be trimmed".into()));
-        }
-        let audio = c.sources.variant(clip.source, clip.norm, clip.rev).ok_or(EngineError::Msg("audio not loaded".into()))?;
-        let sr = audio.sr as f64;
-        // the source region (a stretched clip keeps its stretch over the trimmed source)
-        let (sa, sb) = clip.source_span(c.project.bpm);
-        let a = ((sa * sr) as usize).min(audio.frames);
-        let b = ((sb * sr) as usize).min(audio.frames);
-        if b <= a + 16 {
-            return Err(EngineError::Msg("the region is empty".into()));
-        }
+        let (clip, old, audio, bpm, a, b, tmp) = {
+            let mut c = self.core.lock();
+            let clip = c.project.clips.iter().find(|x| x.id == clip_id).cloned().ok_or(EngineError::Msg("no such clip".into()))?;
+            if clip.kind != ClipKind::Audio {
+                return Err(EngineError::Msg("only audio clips can be trimmed".into()));
+            }
+            let audio = c.sources.variant(clip.source, clip.norm, clip.rev).ok_or(EngineError::Msg("audio not loaded".into()))?;
+            let sr = audio.sr as f64;
+            // the source region (a stretched clip keeps its stretch over the trimmed source)
+            let (sa, sb) = clip.source_span(c.project.bpm);
+            let a = ((sa * sr) as usize).min(audio.frames);
+            let b = ((sb * sr) as usize).min(audio.frames);
+            if b <= a + 16 {
+                return Err(EngineError::Msg("the region is empty".into()));
+            }
+            let old = c.project.sources.iter().find(|s| s.id == clip.source).cloned().unwrap();
+            let tmp = audio_dir(&c).join(format!(".tmp-{}-{}.wav", std::process::id(), SIDE_FILE.fetch_add(1, Relaxed)));
+            (clip, old, audio, c.project.bpm, a, b, tmp)
+        };
         let data = audio.content()[a * 2..b * 2].to_vec();
-        let old = c.project.sources.iter().find(|s| s.id == clip.source).cloned().unwrap();
+        write_wav(&tmp, &data, audio.sr)?;
+        let new = Audio::from_stereo(data, audio.sr, audio.channels);
+        let mut c = self.core.lock();
+        let now = c.project.clips.iter().find(|x| x.id == clip_id).cloned();
+        let same_audio = c.sources.variant(clip.source, clip.norm, clip.rev).is_some_and(|a| Arc::ptr_eq(&a, &audio));
+        if now.as_ref() != Some(&clip) || c.project.bpm != bpm || !same_audio {
+            // the half-written file is ours alone: no trim, no file
+            let _ = std::fs::remove_file(&tmp);
+            return Err(EngineError::Msg(if same_audio {
+                "the clip changed while it was trimmed; try again".into()
+            } else {
+                "the clip's audio changed while it was trimmed; try again".into()
+            }));
+        }
         let id = c.project.alloc_id();
         let path = fresh_path(&audio_dir(&c), &format!("{} trim {}", sanitize(&old.name), id));
-        write_wav(&path, &data, audio.sr)?;
-        let new = Audio::from_stereo(data, audio.sr, audio.channels);
+        if let Err(e) = std::fs::rename(&tmp, &path) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(EngineError::Msg(format!("could not write the trimmed audio: {e}")));
+        }
         let before = c.project.clone();
         c.project.sources.push(Source {
             id,
@@ -1245,7 +1387,7 @@ impl Engine {
             x.norm = false;
             x.rev = false;
         }
-        push_undo(&mut c, before);
+        push_undo(&mut c, before, Some("Trim clip".into()));
         c.revision += 1;
         self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
         self.changed(c);
@@ -1310,7 +1452,7 @@ impl Engine {
                 x.track += 1;
             }
         }
-        push_undo(&mut c, before);
+        push_undo(&mut c, before, Some("Make unique".into()));
         c.revision += 1;
         self.sync(&mut c, Dirty { timeline: true, mixer: true, ..Default::default() });
         self.changed(c);
@@ -1353,6 +1495,7 @@ impl Engine {
         }
         let shared = self.shared();
         let frame_parts;
+        let mut take_capped = false;
         {
             let mut guard = self.core.lock();
             let c = &mut *guard;
@@ -1383,6 +1526,7 @@ impl Engine {
                         for &x in a.iter().chain(b.iter()) {
                             t.push(x);
                         }
+                        take_capped = t.full;
                     }
                     chunk.commit_all();
                 }
@@ -1411,6 +1555,26 @@ impl Engine {
             self.finish_midi_take();
             let c = self.core.lock();
             self.changed(c);
+        }
+        if take_capped {
+            // the take hit the RAM cap: it ends here (as at the song's end), the transport
+            // keeps rolling, further input is dropped. Stop may have finalized it and a new
+            // take may have started while this lock was away: only a still-full one ends.
+            log::warn!("recording stopped at {} minutes: the take keeps what it captured", TAKE_MAX_SECONDS / 60);
+            let shared = self.shared();
+            let mut c = self.core.lock();
+            if c.take.as_ref().is_some_and(|t| t.full) {
+                if let Some(t) = c.take.as_mut() {
+                    t.resolve(&shared);
+                }
+                if let Err(e) = self.finalize_take(&mut c) {
+                    log::warn!("could not finish the capped take: {e}");
+                }
+                if c.graph_deferred {
+                    self.sync(&mut c, Dirty { timeline: false, mixer: true, params: true });
+                }
+                self.changed(c);
+            }
         }
         if let Some((ids, analysis, rec)) = frame_parts {
             let sink = self.sink.lock();
@@ -1448,33 +1612,59 @@ impl Engine {
 
     /// Renders what a comp clip plays into a new source and replaces the clip by an
     /// ordinary audio clip (gain, fades and pan stay on the clip). The take group goes
-    /// when no other clip plays it. One undo step.
+    /// when no other clip plays it. One undo step. The render and the WAV write run
+    /// without the engine lock (a long comp takes a while), so the UI keeps moving; the
+    /// clip, its comp, the tempo and the takes' audio are re-checked when the lock comes
+    /// back and the flatten refuses ("try again") if any of them changed in the meantime.
+    /// The id and the final name are only taken then, from the project as it stands then.
     pub fn flatten_comp(&self, clip_id: Id) -> Result<Id, EngineError> {
-        let mut c = self.core.lock();
-        let clip = c.project.clips.iter().find(|x| x.id == clip_id).cloned().ok_or(EngineError::Msg("no such clip".into()))?;
-        if clip.kind != ClipKind::Comp {
-            return Err(EngineError::Msg("only comp clips can be flattened".into()));
-        }
-        let comp = c.project.comp(clip.source).cloned().ok_or(EngineError::Msg("the clip's comp is missing".into()))?;
-        let map = comp_audio(&c.sources, std::slice::from_ref(&comp));
-        let first = comp.takes.iter().find_map(|t| map.get(&t.source)).ok_or(EngineError::Msg("the takes' audio is not loaded".into()))?;
-        let (sr, ch) = (first.sr, comp.takes.iter().filter_map(|t| map.get(&t.source)).map(|a| a.channels).max().unwrap_or(1));
-        let spb = 60.0 / c.project.bpm;
-        let frames = (clip.len * spb * sr as f64).round() as usize;
-        if frames < 16 {
-            return Err(EngineError::Msg("the clip is empty".into()));
-        }
-        // two guard frames: the playhead's beat may land a hair before the clip end
-        let frames = frames + 2;
+        let (clip, comp, map, spb, sr, ch, frames, name, tmp) = {
+            let c = self.core.lock();
+            let clip = c.project.clips.iter().find(|x| x.id == clip_id).cloned().ok_or(EngineError::Msg("no such clip".into()))?;
+            if clip.kind != ClipKind::Comp {
+                return Err(EngineError::Msg("only comp clips can be flattened".into()));
+            }
+            let comp = c.project.comp(clip.source).cloned().ok_or(EngineError::Msg("the clip's comp is missing".into()))?;
+            let map = comp_audio(&c.sources, std::slice::from_ref(&comp));
+            let first =
+                comp.takes.iter().find_map(|t| map.get(&t.source)).ok_or(EngineError::Msg("the takes' audio is not loaded".into()))?;
+            let (sr, ch) = (first.sr, comp.takes.iter().filter_map(|t| map.get(&t.source)).map(|a| a.channels).max().unwrap_or(1));
+            let spb = 60.0 / c.project.bpm;
+            let frames = (clip.len * spb * sr as f64).round() as usize;
+            if frames < 16 {
+                return Err(EngineError::Msg("the clip is empty".into()));
+            }
+            // two guard frames: the playhead's beat may land a hair before the clip end
+            let frames = frames + 2;
+            let name = format!("{} (flat)", comp.name);
+            let tmp = audio_dir(&c).join(format!(".tmp-{}-{}.wav", std::process::id(), SIDE_FILE.fetch_add(1, Relaxed)));
+            (clip, comp, map, spb, sr, ch, frames, name, tmp)
+        };
         let rt = crate::comp::build(&comp, spb, None, &map);
         let (mut l, mut r) = (vec![0f32; frames], vec![0f32; frames]);
         rt.render_add(clip.offset, 1.0 / (spb * sr as f64), &mut l, &mut r, spb);
         let data: Vec<f32> = l.iter().zip(&r).flat_map(|(a, b)| [*a, *b]).collect();
-        let id = c.project.alloc_id();
-        let name = format!("{} (flat)", comp.name);
-        let path = fresh_path(&audio_dir(&c), &format!("{} flat {}", sanitize(&comp.name), id));
-        write_wav(&path, &data, sr)?;
+        write_wav(&tmp, &data, sr)?;
         let audio = Audio::from_stereo(data, sr, ch);
+        let mut c = self.core.lock();
+        let now = c.project.clips.iter().find(|x| x.id == clip_id).cloned();
+        let now_map = comp_audio(&c.sources, std::slice::from_ref(&comp));
+        let takes_same = now_map.len() == map.len() && map.iter().all(|(k, a)| now_map.get(k).is_some_and(|b| Arc::ptr_eq(a, b)));
+        if now.as_ref() != Some(&clip) || c.project.comp(clip.source) != Some(&comp) || 60.0 / spb != c.project.bpm || !takes_same {
+            // the half-written file is ours alone: no flatten, no file
+            let _ = std::fs::remove_file(&tmp);
+            return Err(EngineError::Msg(if takes_same {
+                "the comp changed while it was flattened; try again".into()
+            } else {
+                "the comp's audio changed while it was flattened; try again".into()
+            }));
+        }
+        let id = c.project.alloc_id();
+        let path = fresh_path(&audio_dir(&c), &format!("{} flat {}", sanitize(&comp.name), id));
+        if let Err(e) = std::fs::rename(&tmp, &path) {
+            let _ = std::fs::remove_file(&tmp);
+            return Err(EngineError::Msg(format!("could not write the flattened audio: {e}")));
+        }
         let before = c.project.clone();
         c.project.sources.push(Source {
             id,
@@ -1504,7 +1694,7 @@ impl Engine {
             c.project.comps.retain(|x| x.id != comp.id);
             c.audition.remove(&comp.id);
         }
-        push_undo(&mut c, before);
+        push_undo(&mut c, before, Some("Flatten comp".into()));
         c.revision += 1;
         self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
         self.changed(c);
@@ -1550,8 +1740,8 @@ fn missing_sources(c: &Core) -> HashMap<Id, String> {
 
 /// True when `ops` changed nothing but lane heights: every op puts a track, and `after` is
 /// `before` with other heights.
-fn only_track_heights(ops: &[Op], before: &Project, after: &Project) -> bool {
-    if ops.is_empty() || !ops.iter().all(|op| matches!(op, Op::PutTrack { .. })) || before.tracks.len() != after.tracks.len() {
+fn only_track_heights(ops: &[Op], before: &[Track], after: &[Track]) -> bool {
+    if ops.is_empty() || !ops.iter().all(|op| matches!(op, Op::PutTrack { .. })) || before.len() != after.len() {
         return false;
     }
     let same_but_height = |a: &Track, b: &Track| {
@@ -1559,7 +1749,7 @@ fn only_track_heights(ops: &[Op], before: &Project, after: &Project) -> bool {
         a.h = b.h;
         a == *b
     };
-    before.tracks.iter().zip(&after.tracks).all(|(a, b)| same_but_height(a, b))
+    before.iter().zip(after).all(|(a, b)| same_but_height(a, b))
 }
 
 /// True when `a` and `b` (the lane at one id in two consecutive history states) are the same
@@ -1589,17 +1779,47 @@ fn carry_height<'a>(now: &Track, states: impl Iterator<Item = &'a mut Project>) 
     }
 }
 
-fn push_undo(c: &mut Core, before: Project) {
+fn push_undo(c: &mut Core, before: Project, label: Option<String>) {
     // a file imported for this edit (and nothing else since) is undone with it
     let before = match c.import_base.take() {
         Some((r, b)) if r == c.revision => b,
         _ => before,
     };
-    c.undo.push(before);
+    // history may drop its last reference to a source here (the oldest entry leaves the
+    // limit, redo goes): its decoded audio is collected now, not at some later undo
+    let evicted = c.undo.len() >= UNDO_LIMIT;
+    let redo_dropped = !c.redo.is_empty();
+    c.undo.push(UndoStep { project: before, label });
     if c.undo.len() > UNDO_LIMIT {
         c.undo.remove(0);
     }
     c.redo.clear();
+    if evicted || redo_dropped {
+        gc_sources(c);
+    }
+}
+
+/// Asks the source store to drop what no part of the history can reach: the project, its
+/// undo and redo snapshots, the open gesture. Rare and cheap (two id sets), and what keeps
+/// a long session's decoded audio bounded — a source whose every history entry has aged out
+/// of the undo limit holds its decoded audio and its relink parking for nothing.
+fn gc_sources(c: &mut Core) {
+    let mut sources: HashSet<Id> = HashSet::new();
+    let mut clips: HashSet<Id> = HashSet::new();
+    {
+        let mut acc = |p: &Project| {
+            sources.extend(p.sources.iter().map(|s| s.id));
+            clips.extend(p.clips.iter().map(|x| x.id));
+        };
+        acc(&c.project);
+        for s in c.undo.iter().chain(c.redo.iter()) {
+            acc(&s.project);
+        }
+        if let Some(g) = &c.gesture {
+            acc(g);
+        }
+    }
+    c.sources.gc(&sources, &clips);
 }
 
 /// The channel the keyboard plays: the chosen one if it exists, else the first pitched
@@ -1660,4 +1880,38 @@ fn drop_empty_track(p: &mut Project, id: Id) -> bool {
         c.track -= 1;
     }
     true
+}
+
+#[cfg(test)]
+mod rec_cap_tests {
+    use super::*;
+
+    #[test]
+    fn a_take_stops_growing_at_the_ram_cap() {
+        let mut t = RecBuf {
+            track: 0,
+            start: 0.0,
+            skip: 0,
+            pdc: 0,
+            lap: None,
+            sr: 48000,
+            data: vec![],
+            marks: vec![],
+            nans: 0,
+            peaks: vec![],
+            peaks_sent: 0,
+            acc: (0.0, 0.0, 0),
+            full: false,
+        };
+        let cap = TAKE_MAX_SECONDS * 48000;
+        for _ in 0..(cap - 10) * 2 {
+            t.push(0.1);
+        }
+        assert_eq!(t.frames(), cap - 10);
+        for _ in 0..40 {
+            t.push(0.1);
+        }
+        assert!(t.full, "crossing the cap marks the take full");
+        assert_eq!(t.frames(), cap, "the take stops growing at the cap");
+    }
 }

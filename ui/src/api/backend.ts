@@ -262,6 +262,12 @@ export interface WindowCtl {
   startDragging(): Promise<void>;
   /** Called on every window resize (maximise state may have changed). */
   onResized(cb: () => void): Promise<() => void>;
+  /** The user asked to close the window (its X, Alt+F4): decide (save prompts) and call
+   *  `destroy()` to really close it, or do nothing to keep it open. */
+  onCloseRequested(cb: (destroy: () => Promise<void>) => Promise<void>): Promise<() => void>;
+  /** The webview's own zoom (the View menu's scale; keeps text crisp). False = not supported
+   *  here, the caller falls back to CSS zoom. */
+  setZoom(z: number): Promise<boolean>;
 }
 
 function tauriWindow(): WindowCtl {
@@ -273,6 +279,31 @@ function tauriWindow(): WindowCtl {
     isMaximized: async () => (await w()).isMaximized(),
     startDragging: async () => (await w()).startDragging(),
     onResized: async cb => (await w()).onResized(() => cb()),
+    onCloseRequested: async cb => {
+      const win = await w();
+      // one guard at a time: a second close event while the save prompt is open is swallowed
+      // (the window stays open) instead of prompting again or destroying mid-prompt
+      let guarding = false;
+      return win.onCloseRequested(async ev => {
+        ev.preventDefault();
+        if (guarding) return;
+        guarding = true;
+        try {
+          await cb(async () => { await win.destroy(); });
+        } finally {
+          guarding = false;
+        }
+      });
+    },
+    setZoom: async z => {
+      try {
+        const { getCurrentWebview } = await import('@tauri-apps/api/webview');
+        await getCurrentWebview().setZoom(z);
+        return true;
+      } catch {
+        return false;
+      }
+    },
   };
 }
 
