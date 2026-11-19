@@ -7,6 +7,14 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **A new synth sound bank and a more Serum-like synth.** 50 new factory presets (808s, Reese,
+  growl, FM and sync basses, acid, future and progressive plucks, supersaw and creamy mono leads,
+  evolving pads, choir, FM keys and bells, organ, strings, flute, arps, lo-fi, risers and impacts).
+  Six new wavetables you scan with Position (Basic, Formant, Harmonics, Sync, Growl, Comb), a Warp
+  per oscillator (Sync, Bend, Asym, FM from the other oscillator), four Macros named after what they
+  drive (nearly every preset puts its main moves on them), eight modulation slots and a Rise per LFO for
+  delayed vibrato. The oscillator picture now shows the real wave. Old projects keep their sound;
+  the old preset names are gone from the list.
 - **Find a command (Ctrl+K).** Type what you want to do; every menu command is there with its
   shortcut, what you have selected comes first, and a question that is not a command goes to Ask AI.
 - **Pan per note.** The Piano roll's lower lane switches between Velocity and Pan; drag to pan
