@@ -33,6 +33,7 @@ import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
 import { masterClip, masterClipTip, resetMasterClip } from '../state/masterClip';
 import { cpuBand, cpuText, resetUnderruns, underrunFlash, underruns } from '../state/underruns';
 import { audioStatus, openAudioSettings } from '../state/audioWatch';
+import { barFits, fitLevel, FIT_MAX } from '../lib/toolbarFit';
 
 export const TOOLS: [Tool, string, TranslationKey][] = [
   ['draw', 'P', 'a.tb.toolDraw'], ['paint', 'B', 'a.tb.toolPaint'], ['erase', 'D', 'a.tb.toolErase'], ['mute', 'T', 'a.tb.toolMute'], ['slice', 'C', 'a.tb.toolSlice'], ['select', 'E', 'a.tb.toolSelect'],
@@ -42,7 +43,30 @@ export const TOOL_HINT: Record<Tool, TranslationKey> = { draw: 'a.tb.hint_draw',
 const clampBpm = (v: number) => clamp(Math.round(v * 100) / 100, 20, 999);
 
 export function Toolbar() {
-  let clockEl!: HTMLSpanElement, inEl!: HTMLDivElement;
+  let clockEl!: HTMLSpanElement, inEl!: HTMLDivElement, barEl!: HTMLDivElement;
+  // the fit (lib/toolbarFit.ts): measured again when the bar's width or what it shows changes
+  onMount(() => {
+    const q = (sel: string) => barEl.querySelector<HTMLElement>(sel);
+    const box = (el: Element | null) => { const r = el?.getBoundingClientRect(); return { left: r?.left ?? 0, right: r?.right ?? 0 }; };
+    const over = (el: HTMLElement | null) => !!el && el.scrollWidth > el.clientWidth + 1;
+    const apply = (n: number) => { for (let i = 1; i <= FIT_MAX; i++) barEl.classList.toggle('f' + i, i <= n); };
+    const fits = () => {
+      const l = q('.tbleft'), m = q('.tbmid'), r = q('.tbright');
+      return barFits({ bar: box(barEl), left: box(l), mid: box(m), right: box(r), leftOver: over(q('.tbmenu')), midOver: over(m), rightOver: over(r) });
+    };
+    let raf = 0;
+    const refit = () => { raf = 0; if (barEl.isConnected && barEl.clientWidth > 0) fitLevel(apply, fits); };
+    const later = () => { if (!raf) raf = requestAnimationFrame(refit); };
+    // what ticks while playing (the clock, the hint line, the meters) never changes what fits
+    const ticking = (n: Node) => !!(n.nodeType === 1 ? (n as Element) : n.parentElement)?.closest('.clock, .tbhint, .cpumeter, .inmeter');
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(later) : null;
+    ro?.observe(barEl);
+    const mo = typeof MutationObserver !== 'undefined' ? new MutationObserver(rs => { if (rs.some(r => !ticking(r.target))) later(); }) : null;
+    mo?.observe(barEl, { childList: true, subtree: true, characterData: true });
+    void document.fonts?.ready.then(later);
+    later();
+    onCleanup(() => { ro?.disconnect(); mo?.disconnect(); cancelAnimationFrame(raf); });
+  });
   let lastClock = '', inHold = 0;
   onMount(() => {
     const stop = addFrameTask(() => {
@@ -156,7 +180,7 @@ export function Toolbar() {
   const wins = () => U.plugs.length + (rackFloating() ? 1 : 0) + (rollFloating() ? 1 : 0);
   const hint = () => t('a.tb.statusHint', { tool: t(TOOLS.find(x => x[0] === U.tool)![2]), hint: t(TOOL_HINT[U.tool]), snap: U.alt ? 'off' : snapLabel(U.snap, U.bw).replace('Snap: ', '') });
   return (
-    <div class="toolbar" classList={{ native: !!win }} onMouseDown={dragDown}>
+    <div ref={barEl} class="toolbar" classList={{ native: !!win }} onMouseDown={dragDown}>
       {/* left: the menus over the hint line (FL): what the last action did, and what the tool does */}
       <div class="tbleft" data-drag>
         <div class="tbmenu" data-drag>
@@ -219,7 +243,7 @@ export function Toolbar() {
       <PatSelector />
       <div class="clockbox" onContextMenu={bpmMenu}>
         <span ref={clockEl} class="clock">1:01:01</span>
-        <div style={{ width: '1px', height: '14px', background: 'var(--line)' }} />
+        <div class="clocksep" />
         <span class="bpm" title={t('a.tb.bpmTip')} onPointerDown={bpmDown} onWheel={bpmWheel}>{S.project.bpm.toFixed(2)}</span>
         <span class="tag9">BPM</span>
         <button class="tapbtn" classList={{ on: tapping() }} data-tap title={t('a.tb.tapTip')} onClick={e => doTap(e)}>TAP</button>

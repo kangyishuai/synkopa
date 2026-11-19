@@ -232,15 +232,6 @@ a { color: var(--blue); }
 .mixer.docked.side .strips { min-height: 240px; }
 .mixer.docked.side .fxchain { width: auto; flex: 0 1 36%; min-height: 120px; max-height: 320px; border-left: 0; border-top: 1px solid var(--sep); }
 /* the collapsed docked mixer keeps its title bar (a narrow column with the title turned on a side edge `.vert`): click or drag it open */
-.mixhandle { flex: none; display: flex; align-items: center; gap: 8px; padding: 0 8px 0 10px; cursor: pointer; background: var(--bg6); border-top: 1px solid var(--sep); outline: none; overflow: hidden; }
-.mixhandle .wintitle { font: 600 11px var(--sans); color: var(--fg2); letter-spacing: .02em; white-space: nowrap; }
-.mixhandle .mvhint { margin-left: 2px; flex: 0 1 auto; }
-.mixhandle .mixopen { display: inline-flex; color: var(--fg4); }
-.mixhandle:hover, .mixhandle:focus-visible { background: var(--bg7); }
-.mixhandle:hover .wintitle, .mixhandle:focus-visible .wintitle, .mixhandle:hover .mixopen { color: var(--fg-hi); }
-.mixhandle:focus-visible { box-shadow: inset 0 0 0 1px var(--blue); }
-.mixhandle.vert { flex-direction: column; padding: 8px 0; border-top: 0; border-left: 1px solid var(--sep); }
-.mixhandle.vert .wintitle { writing-mode: vertical-rl; }
 .mixview { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--mixer-bg); }
 .mixhd { flex: none; }
 .mixhd .mvhint, .mixwin .mvhint { margin-left: 10px; }
@@ -589,10 +580,10 @@ select option { background: var(--bg4); color: var(--fg); }
 .crow.addrow .addch { height: 20px; display: flex; align-items: center; gap: 4px; }
 .graphtabs > button { width: auto; padding: 0 8px; font: 600 10px var(--sans); color: var(--fg3); }
 .patselbox { display: flex; align-items: center; gap: 1px; }
-.patselbtn { height: 26px; max-width: 200px; min-width: 110px; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 4px 0 0 4px; background: var(--bg1); color: var(--fg-hi); font: 600 11px var(--sans); cursor: pointer; }
+.patselbtn { height: 26px; max-width: 200px; min-width: 110px; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 4px 0 0 4px; background: var(--bg1); color: var(--fg-hi); font: 600 11px var(--sans); cursor: pointer; }
 .patselbtn:hover { border-color: var(--line3); }
 .patselbtn .num { flex: none; font-size: 10px; color: var(--fg4); }
-.patselbtn .ell { flex: 1; text-align: left; }
+.patselbtn .ell { flex: 1; min-width: 0; text-align: left; }
 .patselarrow { width: 20px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line2); border-left: 0; background: var(--bg1); color: var(--fg3); cursor: pointer; padding: 0; }
 .patselarrow:hover { color: var(--fg-hi); border-color: var(--line3); }
 .patselnew { width: 24px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line2); border-left: 0; border-radius: 0 4px 4px 0; background: var(--bg1); color: var(--fg3); cursor: pointer; padding: 0; }
@@ -753,32 +744,28 @@ select option { background: var(--bg4); color: var(--fg); }
 .toolbar .seg > button { height: 22px; }
 .toolbar .tbtn { height: 28px; }
 .winbtns { display: flex; flex: none; align-self: stretch; margin-left: 2px; }
-/* One row, like FL Studio's bar. As the window narrows, the least needed controls step aside
-   in this order, never half-clipped (perf/toolbar_fit.mjs checks it). Each stays reachable: loop on the
-   timeline, BPM label/TAP in the tempo's right-click menu and keys, transport toggles and
-   panels in the View menu (F5-F9; their names step aside before the buttons do), Ask on F1, the CPU meter's
-   underrun count in Settings → Audio (the meter is shown only when turned on there). The master output meter never steps aside: the widths
-   leave room for it with its clip readout. */
-.toolbar { container: toolbar / inline-size; }
-@container toolbar (max-width: 1812px) { .toolbar .loopText { display: none; } }
-@container toolbar (max-width: 1702px) { .toolbar .clockbox .tag9, .toolbar .typoct { display: none; } }
-@container toolbar (max-width: 1672px) { .toolbar .count, .toolbar .monbtn { display: none; } }
-@container toolbar (max-width: 1592px) { .toolbar .metrobtn, .toolbar .hinttxt { display: none; } }
-@container toolbar (max-width: 1480px) { .toolbar .panelbtn .lbl { display: none; } }
-/* the typing-piano button keeps its name longer than the panels: its icon alone was not found */
-@container toolbar (max-width: 1300px) { .toolbar .typkb .lbl { display: none; } }
-@container toolbar (max-width: 1232px) { .toolbar .panelbtn { display: none; } }
-@container toolbar (max-width: 1372px) { .toolbar .tapbtn, .toolbar .mainvol, .toolbar .projName { display: none; } }
-/* the CPU meter (a Settings option, off by default) takes its room from these a step earlier */
-@container toolbar (max-width: 1412px) { .toolbar:has(.cpumeter) .tapbtn, .toolbar:has(.cpumeter) .mainvol, .toolbar:has(.cpumeter) .projName { display: none; } }
-@container toolbar (max-width: 1302px) {
-  .toolbar .patselnew { display: none; }
-  .toolbar .patselbtn { min-width: 80px; max-width: 120px; }
-  .tbmid, .tbright { gap: 5px; }
-  .toolbar .cpumeter { padding: 0 3px; column-gap: 2px; }
-}
-@container toolbar (max-width: 1152px) { .toolbar .askbtn { display: none; } .toolbar .clockbox { gap: 6px; padding: 0 7px; } .toolbar .patselbtn { min-width: 64px; max-width: 96px; } }
-@container toolbar (max-width: 1000px) { .toolbar .masterout .cliplbl, .toolbar .cpumeter { display: none; } }
+/* One row, like FL Studio's bar. As room runs out the least needed parts step aside, one level
+   at a time, never half-clipped or overlapping: the Toolbar measures the bar and sets `.f1`…`.f12`
+   (lib/toolbarFit.ts lists the levels and where each hidden part stays reachable). */
+.toolbar .clocksep { width: 1px; height: 14px; background: var(--line); }
+.toolbar.f1 .loopText { display: none; }
+.toolbar.f2 .panelbtn .lbl, .toolbar.f2 .clockbox .tag9, .toolbar.f2 .typoct { display: none; }
+.toolbar.f3 .count, .toolbar.f3 .monbtn { display: none; }
+.toolbar.f4 .metrobtn, .toolbar.f4 .hinttxt { display: none; }
+.toolbar.f5 .typkb .lbl { display: none; }
+.toolbar.f6 .patselnew { display: none; }
+.toolbar.f6 .patselbtn { min-width: 80px; max-width: 120px; }
+.toolbar.f6 .tbmid, .toolbar.f6 .tbright { gap: 5px; }
+.toolbar.f6 .cpumeter { padding: 0 3px; column-gap: 2px; }
+.toolbar.f7 .clock, .toolbar.f7 .clocksep { display: none; }
+.toolbar.f8 .tapbtn, .toolbar.f8 .mainvol, .toolbar.f8 .projName { display: none; }
+.toolbar.f9 .askbtn { display: none; }
+.toolbar.f9 .clockbox { gap: 6px; padding: 0 7px; }
+.toolbar.f9 .patselbtn { min-width: 64px; max-width: 96px; }
+.toolbar.f10 .masterout .cliplbl, .toolbar.f10 .cpumeter, .toolbar.f10 .cmdbtn kbd { display: none; }
+.toolbar.f11 .patselbtn { min-width: 0; max-width: none; }
+.toolbar.f11 .patselbtn .ell { display: none; }
+.toolbar.f12 .panelbtn { display: none; }
 /* (the bar's own columns follow the window: a container query cannot style its container) */
 @media (max-width: 1070px) { .toolbar { grid-template-columns: minmax(170px, 1fr) minmax(0, auto) minmax(max-content, 1fr); column-gap: 10px; } }
 .winbtns > button { width: 46px; border: 0; background: transparent; color: var(--fg2); cursor: default; display: flex; align-items: center; justify-content: center; padding: 0; }

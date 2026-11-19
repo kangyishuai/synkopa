@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dockKeyAction, fitMixH, MIX_COLLAPSE_AT, MIX_MIN_H, MIX_OPEN_DRAG, mixHandleDrag, mixSplitDrag, parseGeo, parseLayout } from './layout';
+import { dockKeyAction, parseGeo, parseLayout } from './layout';
 import { defaultHomes, defaultSizes } from './dock';
 
 describe('parseLayout', () => {
@@ -92,37 +92,13 @@ describe('dockKeyAction (F6 / F7 on a docked panel)', () => {
   });
 });
 
-describe('docked mixer height and collapse', () => {
-  it('migrates a saved closed or minimised mixer to the collapsed handle', () => {
+describe('saved mixer visibility', () => {
+  it('migrates a saved closed or minimised mixer to hidden', () => {
     expect(parseLayout(JSON.stringify({ mixOpen: false, mixMin: false, mixH: 280 }))).toMatchObject({ mixMin: true, paneSize: { mix: { h: 280 } } });
     expect(parseLayout(JSON.stringify({ mixOpen: true, mixMin: true }))).toEqual({ mixMin: true });
     expect(parseLayout(JSON.stringify({ mixOpen: true, mixMin: false }))).toEqual({ mixMin: false });
     expect(parseLayout(JSON.stringify({ mixMin: 'no' }))).toEqual({});
-    // mixOpen itself is gone: the docked mixer is always there
+    // mixOpen itself is gone
     expect(parseLayout(JSON.stringify({ mixOpen: true }))).toEqual({});
-  });
-  it('keeps the mixer between its minimum and what leaves the Playlist room', () => {
-    expect(fitMixH(400.4, 880)).toBe(400);
-    expect(fitMixH(50, 880)).toBe(MIX_MIN_H);
-    expect(fitMixH(2000, 880)).toBe(880);
-    expect(fitMixH(100, 120)).toBe(MIX_MIN_H); // a tiny window: never below the minimum
-    // docked on a side edge its minimum is a width
-    expect(fitMixH(200, 880, 360)).toBe(360);
-  });
-  it('collapses when the splitter goes below the breakpoint, keeping the height it had', () => {
-    expect(mixSplitDrag(300, 100, 880)).toEqual({ min: false, h: 200 });
-    // between the breakpoint and the minimum it stays at the minimum
-    expect(mixSplitDrag(300, 300 - MIX_COLLAPSE_AT, 880)).toEqual({ min: false, h: MIX_MIN_H });
-    expect(mixSplitDrag(300, 300 - MIX_COLLAPSE_AT + 1, 880)).toEqual({ min: true, h: 300 });
-    expect(mixSplitDrag(300, 290, 880)).toEqual({ min: true, h: 300 });
-    // dragged back up in the same drag it opens again
-    expect(mixSplitDrag(300, -50, 880)).toEqual({ min: false, h: 350 });
-    expect(mixSplitDrag(300, -2000, 880)).toEqual({ min: false, h: 880 });
-  });
-  it('opens the collapsed handle once it is dragged up far enough, following the pointer', () => {
-    expect(mixHandleDrag(320, -10, 880)).toEqual({ min: true, h: 320 });
-    expect(mixHandleDrag(320, -MIX_OPEN_DRAG, 880)).toEqual({ min: false, h: MIX_MIN_H });
-    expect(mixHandleDrag(320, -400, 880)).toEqual({ min: false, h: 400 });
-    expect(mixHandleDrag(320, 30, 880)).toEqual({ min: true, h: 320 });
   });
 });

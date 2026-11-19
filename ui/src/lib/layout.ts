@@ -1,5 +1,5 @@
 // The window layout saved per user (`wave.layout` in localStorage, never in the project) and the
-// docked mixer's collapse math. Where docked panels go is `lib/dock.ts`.
+// F6/F7 key logic. Where docked panels go is `lib/dock.ts`.
 // Pure: tested in layout.test.ts.
 import type { Tool, UiState } from '../state/ui';
 import { migrateDock, migrateSizes, parseDock, parseHomes, parseSizes } from './dock';
@@ -11,29 +11,6 @@ export interface Geo { x: number; y: number; w: number; h: number }
 export const SPLIT = 5;
 /** The Playlist never gets narrower / lower than this while panels are docked beside / under it. */
 export const PLAYLIST_MIN_W = 320, PLAYLIST_MIN_H = 140;
-
-/**
- * The docked mixer alone in its strip: dragging the strip's splitter below `MIX_COLLAPSE_AT`
- * collapses it to its title bar (`MIX_HANDLE_H`) and keeps the size it had for when it opens
- * again; between the breakpoint and `MIX_MIN_H` it stays at its minimum. Dragging the collapsed
- * handle toward the Playlist by `MIX_OPEN_DRAG` opens it under the pointer. The sizes are the
- * mixer's thickness: its height at the bottom, its width on a side edge (`min` there).
- */
-export const MIX_MIN_H = 170, MIX_COLLAPSE_AT = 110, MIX_HANDLE_H = 28, MIX_OPEN_DRAG = 24;
-/** A wanted docked size clamped to what fits (whole px). */
-export function fitMixH(h: number, max: number, min = MIX_MIN_H): number {
-  return Math.round(Math.min(Math.max(h, min), Math.max(min, max)));
-}
-/** Where the docked mixer goes while its splitter is dragged by `dy` (away from the Playlist = positive) from size `h0`: collapsed below the breakpoint (the size before the drag is kept), else the fitted size. */
-export function mixSplitDrag(h0: number, dy: number, max: number, min = MIX_MIN_H): { min: boolean; h: number } {
-  const raw = h0 - dy;
-  return raw < MIX_COLLAPSE_AT ? { min: true, h: h0 } : { min: false, h: fitMixH(raw, max, min) };
-}
-/** Dragging the collapsed handle by `dy` (toward the Playlist = negative): it opens once pulled by `MIX_OPEN_DRAG` and then follows the pointer; pushed back it collapses again, keeping `last`. */
-export function mixHandleDrag(last: number, dy: number, max: number, min = MIX_MIN_H): { min: boolean; h: number } {
-  const raw = -dy;
-  return raw < MIX_OPEN_DRAG ? { min: true, h: last } : { min: false, h: fitMixH(raw, max, min) };
-}
 
 /**
  * F6 / F7 on a docked panel: hidden → show it (and give it the keyboard); shown but the keyboard
@@ -73,7 +50,7 @@ export function parseLayout(raw: string | null): Partial<UiState> {
   const p: Partial<UiState> = {
     tool: TOOLS_OK.includes(v.tool as Tool) ? (v.tool as Tool) : undefined,
     snap: num(v.snap, -1, 64), bw: num(v.bw, 4, 1024), follow: bool(v.follow), // 1024: keep in step with actions.BW_MAX
-    // the docked mixer can no longer be closed: a layout saved with it closed opens collapsed
+    // a layout saved with the mixer closed opens with it hidden
     mixMin: v.mixOpen === false || v.mixMin === true ? true : bool(v.mixMin),
     headW: num(v.headW, 120, 600), pickW: num(v.pickW, 140, 800), pickOpen: bool(v.pickOpen),
     // 'project' (Patterns and Audio in one tab, before they were split) opens on Patterns

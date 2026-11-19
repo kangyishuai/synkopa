@@ -70,11 +70,11 @@ export function showMixer() {
   if (U.mixMin) setU('mixMin', false);
   mixFront();
 }
-/** Hide the Mixer (×, Esc, F9): docked it keeps its thin handle, floating it closes. */
+/** Hide the Mixer (×, Esc, F9): docked or floating it goes away entirely, like the Channel Rack and the Piano roll. */
 export function hideMixer() {
   leaveMixView();
   setU('mixMin', true);
-  say(t(docked('mix') ? 'c.mv.collapsed' : 'c.mv.hidden'));
+  say(t('c.mv.hidden'));
 }
 /** The Mixer floats again: its window kept on screen and in front. */
 export function mixFloated() {

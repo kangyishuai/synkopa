@@ -6,25 +6,25 @@
 import { createMemo, For, Show, type JSX } from 'solid-js';
 import { t } from '../lib/i18n';
 import { clamp } from '../lib/format';
-import { MIX_HANDLE_H, mixHandleDrag, mixSplitDrag, PLAYLIST_MIN_H, PLAYLIST_MIN_W, SPLIT } from '../lib/layout';
+import { PLAYLIST_MIN_H, PLAYLIST_MIN_W, SPLIT } from '../lib/layout';
 import { dim, fitStrips, PANE_MIN, PANE_MIN_LEN, side, splitShares, type DockPane, type Edge, type PaneId } from '../lib/dock';
 import { channels, closeRack, closeRoll, curPat, newPattern, openRack, RACK_LEFT, RACK_MIN_W, RACK_PAD_X, selChan, STEP_W } from '../state/pattern';
 import { rackDockFitWidth } from '../lib/rack';
 import { stepsOf } from '../lib/pattern';
-import { say, setU, U } from '../state/ui';
+import { setU, U } from '../state/ui';
 import { tuckOnClick } from '../state/actions';
 import { guides, openDockMenu, paneDock, paneHeadDown, paneOpen } from '../state/docking';
 import { track } from '../ui/drag';
 import { Browser } from './Browser';
 import { ChannelRack } from './ChannelRack';
-import { MixCollapsedHead, MixDockPane } from './Mixer';
+import { MixDockPane } from './Mixer';
 import { PianoRoll } from './PianoRoll';
 import { Playlist } from './Playlist';
 import { guardKeys, useSize } from './patternShared';
 import { WinControls } from './PanelFrame';
 
-/** A strip as laid out: its edge and index, its panels shown (with their index in the strip), or the hidden Mixer's handle. */
-interface StripView { edge: Edge; si: number; panes: { p: DockPane; at: number }[]; handle: boolean }
+/** A strip as laid out: its edge and index and its panels shown (with their index in the strip). A strip with none shown takes no room. */
+interface StripView { edge: Edge; si: number; panes: { p: DockPane; at: number }[] }
 
 export function Workspace() {
   let col!: HTMLDivElement, row!: HTMLDivElement;
@@ -34,19 +34,18 @@ export function Workspace() {
 
   const views = (edge: Edge): StripView[] => U.dock[edge].map((s, si) => {
     const panes = s.map((p, at) => ({ p, at })).filter(x => paneOpen(x.p.id));
-    // the hidden Mixer alone in its strip stays as a thin handle (click or drag it out); sharing a strip it just leaves
-    return { edge, si, panes, handle: !panes.length && s.length === 1 && s[0].id === 'mix' };
-  }).filter(v => v.panes.length || v.handle);
+    // a hidden panel (the Mixer included) leaves no trace, like a closed Channel Rack or Piano roll
+    return { edge, si, panes };
+  }).filter(v => v.panes.length);
   const left = createMemo(() => views('left')), right = createMemo(() => views('right')), bottom = createMemo(() => views('bottom'));
 
   const want = (v: StripView) => { const id = v.panes[0].p.id, d = dim(v.edge), w = U.paneSize[id][d]; return id === 'rack' && d === 'w' && !w ? autoW() : w; };
   const minOf = (v: StripView) => Math.max(...v.panes.map(x => PANE_MIN[x.p.id][dim(v.edge)]));
-  const sized = (vs: StripView[]) => vs.filter(v => v.panes.length);
-  // the side strips share the row beside the Browser, the bottom strips the column's height; each splitter and handle takes its own
-  const sideAvail = () => rowSize().w - (U.pickOpen ? U.pickW + SPLIT : 0) - [...left(), ...right()].reduce((a, v) => a + (v.handle ? MIX_HANDLE_H : SPLIT), 0);
-  const bottomAvail = () => colSize().h - bottom().reduce((a, v) => a + (v.handle ? MIX_HANDLE_H : SPLIT), 0);
-  const sideFit = createMemo(() => { const vs = sized([...left(), ...right()]); return { vs, px: fitStrips(vs.map(want), vs.map(minOf), rowSize().w > 0 ? sideAvail() : 0, PLAYLIST_MIN_W) }; });
-  const bottomFit = createMemo(() => { const vs = sized(bottom()); return { vs, px: fitStrips(vs.map(want), vs.map(minOf), colSize().h > 0 ? bottomAvail() : 0, PLAYLIST_MIN_H) }; });
+  // the side strips share the row beside the Browser, the bottom strips the column's height; each splitter takes its own
+  const sideAvail = () => rowSize().w - (U.pickOpen ? U.pickW + SPLIT : 0) - (left().length + right().length) * SPLIT;
+  const bottomAvail = () => colSize().h - bottom().length * SPLIT;
+  const sideFit = createMemo(() => { const vs = [...left(), ...right()]; return { vs, px: fitStrips(vs.map(want), vs.map(minOf), rowSize().w > 0 ? sideAvail() : 0, PLAYLIST_MIN_W) }; });
+  const bottomFit = createMemo(() => { const vs = bottom(); return { vs, px: fitStrips(vs.map(want), vs.map(minOf), colSize().h > 0 ? bottomAvail() : 0, PLAYLIST_MIN_H) }; });
   const fitOf = (v: StripView) => (side(v.edge) ? sideFit() : bottomFit());
   const sizeOf = (v: StripView) => { const f = fitOf(v), i = f.vs.findIndex(x => x.edge === v.edge && x.si === v.si); return i < 0 ? 0 : f.px[i]; };
   /** The most a strip can take: what the Playlist and the other strips on its axis leave. */
@@ -61,7 +60,6 @@ export function Workspace() {
   const stripSplit = (v: StripView) => (e: PointerEvent) => {
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation();
     const id = v.panes[0].p.id, d = dim(v.edge), sx = e.clientX, sy = e.clientY, s0 = sizeOf(v), max = maxOf(v), min = minOf(v);
-    const mixOnly = v.panes.length === 1 && id === 'mix';
     // past what the Playlist can give, the strips between it and this one give way, the nearest first
     // (dragging the splitter between two docked panels trades their sizes, as in FL Studio)
     const f = fitOf(v), inner = f.vs.map((x, i) => ({ x, px: f.px[i] })).filter(o => o.x.edge === v.edge && o.x.si < v.si).reverse()
@@ -76,13 +74,6 @@ export function Workspace() {
     };
     track(ev => {
       const g = grow(v.edge, ev.clientX - sx, ev.clientY - sy);
-      if (mixOnly) {
-        // dragged far enough toward the edge, the Mixer collapses to its handle (keeping its size)
-        const r = mixSplitDrag(s0, -g, max, min);
-        if (r.min !== U.mixMin) setU('mixMin', r.min);
-        if (!r.min) setSize('mix', d, r.h);
-        return;
-      }
       if (inner.length) borrow(s0 + g - Math.max(min, max));
       setSize(id, d, clamp(s0 + g, min, Math.max(min, max) + spare));
     }, null, side(v.edge) ? 'col-resize' : 'row-resize');
@@ -93,32 +84,8 @@ export function Workspace() {
     if (e.key === inward || e.key === outward) {
       e.preventDefault(); e.stopPropagation();
       setSize(id, d, clamp(sizeOf(v) + (e.key === inward ? step : -step), minOf(v), Math.max(minOf(v), maxOf(v))));
-    } else if ((e.key === 'Enter' || e.key === ' ') && v.panes.length === 1 && id === 'mix') {
-      e.preventDefault(); e.stopPropagation();
-      setU('mixMin', true); say(t('c.mv.collapsed'));
     }
   };
-  const handleDown = (v: StripView) => (e: PointerEvent) => {
-    if (e.button !== 0) return; e.preventDefault();
-    const sx = e.clientX, sy = e.clientY, d = dim(v.edge), last = U.paneSize.mix[d], min = PANE_MIN.mix[d];
-    // room for the opened mixer: what is left of the axis now that the handle would become a strip
-    const max = Math.max(min, (side(v.edge) ? sideAvail() - PLAYLIST_MIN_W - sideFit().px.reduce((a, b) => a + b, 0) : bottomAvail() - PLAYLIST_MIN_H - bottomFit().px.reduce((a, b) => a + b, 0)) + MIX_HANDLE_H - SPLIT);
-    let moved = false;
-    track(ev => {
-      const g = grow(v.edge, ev.clientX - sx, ev.clientY - sy);
-      if (!moved && Math.abs(g) < 4) return;
-      moved = true;
-      const r = mixHandleDrag(last, -g, max, min);
-      if (r.min !== U.mixMin) setU('mixMin', r.min);
-      if (!r.min) setSize('mix', d, r.h);
-    }, () => { if (!moved) { setU('mixMin', false); say(t('c.mv.expanded')); } }, side(v.edge) ? 'col-resize' : 'row-resize');
-  };
-  const handleKey = (e: KeyboardEvent) => {
-    if (e.key !== 'Enter' && e.key !== ' ') return;
-    e.preventDefault(); e.stopPropagation();
-    setU('mixMin', false); say(t('c.mv.expanded'));
-  };
-
   /** Splitter between panels `i` and `i + 1` of a strip: their shares follow the pointer, both keep their minimum length. */
   const paneSplit = (v: StripView, i: number) => (e: PointerEvent) => {
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation();
@@ -136,18 +103,11 @@ export function Workspace() {
   const splitTip = (v: StripView) => (v.panes.length === 1 && v.panes[0].p.id === 'rack' && side(v.edge) ? t('b.dk.resizeRack') : t('b.dk.resizeStrip'));
   // Rows are keyed by strings, so a panel opening, closing or resizing elsewhere does not rebuild
   // (and reset) the panels already on screen; a row reads its strip through `byKey`.
-  const keyOf = (v: StripView) => `${v.edge}:${v.si}:${v.handle ? 'h' : 's'}`;
+  const keyOf = (v: StripView) => `${v.edge}:${v.si}`;
   const byKey = createMemo(() => new Map([...left(), ...right(), ...bottom()].map(v => [keyOf(v), v])));
   const keys = (vs: StripView[]) => vs.map(keyOf);
   const Strip = (p: { k: string; splitFirst: boolean }) => (
-    <Show when={byKey().get(p.k)}>{v => (
-      <Show when={!v().handle} fallback={
-        <div class="mixhandle" classList={{ vert: side(v().edge) }} style={side(v().edge) ? { width: MIX_HANDLE_H + 'px' } : { height: MIX_HANDLE_H + 'px' }}
-          role="button" tabIndex={0} aria-expanded="false" aria-label={t('c.mv.handleLabel')} title={t('c.mv.handleTip')} onPointerDown={e => handleDown(v())(e)} onKeyDown={handleKey}>
-          <MixCollapsedHead vert={side(v().edge)} />
-        </div>
-      }>
-        {(() => {
+    <Show when={byKey().get(p.k)}>{v => (() => {
           const split = (
             <div class={side(v().edge) ? 'vsplit' : 'docksplit'} role="separator" aria-orientation={side(v().edge) ? 'vertical' : 'horizontal'} tabIndex={0}
               aria-label={t('b.dk.resizeStrip')} title={splitTip(v())} onPointerDown={e => stripSplit(v())(e)} onKeyDown={e => stripKey(v())(e)}
@@ -170,9 +130,7 @@ export function Workspace() {
             </div>
           );
           return p.splitFirst ? <>{split}{body}</> : <>{body}{split}</>;
-        })()}
-      </Show>
-    )}</Show>
+        })()}</Show>
   );
 
   return (
