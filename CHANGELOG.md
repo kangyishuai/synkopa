@@ -7,6 +7,11 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Find a command (Ctrl+K).** Type what you want to do; every menu command is there with its
+  shortcut, what you have selected comes first, and a question that is not a command goes to Ask AI.
+- **Pan per note.** The Piano roll's lower lane switches between Velocity and Pan; drag to pan
+  notes left and right, or type it in a note's properties. Plays on sampler, Synth and Synkopa Keys
+  channels (not on plugins).
 - **Stereo.** Width (0 % mono … 200 %), Spread to widen even a mono synth or vocal without any
   loss when the song is summed to mono, Bass mono to keep everything under 120 Hz (or your
   frequency) in the centre for clubs and phones, gain and balance; polarity and L/R swap under
@@ -32,6 +37,19 @@ shown in the app after an update and is published as the release notes (see
   100 % wet plate for a send. The old presets keep their places.
 
 ### Changed
+- **A calmer look.** Panels, mixer channels, windows and menus are told apart by their tone and a
+  soft shadow instead of outlines; floating windows stand a step off the app behind them. Buttons
+  and fields are filled blocks, so what can be clicked reads at a glance.
+- **Piano roll bar, rebuilt.** Tools as one switch, Snap as a chip (with Auto), the song's key shown
+  as a badge with its scale on a small keyboard, and Humanize and the other note tools behind
+  "Tools" with icons and sliders. The Playlist bar is built from the same pieces.
+- **Playlist.** Track names are shown in full (the mixer insert sits beside the volume). Automation
+  clips read as curves. Audio clips show stretch, pitch and gain only when selected; a small dot
+  marks a clip that has any. A muted track's M stays lit while the rest of the track fades.
+- **Mixer.** A dB scale on the faders, the Master set apart, a grip on effect rows, and a "Route
+  selected here" button when Channel rack channels are selected.
+- **The effect picker opens in the middle of the app** instead of beside the pointer.
+- **Dim labels are easier to read** in the dark theme.
 - **Effect windows are tidier.** Each group of controls sits in its own frame, packed closer, and
   the how-to line that took the bottom of every window now sits behind a ? in the title bar.
 - **A clearer Reverb window.** The picture now shows what you hear: how long each frequency rings
