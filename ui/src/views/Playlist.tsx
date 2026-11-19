@@ -1490,10 +1490,18 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
   const stop = (e: Event) => e.stopPropagation();
   // tracks play into the master unless the user sends one to a mixer channel (lane menu); only then is it shown.
   // It sits beside the volume, so the name has the whole first row; a track too low for a second row keeps it up there.
+  // one click opens the route menu, a double-click shows that insert in the mixer instead (the menu
+  // waits for the second click: opened at once, it covered the button and swallowed the double-click)
+  let routeTimer = 0;
+  onCleanup(() => clearTimeout(routeTimer));
+  const routeClick = (e: MouseEvent) => {
+    if (routeTimer) { clearTimeout(routeTimer); routeTimer = 0; closeMenu(); showInsert(t().insert ?? 0); return; }
+    const x = e.clientX, y = e.clientY;
+    routeTimer = window.setTimeout(() => { routeTimer = 0; openRouteMenu(props.i, x, y); }, 250);
+  };
   const route = () => (
     <Show when={routeIdx() > 0}>
-              <button class="mini route" title={tl('a.pl.routeTip', { out: 'Insert ' + routeIdx() })} onPointerDown={stop} onClick={e => openRouteMenu(props.i, e.clientX, e.clientY)}
-                onDblClick={() => { closeMenu(); showInsert(t().insert ?? 0); }}>{'Ins ' + routeIdx()}</button>
+              <button class="mini route" title={tl('a.pl.routeTip', { out: 'Insert ' + routeIdx() })} onPointerDown={stop} onClick={routeClick}>{'Ins ' + routeIdx()}</button>
             </Show>
   );
   return (
