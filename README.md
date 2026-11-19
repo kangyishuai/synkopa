@@ -26,7 +26,7 @@ Synkopa is a desktop music production program (a DAW) for Windows and Linux. It 
 source is open, and it is made for one job: making a beat and recording
 a vocal over it, the way you would in FL Studio.
 
-## Note from developer (This part is not AI SLOP)
+## Note from developer
 
 ![From the first FL Studio in 2010 to Synkopa in 2026](site/img/journey.svg)
 
