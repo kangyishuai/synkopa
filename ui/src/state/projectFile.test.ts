@@ -123,6 +123,38 @@ describe('opening a project', () => {
     expect((await import('./ui')).U.readout).toContain('recording: stop it first');
     await mock.transportStop();
   });
+  it('refuses to start a new project while a take is recording, like the engine', async () => {
+    await A.projectOpen('C:\\Muzyka\\First.wave');
+    await mock.applyOps([{ op: 'setBpm', bpm: 97 }]);
+    store.replaceState(await mock.getState());
+    const track = store.S.project.tracks[0];
+    await mock.applyOps([{ op: 'putTrack', track: { ...track, arm: true } }]);
+    await mock.transportSet({ rec: true });
+    await mock.transportPlay(0);
+    store.replaceState(await mock.getState());
+    // the user-facing action reports the refusal, like Ctrl+N in the app
+    expect(await A.projectNew()).toBe(false);
+    expect((await import('./ui')).U.readout).toContain('recording: stop it first');
+    // the refused reset left the backend project alone
+    expect((await mock.getState()).project.bpm).toBe(97);
+    await mock.transportStop();
+    await A.projectNew();
+    expect((await mock.getState()).project.bpm).not.toBe(97); // with the take over, the reset goes through
+  });
+  it('accepts a new project while the audio device is down, like the engine', async () => {
+    // the output refuses to open (the Focusrite is unplugged, the ASIO host is selected):
+    // like the native engine, no running device means no audio take, so the reset is allowed
+    await A.projectOpen('C:\\Muzyka\\First.wave');
+    await mock.setFocusritePresent(false);
+    await mock.audioSetConfig({ ...(await mock.audioGetConfig()), host: 'asio' });
+    expect((await mock.audioGetConfig()).running).toBe(false);
+    const track = store.S.project.tracks[0];
+    await mock.applyOps([{ op: 'putTrack', track: { ...track, arm: true } }]);
+    await mock.transportSet({ rec: true });
+    await mock.transportPlay(0);
+    expect(await A.projectNew()).toBe(true); // no take without a device: the reset goes through
+    expect((await mock.getState()).path).toBeNull();
+  });
   it('explains how to retry an Explorer open while another confirmation is active', async () => {
     await A.projectOpen('C:\\Muzyka\\First.wave');
     await mock.applyOps([{ op: 'setBpm', bpm: 137 }]);

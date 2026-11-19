@@ -14,6 +14,8 @@ let inflight = 0;          // queued/unanswered mutating requests
 let gestures = 0;          // gestures between begin and end
 let lastReplyRev = 0;      // newest revision the engine reported for one of *our* batches
 let stash: StateDto | null = null;
+let recovery: Promise<void> | null = null; // a refusal's state read-back, while it runs
+let resyncTries = 0;       // read-back retries after the backend itself failed
 
 export const projectRevision = () => Math.max(S.revision, lastReplyRev);
 
@@ -78,9 +80,42 @@ export function acceptReply(dto: StateDto) {
   replaceState(dto);
 }
 
-export async function resync(err?: unknown) {
+export function resync(err?: unknown): Promise<void> {
   if (err) { console.warn('[wave] edit rejected:', err); say(tl('a.err', { e: String((err as Error)?.message ?? err) })); }
-  try { const dto = await be().getState(); lastReplyRev = dto.revision; stash = null; replaceState(dto); } catch (e) { console.error(e); }
+  recovery = (async () => {
+    try {
+      const dto = await be().getState();
+      resyncTries = 0;
+      if (dto.revision < S.revision) return; // a newer state is already on screen
+      lastReplyRev = dto.revision; stash = null; replaceState(dto);
+    } catch (e) {
+      // the read failed too: the refused frame must not stay on screen for ever, but a
+      // backend that errors on reads must not be spun against either — retry, bounded
+      console.error(e);
+      scheduleResync();
+    }
+  })();
+  return recovery;
+}
+
+function scheduleResync() {
+  if (resyncTries >= 4) return; // bounded: a backend that keeps failing is not spun against
+  resyncTries++;
+  setTimeout(() => {
+    // a live edit or gesture is working against its own state; its next reply repairs it.
+    // Checked here (retry time), not above: the failing read may race the gesture's own
+    // end_gesture, which is still in flight when the first read fails.
+    if (inflight > 0 || gestures > 0) return;
+    void resync();
+  }, 250);
+}
+
+/** Test hook: the mutating queue has drained and any refusal's read-back has landed. */
+export function settled(): Promise<void> {
+  return queue.then(
+    () => {},
+    () => {},
+  ).then(() => recovery ?? undefined).then(() => {});
 }
 
 /** One undo step: apply locally, send to the engine. */
@@ -144,13 +179,18 @@ export class Gesture {
     }
   }
   private mark(k: string) { if (!this.order.includes(k)) this.order.push(k); }
-  private take(): Op[] {
+  /** The ops `take()` would send, without taking them. */
+  private peek(): Op[] {
     const ops: Op[] = [];
     for (const k of this.order) {
       if (k === 'clips') { if (this.putClips.size) ops.push({ op: 'putClips', clips: [...this.putClips.values()] }); }
       else if (k === 'remove') { if (this.removed.size) ops.push({ op: 'removeClips', ids: [...this.removed] }); }
       else { const op = this.other.get(k); if (op) ops.push(op); }
     }
+    return ops;
+  }
+  private take(): Op[] {
+    const ops = this.peek();
     this.putClips.clear(); this.removed.clear(); this.other.clear(); this.order = [];
     return ops;
   }
@@ -160,7 +200,15 @@ export class Gesture {
     if (!ops.length) return;
     this.busy = true;
     enqueue(() => be().applyOps(ops, { label: this.label, transient: true }))
-      .then(noteRev, e => console.warn('[wave] transient op rejected', e))
+      // a refused frame must not leave its local state on screen: pull the engine's truth, like commit()
+      .then(noteRev, e => resync(e).then(() => {
+        // the read-back put the engine's truth on screen — and with it wiped the frames that
+        // buffered while this one was in flight (each was applied locally from `update` but
+        // never sent). Reapply just those still-pending ops so the preview matches what the
+        // next flush sends; the refused ops themselves stay gone (they were taken to send).
+        const pending = this.peek();
+        if (pending.length) applyLocal(pending);
+      }))
       .finally(() => { this.busy = false; if (this.order.length) this.flush(); });
   }
 
@@ -169,7 +217,7 @@ export class Gesture {
     if (this.done) return;
     this.done = true;
     const ops = this.take();
-    if (ops.length) enqueue(() => be().applyOps(ops, { label: this.label, transient: true })).then(noteRev, e => console.warn(e));
+    if (ops.length) enqueue(() => be().applyOps(ops, { label: this.label, transient: true })).then(noteRev, e => resync(e));
     enqueue(() => be().endGesture(label ?? this.label)).catch(e => console.warn(e)).finally(() => { gestures--; settle(); });
   }
 }

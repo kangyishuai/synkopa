@@ -9,7 +9,7 @@ use std::sync::atomic::{
 use std::sync::Arc;
 use std::time::Instant;
 
-use crate::model::{Id, SamplerState};
+use crate::model::{FxKind, Id, SamplerState};
 use crate::plug::{PlugBank, PlugInst};
 use crate::poly::{Patch, SynthBank, SynthInst};
 use crate::processor::{ParamBlock, ProcessCtx, Processor, METERS};
@@ -198,9 +198,19 @@ pub(crate) fn finite_or_silent(x: &mut [f32]) {
 
 pub struct FxSlot {
     pub id: Id,
+    /// Which effect this slot runs: a same-id rebuild of the same kind (a bypass flip, new
+    /// params) keeps the running processor — its tail must not die at the graph swap.
+    pub kind: FxKind,
     pub bypass: bool,
     /// Dry/wet 0..1.
     pub mix: f32,
+    /// Wet scale for the bypass declick (`run_chain` ramps it over ~5 ms on a flip).
+    fade: f32,
+    /// Weight of the dry path's latency delay in a bypass release: 1.0 keeps it delayed
+    /// (aligned with the still-late wet while the wet fades out), and `run_chain` ramps it
+    /// to 0 in a second declick once the wet is gone — dropping the delay in one step would
+    /// click (a phase jump of the whole latency).
+    dly_fade: f32,
     /// `None` = "take the running processor with this id from the current graph".
     pub proc: Option<Box<dyn Processor>>,
     pub params: Option<ParamBlock>,
@@ -212,8 +222,28 @@ pub struct FxSlot {
 
 impl FxSlot {
     /// `latency` in samples (allocates; call off the audio thread).
-    pub fn new(id: Id, bypass: bool, mix: f32, proc: Option<Box<dyn Processor>>, params: Option<ParamBlock>, latency: usize) -> Self {
-        Self { id, bypass, mix, proc, params, dly_l: vec![0.0; latency], dly_r: vec![0.0; latency], dly_w: 0 }
+    pub fn new(
+        id: Id,
+        kind: FxKind,
+        bypass: bool,
+        mix: f32,
+        proc: Option<Box<dyn Processor>>,
+        params: Option<ParamBlock>,
+        latency: usize,
+    ) -> Self {
+        Self {
+            id,
+            kind,
+            bypass,
+            mix,
+            fade: if bypass { 0.0 } else { 1.0 },
+            dly_fade: if bypass { 0.0 } else { 1.0 },
+            proc,
+            params,
+            dly_l: vec![0.0; latency],
+            dly_r: vec![0.0; latency],
+            dly_w: 0,
+        }
     }
 
     fn delay_dry(&mut self, l: &mut [f32], r: &mut [f32]) {
@@ -224,6 +254,14 @@ impl FxSlot {
             *y = std::mem::replace(&mut self.dly_r[w], *y);
             self.dly_w = if w + 1 == n { 0 } else { w + 1 };
         }
+    }
+
+    /// Drops the dry-path delay line once its release is over: nothing reads it any more
+    /// (an un-bypass rebuild swaps in a fresh, zeroed one of the effect's latency).
+    fn clear_delay(&mut self) {
+        self.dly_l.clear();
+        self.dly_r.clear();
+        self.dly_w = 0;
     }
 }
 
@@ -1162,7 +1200,24 @@ impl Rt {
                             if let Some((st, old)) = found {
                                 let mut took = false;
                                 if slot.proc.is_none() {
-                                    slot.proc = old.proc.take();
+                                    // "take the running processor with this id" — but a kind
+                                    // change under the same id is a different effect: the fresh
+                                    // one must play (a carried Comp would process a Fet slot)
+                                    if old.kind == slot.kind {
+                                        slot.proc = old.proc.take();
+                                        slot.fade = old.fade;
+                                        slot.dly_fade = if slot.bypass { old.dly_fade } else { 1.0 };
+                                        took = true;
+                                    }
+                                } else if old.kind == slot.kind && old.proc.is_some() {
+                                    // a same-kind rebuild (a bypass flip, new params) keeps the
+                                    // running processor: its tail must not die at the swap. The
+                                    // fresh one now sits in `old`, freed off-thread with the old
+                                    // graph (trashed below). A different kind (comp ↔ FET) keeps
+                                    // the fresh one.
+                                    std::mem::swap(&mut slot.proc, &mut old.proc);
+                                    slot.fade = old.fade;
+                                    slot.dly_fade = if slot.bypass { old.dly_fade } else { 1.0 };
                                     took = true;
                                 }
                                 if old.dly_l.len() == slot.dly_l.len() {
@@ -1170,6 +1225,19 @@ impl Rt {
                                     std::mem::swap(&mut slot.dly_r, &mut old.dly_r);
                                     slot.dly_w = old.dly_w;
                                     took = took || !slot.dly_l.is_empty();
+                                } else if slot.bypass
+                                    && (slot.fade > 0.0 || slot.dly_fade > 0.0)
+                                    && slot.dly_l.is_empty()
+                                    && !old.dly_l.is_empty()
+                                {
+                                    // a bypass ramp-out (or its release) with the wet still carried
+                                    // on: it stays late by the plugin's latency, so the dry path must
+                                    // stay delayed with it until the handoff is done — the rebuilt
+                                    // slot says 0 (a bypassed effect delays nothing once it is over)
+                                    std::mem::swap(&mut slot.dly_l, &mut old.dly_l);
+                                    std::mem::swap(&mut slot.dly_r, &mut old.dly_r);
+                                    slot.dly_w = old.dly_w;
+                                    took = true;
                                 }
                                 if took {
                                     carried = true;
@@ -2380,6 +2448,18 @@ fn gate(ins: &mut InsertRt, n: usize, enabled: bool, watch: &[Id]) -> Gate {
                 return Gate::Run;
             }
             if s.bypass {
+                // a bypass ramp-out — and the dry handoff after it — is still audible: the
+                // chain keeps running until both fades settle, whatever the tails say. The
+                // flip may land after the silence began, so the elapsed quiet does not cover
+                // the fade; parking here would freeze it mid-ramp and cut the wet (or the
+                // still-late dry) at a block boundary. run_chain only advances a slot's fades
+                // where it runs the slot at all (low-latency monitoring skips delayed slots),
+                // so a fade that cannot advance must not hold the chain awake either.
+                let delayed = !s.dly_l.is_empty();
+                let fading = (s.fade > 0.0 && s.proc.is_some()) || (s.dly_fade > 0.0 && delayed);
+                if fading && (!ins.low_lat || !delayed) {
+                    return Gate::Run;
+                }
                 continue;
             }
             tail = tail.saturating_add(s.dly_l.len());
@@ -2412,6 +2492,9 @@ fn gate(ins: &mut InsertRt, n: usize, enabled: bool, watch: &[Id]) -> Gate {
 
 fn run_chain(ins: &mut InsertRt, n: usize, ctx: &ProcessCtx, watch: &[Id], taps: &mut Taps, shared: &Shared) {
     let low_lat = ins.low_lat;
+    // bypass declick: the wet contribution ramps over ~5 ms in either direction, so flipping
+    // bypass never cuts a ringing tail (or a fed delay line) in one sample
+    let declick = 1.0 / (0.005 * ctx.sample_rate);
     for slot in ins.fx.iter_mut() {
         let delayed = !slot.dly_l.is_empty();
         if low_lat && delayed {
@@ -2421,13 +2504,41 @@ fn run_chain(ins: &mut InsertRt, n: usize, ctx: &ProcessCtx, watch: &[Id], taps:
         if let Some(w) = w {
             push_tap(&mut taps.input[w], &ins.l[..n], &ins.r[..n]);
         }
+        // the wet path runs while it is audible or still ramping out: a bypassed slot whose
+        // fade has reached 0 costs nothing again
+        let fading = (!slot.bypass && slot.mix > 0.0005) || (slot.bypass && slot.fade > 0.0);
+        // the wet is gone, but the dry path still sits on the old latency: hand it back in a
+        // second declick (dropping the delay in one step would click with a phase jump)
+        let releasing = slot.bypass && slot.fade <= 0.0 && slot.dly_fade > 0.0 && delayed;
         if !slot.bypass && slot.mix <= 0.0005 && delayed {
             // fully dry: still late by the latency PDC is compensating for
             slot.delay_dry(&mut ins.l[..n], &mut ins.r[..n]);
-        } else if !slot.bypass && slot.mix > 0.0005 {
+        } else if releasing {
+            ins.dry_l[..n].copy_from_slice(&ins.l[..n]);
+            ins.dry_r[..n].copy_from_slice(&ins.r[..n]);
+            slot.delay_dry(&mut ins.l[..n], &mut ins.r[..n]);
+            let mut w = slot.dly_fade;
+            for i in 0..n {
+                w -= declick;
+                if w < 0.0 {
+                    w = 0.0;
+                }
+                ins.l[i] += (ins.dry_l[i] - ins.l[i]) * (1.0 - w);
+                ins.r[i] += (ins.dry_r[i] - ins.r[i]) * (1.0 - w);
+            }
+            slot.dly_fade = w;
+            if w == 0.0 {
+                slot.clear_delay();
+            }
+        } else if fading {
             if let Some(p) = slot.proc.as_mut() {
                 let mix = slot.mix.min(1.0);
-                if mix < 0.9995 || delayed {
+                let mut g = slot.fade;
+                let down = slot.bypass;
+                // the ramp must run whenever the wet scale is not settled: a bypass flip at
+                // full Mix arrives with g == 1.0 and still has to ramp down to dry
+                let blending = mix < 0.9995 || g < 0.9995 || down;
+                if blending || delayed {
                     ins.dry_l[..n].copy_from_slice(&ins.l[..n]);
                     ins.dry_r[..n].copy_from_slice(&ins.r[..n]);
                 }
@@ -2440,12 +2551,25 @@ fn run_chain(ins: &mut InsertRt, n: usize, ctx: &ProcessCtx, watch: &[Id], taps:
                     // the line runs at every Mix so lowering it never plays stale audio
                     slot.delay_dry(&mut ins.dry_l[..n], &mut ins.dry_r[..n]);
                 }
-                if mix < 0.9995 {
+                if blending {
                     for i in 0..n {
-                        ins.l[i] = ins.dry_l[i] + (ins.l[i] - ins.dry_l[i]) * mix;
-                        ins.r[i] = ins.dry_r[i] + (ins.r[i] - ins.dry_r[i]) * mix;
+                        if down {
+                            g -= declick;
+                            if g < 0.0 {
+                                g = 0.0;
+                            }
+                        } else {
+                            g += declick;
+                            if g > 1.0 {
+                                g = 1.0;
+                            }
+                        }
+                        let wet = mix * g;
+                        ins.l[i] = ins.dry_l[i] + (ins.l[i] - ins.dry_l[i]) * wet;
+                        ins.r[i] = ins.dry_r[i] + (ins.r[i] - ins.dry_r[i]) * wet;
                     }
                 }
+                slot.fade = g;
             }
         }
         if let Some(w) = w {
