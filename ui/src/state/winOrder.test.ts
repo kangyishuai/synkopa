@@ -87,6 +87,29 @@ describe('one stack for every floating window', () => {
     A.tuckBelow(before);
     expect(shownFloating()).toMatchObject([{ kind: 'plug', id: 7 }]);
   });
+  it('a click in the Browser (auditioning a sample) keeps the Channel rack up; one on the Playlist tucks it', async () => {
+    const { setU } = await import('../state/ui');
+    const A = await import('../state/actions');
+    const { shownFloating } = await import('../state/winOrder');
+    const ups: ((e: PointerEvent) => void)[] = [];
+    const prev = globalThis.window;
+    vi.stubGlobal('window', { ...prev, addEventListener: (t: string, h: (e: PointerEvent) => void) => { if (t === 'pointerup') ups.push(h); }, removeEventListener: () => {} });
+    const click = (inside: string | null) => {
+      ups.length = 0;
+      const target = { closest: (sel: string) => (inside && sel.split(',').map(x => x.trim()).includes(inside) ? {} : null) };
+      A.tuckOnClick({ button: 0, clientX: 10, clientY: 10, target } as unknown as PointerEvent);
+      for (const h of ups) h({ type: 'pointerup', clientX: 10, clientY: 10 } as PointerEvent);
+    };
+    setU({ zTop: 1, plugs: [], editor: null, pitchEd: null, plugsHidden: false, tuckZ: 0,
+      rackWin: { x: 0, y: 0, w: 600, h: 300, z: 1 }, rollWin: null, mixView: false, dock: { left: [], right: [], bottom: [] } });
+    const before = shownFloating().length;
+    click('.browser');
+    expect(shownFloating().map(f => f.kind)).toContain('rack');
+    expect(shownFloating().length).toBe(before);
+    click(null); // the Playlist
+    expect(shownFloating()).toEqual([]);
+    vi.stubGlobal('window', prev);
+  });
 });
 
 describe('F5 then F6 (#125)', () => {
