@@ -16,6 +16,20 @@ shown in the app after an update and is published as the release notes (see
   pitch editor lists and every other drop-down open a dark list in the app's own style instead of
   the system's white one, with the current choice ticked. Keyboard works as before: arrows, Enter,
   Esc (closes only the list, not the dialog behind it) and typing the first letters.
+- **Docking shows one arrow per side.** Dragging a window's title bar shows just three arrows, left,
+  right and bottom, instead of a cluster of them in the middle of the screen.
+
+### Fixed
+- Clicking a sample in the Browser to hear it no longer hides the floating Channel rack.
+
+## 0.9.29 — 2026-11-19
+
+### Added
+- **Synkopa runs on a Mac.** A `.dmg` for Apple Silicon (M1 or later, macOS 13.4 or newer) is part
+  of every release from now on, and it updates itself like the Windows and Linux versions. The app
+  is not notarized by Apple yet: the first time, open System Settings → Privacy & Security and
+  click **Open Anyway**. VST3 plugins are not hosted on macOS yet; the built-in instruments and
+  effects are all there.
 
 ## 0.9.28 — 2026-11-19
 

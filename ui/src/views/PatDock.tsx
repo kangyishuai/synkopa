@@ -135,7 +135,7 @@ export function Workspace() {
 
   return (
     // the Mix view (F9) covers this; it stays laid out (scroll, zoom and sizes are kept) but is not painted or reachable
-    // a plain click anywhere in it (Browser, docked panels, Playlist) sends the floating windows behind it
+    // a plain click in it (docked panels, Playlist; not the Browser) sends the floating windows behind it
     <div ref={col} class="workcol" classList={{ away: U.mixView }} inert={U.mixView} aria-hidden={U.mixView}
       on:pointerdown={{ capture: true, handleEvent: tuckOnClick }}>
       <div ref={row} class="workrow">
