@@ -19,6 +19,13 @@ describe('localization', () => {
   it('passes unknown names through', () => {
     expect(tName('User preset')).toBe('User preset');
   });
+  it('shows factory synth presets in the interface language (English in the engine)', () => {
+    expect(tName('Arp Digital')).toBe('Arp Digital');
+    expect(tName('Klawisze')).toBe('Keys'); // categories stay Polish in the engine
+    setLang('pl');
+    expect(tName('Arp Digital')).toBe('Arp Cyfrowy');
+    expect(tName('Klawisze')).toBe('Klawisze');
+  });
   it('loads the saved language and updates the document', () => {
     vi.stubGlobal('localStorage', { getItem: () => '{"lang":"pl"}' });
     const documentElement = { lang: '' };

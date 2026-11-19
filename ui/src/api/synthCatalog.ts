@@ -1206,7 +1206,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
   ],
   "presets": [
     {
-      "name": "808 Głęboki",
+      "name": "808 Deep",
       "category": "808",
       "params": {
         "amp_a": 1.5,
@@ -1292,7 +1292,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "808 Przester",
+      "name": "808 Distorted",
       "category": "808",
       "params": {
         "amp_a": 1.2,
@@ -1378,7 +1378,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "808 Ślizg",
+      "name": "808 Glide",
       "category": "808",
       "params": {
         "amp_a": 1.2,
@@ -1464,7 +1464,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Sub Czysty",
+      "name": "Sub Clean",
       "category": "808",
       "params": {
         "amp_a": 2.0,
@@ -1550,7 +1550,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Reese Ruchomy",
+      "name": "Reese Moving",
       "category": "Bas",
       "params": {
         "amp_a": 3.0,
@@ -1636,7 +1636,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Growl Bas",
+      "name": "Growl Bass",
       "category": "Bas",
       "params": {
         "amp_a": 2.0,
@@ -1722,7 +1722,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "FM Bas",
+      "name": "FM Bass",
       "category": "Bas",
       "params": {
         "amp_a": 1.0,
@@ -1808,7 +1808,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Sync Bas",
+      "name": "Sync Bass",
       "category": "Bas",
       "params": {
         "amp_a": 1.0,
@@ -1894,7 +1894,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Bas Formant",
+      "name": "Formant Bass",
       "category": "Bas",
       "params": {
         "amp_a": 3.0,
@@ -2066,7 +2066,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Bas Ciepły",
+      "name": "Warm Bass",
       "category": "Bas",
       "params": {
         "amp_a": 1.5,
@@ -2152,7 +2152,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Bas Klik",
+      "name": "Click Bass",
       "category": "Bas",
       "params": {
         "amp_a": 5.0,
@@ -2238,7 +2238,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pluck Szkło",
+      "name": "Pluck Glass",
       "category": "Pluck",
       "params": {
         "amp_a": 0.8,
@@ -2582,7 +2582,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pluck Grzebień",
+      "name": "Pluck Comb",
       "category": "Pluck",
       "params": {
         "amp_a": 0.8,
@@ -2668,7 +2668,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pluck Wokal",
+      "name": "Pluck Vocal",
       "category": "Pluck",
       "params": {
         "amp_a": 1.5,
@@ -2926,7 +2926,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Lead Gwizdek",
+      "name": "Lead Whistle",
       "category": "Lead",
       "params": {
         "amp_a": 30.0,
@@ -3012,7 +3012,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Lead Kremowy",
+      "name": "Lead Creamy",
       "category": "Lead",
       "params": {
         "amp_a": 3.0,
@@ -3270,7 +3270,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pad Ciepły",
+      "name": "Pad Warm",
       "category": "Pad",
       "params": {
         "amp_a": 450.0,
@@ -3356,7 +3356,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pad Chór",
+      "name": "Pad Choir",
       "category": "Pad",
       "params": {
         "amp_a": 600.0,
@@ -3442,7 +3442,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pad Ruch",
+      "name": "Pad Motion",
       "category": "Pad",
       "params": {
         "amp_a": 700.0,
@@ -3528,7 +3528,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pad Ciemny",
+      "name": "Pad Dark",
       "category": "Pad",
       "params": {
         "amp_a": 900.0,
@@ -3614,7 +3614,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Pad Szklany",
+      "name": "Pad Glass",
       "category": "Pad",
       "params": {
         "amp_a": 1500.0,
@@ -3786,7 +3786,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Klawisz Miękki",
+      "name": "Keys Soft",
       "category": "Klawisze",
       "params": {
         "amp_a": 1.5,
@@ -3872,7 +3872,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Organy",
+      "name": "Organ",
       "category": "Klawisze",
       "params": {
         "amp_a": 3.0,
@@ -4130,7 +4130,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Dzwonek FM",
+      "name": "FM Bell",
       "category": "Dzwonki",
       "params": {
         "amp_a": 0.8,
@@ -4216,7 +4216,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Vibrafon",
+      "name": "Vibraphone",
       "category": "Dzwonki",
       "params": {
         "amp_a": 0.8,
@@ -4474,7 +4474,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Smyczki",
+      "name": "Strings",
       "category": "Dęte/Smyczki",
       "params": {
         "amp_a": 500.0,
@@ -4646,7 +4646,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Flet",
+      "name": "Flute",
       "category": "Dęte/Smyczki",
       "params": {
         "amp_a": 70.0,
@@ -4732,7 +4732,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Arp Cyfrowy",
+      "name": "Arp Digital",
       "category": "Arp",
       "params": {
         "amp_a": 0.8,
@@ -4990,7 +4990,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Lo-fi Klawisz",
+      "name": "Lo-fi Keys",
       "category": "Lo-fi",
       "params": {
         "amp_a": 5.0,
@@ -5162,7 +5162,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Wznoszenie",
+      "name": "Uplifter",
       "category": "FX",
       "params": {
         "amp_a": 4000.0,
@@ -5248,7 +5248,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Zjazd Sub",
+      "name": "Sub Drop",
       "category": "FX",
       "params": {
         "amp_a": 1.0,
@@ -5334,7 +5334,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Szum Wiatru",
+      "name": "Wind Noise",
       "category": "FX",
       "params": {
         "amp_a": 600.0,
@@ -5420,7 +5420,7 @@ export const SYNTH_CATALOG: SynthCatalog = {
       }
     },
     {
-      "name": "Uderzenie",
+      "name": "Impact",
       "category": "FX",
       "params": {
         "amp_a": 0.8,

@@ -1,7 +1,7 @@
 # Built-in synth
 
 Channel Rack channels of kind `synth` play the engine's own polyphonic synth
-(`crates/engine/src/poly`). Project format: `{"kind": "synth", "synth": {"preset": "808 Głęboki" | null,
+(`crates/engine/src/poly`). Project format: `{"kind": "synth", "synth": {"preset": "808 Deep" | null,
 "params": {"flt_cutoff": 900, ...}}}`; a missing id plays its default, unknown ids are rejected
 by `putChannel`. Projects without synth channels load unchanged (serde defaults).
 
@@ -17,7 +17,7 @@ by `putChannel`. Projects without synth channels load unchanged (serde defaults)
 - New channel: `newSynthChannel(catalog.synth, id, presetName | null)` then the `putChannel` op.
   Knob edit: `withSynthParam(...)` + `putChannel` (fast path, no timeline rebuild, held notes
   follow). Preset: `withSynthPreset(...)` + `putChannel`.
-- CLI: `synkopa channels --synth "808 Głęboki"`, `--ch ID --preset NAME`, `--ch ID --param ID --value V`.
+- CLI: `synkopa channels --synth "808 Deep"`, `--ch ID --preset NAME`, `--ch ID --param ID --value V`.
 
 ## Signal flow
 

@@ -851,6 +851,7 @@ pub fn catalog() -> SynthCatalog {
 
 /// A synth state holding preset `name`'s full parameter set (`None` if there is no such preset).
 pub fn preset_state(name: &str) -> Option<crate::model::SynthState> {
+    let name = presets::current_name(name);
     let p = presets::all().into_iter().find(|p| p.name == name)?;
     Some(crate::model::SynthState {
         preset: Some(p.name.to_owned()),
