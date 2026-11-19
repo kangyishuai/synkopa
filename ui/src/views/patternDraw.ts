@@ -143,7 +143,7 @@ export function drawLane(g: CanvasRenderingContext2D, W: number, H: number, o: {
 }
 
 /** The colour of the Piano roll lane's handles: one per target, so the lane says what it edits. */
-export const laneColor = (mode: 'vel' | 'pan') => (mode === 'pan' ? T.amber : T.blue);
+export const laneColor = (mode: 'vel' | 'pan') => (mode === 'pan' ? T.pan : T.blue);
 
 /**
  * The Piano roll's lane (FL's event editor): one handle per note of the channel — a stem from the
@@ -268,6 +268,10 @@ function rollBg(g: CanvasRenderingContext2D, W: number, H: number, G: RollGeo, r
     if (k % 12 === 0 && G.rowH >= 9) {
       g.fillStyle = T.keyWText; g.font = MONO9; g.textBaseline = 'middle'; g.textAlign = 'right';
       g.fillText(noteName(k), G.kw - 4, y + G.rowH / 2 + 0.5);
+    } else if (G.rowH >= 11 && inScale(k, root, mask)) {
+      // the other notes of the song's key, by letter only (the octave is on the C): where the scale is on the keyboard
+      g.fillStyle = b ? rgba(T.keyBText, 0.55) : rgba(T.keyWText, 0.5); g.font = MONO8; g.textBaseline = 'middle'; g.textAlign = 'right';
+      g.fillText(noteName(k).replace(/-?\d+$/, ''), b ? G.kw * 0.62 - 4 : G.kw - 4, y + G.rowH / 2 + 0.5);
     }
   }
   g.fillStyle = T.line2; g.fillRect(G.kw - 1, 0, 1, H);
