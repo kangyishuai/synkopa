@@ -206,9 +206,8 @@ the wants do not fit, every strip gives up the same part of what it has above it
 Splitters: one on each strip's Playlist side (drag, arrow keys; a rack strip's double-click fits
 the pattern) and one between panels sharing a strip (`splitShares`). Dragging a title bar
 (`paneHeadDown`) moves the window — a docked panel floats off under the pointer first — and
-shows the dock guides (`dockGuides`, Visual Studio's): one at each outer edge (dock outside every
-strip there), a compass over the Playlist (dock beside it) and one over each docked panel (along
-its strip = share it, across = a new strip on that side). Only a drop on a guide docks; anywhere
+shows the dock guides (`dockGuides`): one arrow per side (left, right, bottom; FL Studio's), each
+docking outside every strip there. Only a drop on a guide docks; anywhere
 else the window stays floating. The title bar's dock button floats a panel or docks it back where
 it was (`U.dockHome`); its right-click menu and View → Window layout dock it to an edge without
 dragging, and *Reset window layout* restores the first-launch layout. Rows are keyed by strings,
