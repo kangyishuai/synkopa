@@ -1,7 +1,3 @@
-> [!IMPORTANT]
-> **WAVE is now called Synkopa.** Same app, new name and logo: nothing of yours moves, `.wave` projects still open and
-> the `wave` command still works. The repository moved to `miskibin/synkopa`; old links redirect.
-
 <p align="center"><img src="site/img/icon.png" width="96" alt="Synkopa logo"></p>
 <h1 align="center">Synkopa</h1>
 <p align="center">
