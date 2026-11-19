@@ -4,7 +4,7 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
-## Unreleased
+## 0.9.27 — 2026-11-19
 
 ### Added
 - **A new synth sound bank and a more Serum-like synth.** 50 new factory presets (808s, Reese,
@@ -71,6 +71,17 @@ shown in the app after an update and is published as the release notes (see
   the low and high cut shaded where the tail is filtered away. Drag the three dots up and down
   and the cut lines sideways; below, the tail in time with the pre-delay to drag and the output
   after the last hit.
+
+### Fixed
+- **Undo says what it undoes.** Edit → Undo and Redo name the step ("Undo: Move clips", "Trim
+  clip", "Record take", …) instead of a bare Undo.
+- **No freeze while trimming or flattening.** Trimming a clip or flattening a comp writes its audio
+  in the background; the rest of the app keeps answering.
+- **Long sessions stay light on memory.** Audio that no undo step can bring back any more is let
+  go, and a recording take stops at 30 minutes (it lands as a clip; playback keeps going).
+- **Importing a folder with one bad file** imports the rest and names the file that failed.
+- **Settings survive a crash.** The settings file is written safely, so a crash mid-save can no
+  longer lose your audio device.
 
 ## 0.9.26 — 2026-11-19
 
