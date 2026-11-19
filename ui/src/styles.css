@@ -1368,3 +1368,82 @@ select option { background: var(--bg4); color: var(--fg); }
 .setdlg .setpane .form { align-items: stretch; }
 .setdlg .setpane .form > * { display: flex; align-items: center; }
 .setdlg .setpane .form .lab { align-items: flex-start; justify-content: center; }
+
+/* round 5 */
+.toolmenu { position: relative; align-self: center; }
+.toolmenu > .smallbtn { display: inline-flex; align-items: center; gap: 6px; }
+.toolmenu > .smallbtn.on { background: var(--bg6); color: var(--fg-hi); }
+.toolpop { position: absolute; right: 0; top: calc(100% + 6px); z-index: 30; width: 232px; display: flex; flex-direction: column; gap: 8px; padding: 12px; background: var(--bg4); border: 1px solid var(--line2); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+.toolpop .sel { width: 100%; height: 28px; }
+.toolpop .tprow { display: flex; align-items: center; justify-content: space-between; gap: 10px; font: 500 12px var(--sans); color: var(--fg3); }
+.toolpop .tprow > span::first-letter { text-transform: uppercase; }
+.toolpop .tprow .textin, .toolpop .tprow .sel { width: 96px; height: 26px; }
+.toolpop .smallbtn.primary { height: 28px; margin-top: 2px; }
+.pstatus .hintlink { flex: none; height: 18px; padding: 0 6px; border: 0; border-radius: 4px; background: transparent; color: var(--fg4); font: 500 11px var(--sans); cursor: pointer; }
+.pstatus .hintlink::before { content: '?'; display: inline-block; width: 13px; height: 13px; margin-right: 5px; border: 1px solid var(--line3); border-radius: 50%; font-size: 9px; line-height: 12px; text-align: center; }
+.pstatus .hintlink:hover { background: var(--bg5); color: var(--fg-hi); }
+.pstatus > span.hintshort { flex: 1 1 0; text-align: right; }
+.pstatus > span:last-child { color: inherit; }
+/* mixer strips: the pan / width numbers show once they say something (off centre, or the pointer is on the strip) */
+.strip .pantxt.def { visibility: hidden; }
+.strip:hover .pantxt.def { visibility: visible; }
+/* playlist lanes: the routing chip reads as a quiet tag, the volume thumb shows on hover */
+.lane .mini.route { color: var(--fg5); border-color: transparent; font-weight: 500; }
+.lane .mini.route:hover { color: var(--fg-hi); }
+.lane .lvol .thumb { opacity: 0; transition: opacity .12s; }
+.lane:hover .lvol .thumb, .lane .lvol.auto .thumb { opacity: 1; }
+.lane .lvol .track { height: 2px; }
+
+/* piano roll bar: settings are quiet chips (dim name + value), not boxed form fields */
+.chip { display: inline-flex; align-items: center; gap: 7px; height: 26px; padding: 0 8px 0 9px; border: 0; border-radius: 6px; background: transparent; color: var(--fg4); font: 500 11.5px var(--sans); white-space: nowrap; cursor: pointer; transition: background .12s; }
+.chip:hover, .chip:focus-within, .chip.on { background: var(--bg5); }
+button.chip { color: var(--fg); }
+.chip select { appearance: none; -webkit-appearance: none; height: 24px; padding: 0 13px 0 0; border: 0; outline: 0; background: transparent url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M1 2.5l3 3 3-3' fill='none' stroke='%238a93a3' stroke-width='1.3'/%3E%3C/svg%3E") right center no-repeat; color: var(--fg-hi); font: 600 11.5px var(--sans); cursor: pointer; }
+.chip select { field-sizing: content; }
+.chip select + select { margin-left: 2px; }
+.chip select option, .chip select optgroup { background: var(--bg4); color: var(--fg); }
+.roll .ptools { gap: 6px; }
+.roll .ptools .seg.tools { margin-right: 4px; }
+
+/* the key badge and its picker */
+.ptools .keybadge { display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 9px 0 7px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg2); color: var(--fg4); cursor: pointer; transition: border-color .12s, background .12s; }
+.ptools .keybadge:hover, .ptools .keybadge.on { border-color: var(--line3); background: var(--bg5); }
+.keybadge .kname { font: 600 12px var(--sans); color: var(--fg-hi); white-space: nowrap; }
+.keybadge .kauto { font: 600 9px var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--fg5); }
+.minikeys rect { fill: var(--bg7); }
+.minikeys rect.bk { fill: var(--bg0); stroke: var(--bg2); stroke-width: 1; }
+.minikeys rect.in { fill: color-mix(in srgb, var(--blue) 62%, var(--bg7)); }
+.minikeys rect.bk.in { fill: var(--blue); }
+.minikeys rect.root { fill: var(--fg-hi); }
+.toolpop.keypop { left: 0; right: auto; width: 268px; gap: 10px; }
+.toolpop .tphd { font: 600 12px var(--sans); color: var(--fg-hi); }
+.toolpop .tpnote { font: 11px/1.4 var(--sans); color: var(--fg5); }
+.keypop .rootgrid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
+.keypop .rootgrid button, .keypop .scalelist button { height: 28px; border: 0; border-radius: 6px; background: var(--bg2); color: var(--fg3); font: 600 11.5px var(--sans); cursor: pointer; }
+.keypop .rootgrid button.bk { background: var(--bg0); }
+.keypop .scalelist { display: flex; flex-direction: column; gap: 2px; }
+.keypop .scalelist button { background: transparent; text-align: left; padding: 0 9px; font-weight: 500; }
+.keypop .rootgrid button:hover, .keypop .scalelist button:hover { background: var(--bg6); color: var(--fg-hi); }
+.keypop .rootgrid button.on, .keypop .scalelist button.on { background: color-mix(in srgb, var(--blue) 28%, var(--bg4)); color: var(--blue-hi); }
+
+/* shared editor bar pieces in the Playlist header */
+.pltools .chip { height: 24px; padding: 0 6px 0 7px; font-size: 11px; }
+.pltools .chip select { font-size: 11px; height: 22px; }
+/* the note tools: a list with icons, the chosen one's settings below */
+.toolpop { width: 340px; }
+.toolpop .toolgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.toolpop .toolgrid button { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px; border: 0; border-radius: 6px; background: transparent; color: var(--fg3); font: 500 12px var(--sans); cursor: pointer; text-align: left; min-width: 0; }
+.toolpop .toolgrid button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toolpop .toolgrid button svg { flex: none; color: var(--fg4); }
+.toolpop .toolgrid button:hover { background: var(--bg6); color: var(--fg-hi); }
+.toolpop .toolgrid button.on { background: color-mix(in srgb, var(--blue) 28%, var(--bg4)); color: var(--blue-hi); }
+.toolpop .toolgrid button.on svg { color: var(--blue-hi); }
+
+/* note tool numbers: sliders */
+.toolpop .tpslide { display: grid; grid-template-columns: 1fr auto; gap: 5px 10px; align-items: baseline; font: 500 12px var(--sans); color: var(--fg3); }
+.toolpop .tpslide b { font: 600 11.5px var(--mono); color: var(--fg-hi); }
+.toolpop .tpslide input[type=range] { grid-column: 1 / -1; appearance: none; -webkit-appearance: none; width: 100%; height: 14px; margin: 0; background: transparent; cursor: ew-resize; }
+.toolpop .tpslide input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--blue) var(--p), var(--bg0) var(--p)); }
+.toolpop .tpslide input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; margin-top: -4px; border-radius: 50%; background: var(--fg-hi); border: 0; box-shadow: 0 1px 3px rgba(0,0,0,.5); }
+.toolpop .tpslide input[type=range]:focus-visible { outline: 1px solid var(--blue); outline-offset: 3px; border-radius: 3px; }
+.toolpop .tprow .textin { background: var(--bg1); border-color: var(--line); }

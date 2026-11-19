@@ -16,7 +16,7 @@ import { clipOfPattern, patBeatAt, songBeatIn } from '../lib/patLoop';
 import { rgba, T, themeVersion } from '../ui/theme';
 import { curBeat } from '../state/telemetry';
 import { clamp } from '../lib/format';
-import { duplicateRight, keyOf, noteAt, noteWidth, notesText, ROLL_SNAPS, ROLL_SNAPS_TRIPLET, rollSnapName, SCALES, scaleMask, stepsOf, transpose, velOf } from '../lib/pattern';
+import { autoRollSnap, duplicateRight, keyOf, noteAt, noteWidth, notesText, ROLL_SNAPS, ROLL_SNAPS_TRIPLET, rollSnapName, SCALES, scaleMask, stepsOf, transpose, velOf } from '../lib/pattern';
 import { NOTE_NAMES, noteName } from '../lib/pitch';
 
 /** The project key/scale as a setKey op (the roll header's key selectors commit it). */
@@ -30,7 +30,8 @@ import { audition, chanKindLabel, channels, closeRoll, curPat, moveNotesToNewPat
   selectChannel, setPatLoop, setPatStart, toggleRollMax,
 } from '../state/pattern';
 import { arrVersion, S } from '../state/store';
-import { openMenu, say, U } from '../state/ui';
+import { openMenu, say, setU, U } from '../state/ui';
+import { ChipSelect, ToolSeg, type ChipOption } from '../ui/EditorBar';
 import { selectionSpan, vocalsUnder } from '../lib/melody';
 import { fmtPos } from '../lib/format';
 import { openPitchEditor, seekSong, switchMode } from '../state/actions';
@@ -127,6 +128,16 @@ function Roll(props: { z: number; docked?: boolean }) {
   const [vals, setVals] = createSignal<unknown[]>(TOOL_META.humanize.fields.map(f => f.def));
   const setField = (i: number, v: unknown) => setVals(xs => { const c = xs.slice(); c[i] = v; return c; });
   const [toolSeed, setToolSeed] = createSignal('');
+  // the note tools (humanize, strum, ...) live in a popover: used now and then, they do not hold toolbar space
+  const [pop, setPop] = createSignal<'tools' | 'key' | null>(null);
+  const toolsOpen = () => pop() === 'tools', setToolsOpen = (f: boolean | ((v: boolean) => boolean)) => setPop((typeof f === 'function' ? f(toolsOpen()) : f) ? 'tools' : null);
+  let toolMenu!: HTMLDivElement, keyMenu!: HTMLDivElement;
+  createEffect(() => {
+    const open = pop(); if (!open) return;
+    const away = (e: PointerEvent) => { if (!(open === 'key' ? keyMenu : toolMenu).contains(e.target as Node)) setPop(null); };
+    document.addEventListener('pointerdown', away, true);
+    onCleanup(() => document.removeEventListener('pointerdown', away, true));
+  });
   const applyTool = () => {
     const op = buildTransformOp(toolId(), vals(), toolSeed(), pt().id, pt().len, ch().id, sel());
     commit([op], t(TOOL_META[toolId()].label));
@@ -137,6 +148,13 @@ function Roll(props: { z: number; docked?: boolean }) {
   const scaleIdx = () => pk().scale;
   const chansMap = createMemo(() => { arrVersion(); return new Map(unwrap(channels()).map(c => [c.id, c])); });
   const mask = () => scaleMask(scaleIdx());
+  /** A tool field's name without its "(0..1)" range note: the slider shows the range. */
+  const shortLabel = (l: string) => l.replace(/\s*\(.*\)\s*$/, '');
+  const numText = (v: number, step: number) => v.toFixed(step >= 1 ? 0 : step >= 0.1 ? 1 : 2);
+  /** The grid in steps: the chosen one, or (auto) the finest that is still comfortably wide at this zoom. */
+  const snapNow = () => (rollSnap() < 0 ? autoRollSnap(geo().pps) : rollSnap());
+  /** A pitch class on the key badge's tiny keyboard: the root, a scale note, or outside the scale. */
+  const pcClass = (pc: number) => pc === root() ? 'root' : (mask() >> ((pc - root() + 12) % 12)) & 1 ? 'in' : 'out';
   /** After a pick in a toolbar list the keyboard goes back to the roll (arrows transpose, Delete deletes) instead of staying in the list. */
   const backToRoll = (el: HTMLElement) => el.closest<HTMLElement>('.win')?.focus({ preventScroll: true });
   /** Width of the note grid (px). */
@@ -216,7 +234,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     const g = cv.getContext('2d')!, dpr = window.devicePixelRatio || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const lit = typingHeld();
-    drawRoll(g, w, h, geo(), layer, { pt: unwrap(pt()), ch: unwrap(ch()), chans: chansMap(), sel: sel(), root: root(), mask: mask(), grid: rollSnap(), hoverKey: hoverKey(), lit, marquee: marq(), zoomBox: zbox(), stampGhost: stampGhost() });
+    drawRoll(g, w, h, geo(), layer, { pt: unwrap(pt()), ch: unwrap(ch()), chans: chansMap(), sel: sel(), root: root(), mask: mask(), grid: snapNow(), hoverKey: hoverKey(), lit, marquee: marq(), zoomBox: zbox(), stampGhost: stampGhost() });
   };
   const drawVel = () => {
     const { w, h } = laneSize(); if (!w || !h) return;
@@ -299,7 +317,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   const ruler: RulerHost = {
     beatAt: x => (x - rulerCv.getBoundingClientRect().left + geo().sx) / geo().pps / 4,
     bw: () => geo().pps * 4,
-    unit: alt => (alt ? 0 : rollSnap() / 4),
+    unit: alt => (alt ? 0 : snapNow() / 4),
     max: () => pt().len,
     loop: () => patLoopOf(pt().id),
     edit: () => ({ set: r => setPatLoop(pt().id, r), end: () => {} }),
@@ -407,7 +425,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   onCleanup(() => { window.removeEventListener('blur', dropHeld); holdNote(null); });
   const ctx: RollCtx = {
     pt: () => pt(), ch: () => unwrap(ch()), notes: notesRaw, chanNotes: () => chanNotes(), chans: chansMap,
-    geo, snap: () => rollSnap(),
+    geo, snap: () => snapNow(),
     hit: hitNote, edgeHit, ghostAt,
     tool: () => rollTool(),
     sel: () => sel(), setSel,
@@ -562,8 +580,8 @@ function Roll(props: { z: number; docked?: boolean }) {
       const idx = s.length ? s : chanNotes().map(x => x.i);
       if (!idx.length) return;
       if (k === 'q') {
-        const grid = rollSnapName(rollSnap()) ?? '1/16';
-        const r = quantizeStarts(notesRaw(), idx, rollSnap());
+        const grid = rollSnapName(snapNow()) ?? '1/16';
+        const r = quantizeStarts(notesRaw(), idx, snapNow());
         if (!r.moved) return say(t('b.pr.onGrid', { grid }));
         commitNotes(r.notes, t('b.pr.quantize'));
         say(t('b.pr.quantized', { x: notesText(r.moved), grid }));
@@ -628,7 +646,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     }
     if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && e.shiftKey && !m && !e.altKey) {
       stop(); const w = orAll(); if (!w.length) return;
-      commitNotes(nudgeNotes(notesRaw(), w, (e.key === 'ArrowLeft' ? -1 : 1) * (rollSnap() || 1 / 32)), t('b.pe.gestMove'));
+      commitNotes(nudgeNotes(notesRaw(), w, (e.key === 'ArrowLeft' ? -1 : 1) * (snapNow() || 1 / 32)), t('b.pe.gestMove'));
       return;
     }
     // Delete only ever removes a selection: F7 then Delete, meant for a clip in the Playlist, must not empty the channel
@@ -724,33 +742,41 @@ function Roll(props: { z: number; docked?: boolean }) {
       </>}>
     <div class="roll">
       <div class="ptools">
-        <div class="seg tools">
-          <For each={TOOLS}>{tl => (
-            <button classList={{ on: rollTool() === tl.id }} title={t(tl.label) + ' (' + tl.key.toUpperCase() + ') — ' + t(tl.tip)} onClick={e => { setRollTool(tl.id); backToRoll(e.currentTarget); }}>
-              <Icon d={tl.icon} size={14} />
-            </button>
-          )}</For>
-        </div>
-        <span class="toolname">{t(TOOLS.find(x => x.id === rollTool())!.label)}</span>
+        <ToolSeg label={t('a.pl.toolsLabel')} value={rollTool()} onPick={(id, el) => { setRollTool(id); backToRoll(el); }}
+          tools={TOOLS.map(tl => ({ id: tl.id, icon: tl.icon, title: t(tl.label) + ' (' + tl.key.toUpperCase() + ') — ' + t(tl.tip) }))} />
         <div class="vsep" />
-        <label class="plab">{t('b.pe.lblGrid')}
-          <select class="sel" title={t('b.pe.snapTitle')} value={String(rollSnap())} onChange={e => { setRollSnap(+e.currentTarget.value); backToRoll(e.currentTarget); }}>
-            <For each={ROLL_SNAPS}>{([l, v]) => <option value={String(v)}>{l}</option>}</For>
-            <optgroup label={t('b.pe.snapTriplets')}>
-              <For each={ROLL_SNAPS_TRIPLET}>{([l, v]) => <option value={String(v)}>{l}</option>}</For>
-            </optgroup>
-          </select>
-        </label>
-        <label class="plab">{t('b.pe.lblKey')}
-          <span class="row" style={{ gap: '4px' }}>
-            <select class="sel" title={S.project.key == null ? t('b.pe.keyAuto') : t('b.pe.keyScale')} value={String(root())} onChange={e => { commit([setKeyOp(+e.currentTarget.value, scaleIdx())], t('b.pr.keySet')); backToRoll(e.currentTarget); }}>
-              <For each={NOTE_NAMES}>{(n, i) => <option value={String(i())}>{n}</option>}</For>
-            </select>
-            <select class="sel" value={String(scaleIdx())} onChange={e => { commit([setKeyOp(root(), +e.currentTarget.value)], t('b.pr.keySet')); backToRoll(e.currentTarget); }}>
-              <For each={SCALES}>{([l, id]) => <option value={String(id)}>{t(l)}</option>}</For>
-            </select>
-          </span>
-        </label>
+        <ChipSelect label="Snap" title={rollSnap() < 0 ? t('a.tb.snapTipAuto', { unit: rollSnapName(snapNow()) ?? '' }) : t('b.pe.snapTitle')} value={String(rollSnap())}
+          options={[['auto', '-1'], ...ROLL_SNAPS.map(([l, v]): ChipOption => [l, String(v)])]} group={{ label: t('b.pe.snapTriplets'), options: ROLL_SNAPS_TRIPLET.map(([l, v]) => [l, String(v)]) }}
+          onChange={(v, el) => { setRollSnap(+v); backToRoll(el); }} />
+        {/* the song's key, always in view: a tiny keyboard marks the scale's notes (root brightest), the name beside it;
+            a click opens the root and scale pickers. One key for the whole project. */}
+        <div class="toolmenu" ref={keyMenu}>
+          <button class="keybadge" classList={{ on: pop() === 'key' }} aria-expanded={pop() === 'key'} title={S.project.key == null ? t('b.pe.keyAuto') : t('b.pr.songKeyTip')} onClick={() => setPop(v => v === 'key' ? null : 'key')}>
+            <svg class="minikeys" width="43" height="16" viewBox="0 0 43 16">
+              <For each={[0, 2, 4, 5, 7, 9, 11]}>{(pc, i) => <rect x={i() * 6 + 0.5} y="0.5" width="5" height="15" rx="1" class={pcClass(pc)} />}</For>
+              <For each={[[1, 0], [3, 1], [6, 3], [8, 4], [10, 5]]}>{([pc, i]) => <rect x={i * 6 + 4} y="0" width="4" height="9" rx="1" class={'bk ' + pcClass(pc)} />}</For>
+            </svg>
+            <span class="kname">{NOTE_NAMES[root()]} {t(SCALES.find(x => x[1] === scaleIdx())![0]).toLowerCase()}</span>
+            <Show when={S.project.key == null}><span class="kauto">auto</span></Show>
+            <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
+          </button>
+          <Show when={pop() === 'key'}>
+            <div class="toolpop keypop" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setPop(null); } }}>
+              <div class="tphd">{t('b.pr.songKey')}</div>
+              <div class="rootgrid" role="radiogroup">
+                <For each={NOTE_NAMES}>{(n, i) => (
+                  <button role="radio" aria-checked={root() === i()} classList={{ on: root() === i(), bk: n.length > 1 }} onClick={() => commit([setKeyOp(i(), scaleIdx())], t('b.pr.keySet'))}>{n}</button>
+                )}</For>
+              </div>
+              <div class="scalelist" role="radiogroup">
+                <For each={SCALES}>{([l, id]) => (
+                  <button role="radio" aria-checked={scaleIdx() === id} classList={{ on: scaleIdx() === id }} onClick={() => commit([setKeyOp(root(), id)], t('b.pr.keySet'))}>{t(l)}</button>
+                )}</For>
+              </div>
+              <div class="tpnote">{t('b.pr.songKeyNote')}</div>
+            </div>
+          </Show>
+        </div>
         <div style={{ flex: 1 }} />
         <Show when={vocals().length > 0 && chanNotes().length > 0}>
           <button class="smallbtn" style={{ 'align-self': 'center' }} title={t('b.pr.vocalTip')} onClick={vocalRef}>♪ {t('b.pr.vocal')}{vocals().length > 1 ? ' …' : ''}</button>
@@ -758,28 +784,43 @@ function Roll(props: { z: number; docked?: boolean }) {
         <Show when={sel().size > 0}>
           <button class="smallbtn" style={{ 'align-self': 'center' }} title={t('b.pe.toNewPatTip')} onClick={e => { moveSelToPattern(); backToRoll(e.currentTarget); }}>{t('b.pe.toNewPat')}</button>
         </Show>
-        <label class="plab" title={t('b.pr.toolsTip')}>
-          {t('b.pr.tools')}
-          <span class="row" style={{ gap: '4px', 'align-items': 'center' }}>
-            <select class="sel" value={toolId()} onChange={e => { const id = e.currentTarget.value as ToolId; setToolId(id); setVals(TOOL_META[id].fields.map(f => f.def)); backToRoll(e.currentTarget); }}>
-              <For each={Object.keys(TOOL_META) as ToolId[]}>{v => <option value={v}>{t(TOOL_META[v].label)}</option>}</For>
-            </select>
-            <For each={TOOL_META[toolId()].fields}>{(f, i) => f.kind === 'num' ? (
-              <input class="textin" style={{ width: '52px' }} title={t(f.label)} type="number" step="0.1" value={typeof vals()[i()] === 'number' ? (vals()[i()] as number) : f.def} onInput={e => setField(i(), +e.currentTarget.value)} onKeyDown={e => e.stopPropagation()} />
-            ) : f.kind === 'select' ? (
-              <select class="sel" title={t(f.label)} value={String(vals()[i()] ?? f.def)} onChange={e => { setField(i(), e.currentTarget.value); backToRoll(e.currentTarget); }}>
-                <For each={f.options}>{o => <option value={o.v}>{t(o.l)}</option>}</For>
-              </select>
-            ) : (
-              <label class="plab" style={{ gap: '2px' }} title={t(f.label)}>
-                <input type="checkbox" checked={vals()[i()] !== false} onInput={e => setField(i(), e.currentTarget.checked)} />
-                <span style={{ 'font-size': '11px' }}>{t(f.label)}</span>
+        <div class="toolmenu" ref={toolMenu}>
+          <button class="chip" classList={{ on: toolsOpen() }} aria-expanded={toolsOpen()} title={t('b.pr.toolsTip')} onClick={() => setToolsOpen(v => !v)}>
+            {t('b.pr.tools')}<svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
+          </button>
+          <Show when={toolsOpen()}>
+            <div class="toolpop" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setToolsOpen(false); } }}>
+              <div class="toolgrid" role="radiogroup">
+                <For each={Object.keys(TOOL_META) as ToolId[]}>{v => (
+                  <button role="radio" aria-checked={toolId() === v} classList={{ on: toolId() === v }} onClick={() => { setToolId(v); setVals(TOOL_META[v].fields.map(f => f.def)); }}>
+                    <Icon d={TOOL_META[v].icon} size={15} sw={1.8} /><span>{t(TOOL_META[v].label)}</span>
+                  </button>
+                )}</For>
+              </div>
+              <For each={TOOL_META[toolId()].fields}>{(f, i) => f.kind === 'num' ? (
+                // a number is a slider over its useful range, the value beside its name
+                <label class="tpslide" title={t(f.label)}>
+                  <span>{shortLabel(t(f.label))}</span><b>{numText(typeof vals()[i()] === 'number' ? (vals()[i()] as number) : f.def, f.step)}</b>
+                  <input type="range" min={f.min} max={f.max} step={f.step} value={typeof vals()[i()] === 'number' ? (vals()[i()] as number) : f.def}
+                    style={{ '--p': (((typeof vals()[i()] === 'number' ? (vals()[i()] as number) : f.def) - f.min) / (f.max - f.min)) * 100 + '%' }}
+                    onInput={e => setField(i(), +e.currentTarget.value)} onDblClick={() => setField(i(), f.def)} />
+                </label>
+              ) : (
+                <label class="tprow"><span>{t(f.label)}</span>{f.kind === 'select' ? (
+                  <select class="sel" value={String(vals()[i()] ?? f.def)} onChange={e => setField(i(), e.currentTarget.value)}>
+                    <For each={f.options}>{o => <option value={o.v}>{t(o.l)}</option>}</For>
+                  </select>
+                ) : (
+                  <input type="checkbox" checked={vals()[i()] !== false} onInput={e => setField(i(), e.currentTarget.checked)} />
+                )}</label>
+              )}</For>
+              <label class="tprow" title={t('b.pr.seedTip')}><span>{t('b.pr.seed')}</span>
+                <input class="textin" type="number" step="1" value={toolSeed()} onInput={e => setToolSeed(e.currentTarget.value)} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }} />
               </label>
-            )}</For>
-            <input class="textin" style={{ width: '64px' }} title={t('b.pr.seedTip')} placeholder={t('b.pr.seed')} type="number" step="1" value={toolSeed()} onInput={e => setToolSeed(e.currentTarget.value)} onKeyDown={e => e.stopPropagation()} />
-            <button class="smallbtn" style={{ 'align-self': 'center' }} title={t('b.pr.applyTip')} onClick={e => { applyTool(); backToRoll(e.currentTarget); }}>{t('b.pr.apply')}</button>
-          </span>
-        </label>
+              <button class="smallbtn primary" title={t('b.pr.applyTip')} onClick={e => { applyTool(); backToRoll(e.currentTarget); }}>{t('b.pr.apply')}</button>
+            </div>
+          </Show>
+        </div>
         <Show when={rollTool() === 'stamp'}>
           <label class="plab">{t('b.pr.stamp.type')}
             <span class="row" style={{ gap: '4px' }}>
@@ -828,7 +869,7 @@ function Roll(props: { z: number; docked?: boolean }) {
         <Show when={hoverChord()}>
           <span title={t('b.pr.chordTitle')} style={{ color: 'var(--acc2)' }}>{hoverChord()}</span>
         </Show>
-        <span class="rollhint" title={t('b.pr.keysTip')}>{t('b.pe.rollHint')}</span>
+        <button class="hintlink" title={t('b.pr.keysTip')} onClick={() => setU('help', true)}>{t('a.mn.shortcuts')}</button>
       </div>
     </div>
     </PanelFrame>
