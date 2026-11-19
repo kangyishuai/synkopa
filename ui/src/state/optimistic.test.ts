@@ -121,6 +121,43 @@ describe('optimistic editing covers every op', () => {
     await vi.waitFor(() => expect(store.S.project.scale).toBe(2), { timeout: 3000 });
   });
 
+  it('defers a failed read-back retry until a delayed endGesture completes', async () => {
+    edit.commit([{ op: 'setKey', key: 3, scale: 2 }], 'test: set key');
+    await edit.settled();
+
+    const realEnd = mock.endGesture.bind(mock);
+    let releaseEnd: () => void = () => {};
+    const endGate = new Promise<void>(resolve => { releaseEnd = resolve; });
+    let endStarted = false;
+    vi.spyOn(mock, 'endGesture').mockImplementation(async label => {
+      endStarted = true;
+      await endGate;
+      return realEnd(label);
+    });
+    const getState = vi.spyOn(mock, 'getState').mockRejectedValueOnce(new Error('backend down'));
+
+    const g = new edit.Gesture('test: refused drag, delayed end');
+    g.update([{ op: 'setKey', key: 5, scale: 9 }]); // preview accepted, backend refuses
+    g.end();
+
+    try {
+      await vi.waitFor(() => {
+        expect(endStarted).toBe(true);
+        expect(getState).toHaveBeenCalledTimes(1); // the first recovery read failed
+      });
+      // The 250 ms retry fires while endGesture is still pending. Old code drops it.
+      await new Promise(resolve => setTimeout(resolve, 350));
+      expect(store.S.project.scale).toBe(9);
+      expect(getState).toHaveBeenCalledTimes(1);
+    } finally {
+      releaseEnd();
+    }
+
+    // No engine state event follows a refused-only gesture: settle must run the deferred retry.
+    await vi.waitFor(() => expect(store.S.project.scale).toBe(2), { timeout: 3000 });
+    expect(getState).toHaveBeenCalledTimes(2);
+  });
+
   it('refuses an out-of-range euclid size instead of allocating it', async () => {
     const pat = store.S.project.patterns[0];
     const before = JSON.stringify(pat.notes ?? []);

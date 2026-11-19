@@ -16,6 +16,7 @@ let lastReplyRev = 0;      // newest revision the engine reported for one of *ou
 let stash: StateDto | null = null;
 let recovery: Promise<void> | null = null; // a refusal's state read-back, while it runs
 let resyncTries = 0;       // read-back retries after the backend itself failed
+let deferredResync = false; // retry timer fired while an edit/gesture was still active
 
 export const projectRevision = () => Math.max(S.revision, lastReplyRev);
 
@@ -46,7 +47,14 @@ export function onStateEvent(dto: StateDto) {
 let reconciledRev = -1; // project revision last reconciled in full
 
 function settle() {
-  if (inflight > 0 || gestures > 0 || !stash) return;
+  if (inflight > 0 || gestures > 0) return;
+  // A failed read-back may have timed out while endGesture was still pending.
+  // Retry once the queue and gesture have actually settled; don't lose the repair.
+  if (deferredResync) {
+    deferredResync = false;
+    void resync();
+  }
+  if (!stash) return;
   const s = stash; stash = null;
   if (s.revision < lastReplyRev || s.revision < S.revision) return;
   // The engine state is exactly the result of our own last batch, which is already applied
@@ -86,6 +94,7 @@ export function resync(err?: unknown): Promise<void> {
     try {
       const dto = await be().getState();
       resyncTries = 0;
+      deferredResync = false;
       if (dto.revision < S.revision) return; // a newer state is already on screen
       lastReplyRev = dto.revision; stash = null; replaceState(dto);
     } catch (e) {
@@ -102,10 +111,12 @@ function scheduleResync() {
   if (resyncTries >= 4) return; // bounded: a backend that keeps failing is not spun against
   resyncTries++;
   setTimeout(() => {
-    // a live edit or gesture is working against its own state; its next reply repairs it.
-    // Checked here (retry time), not above: the failing read may race the gesture's own
-    // end_gesture, which is still in flight when the first read fails.
-    if (inflight > 0 || gestures > 0) return;
+    // A gesture's end may still be waiting on the engine when this timer fires.
+    // Keep the retry for settle() instead of silently losing the refused frame.
+    if (inflight > 0 || gestures > 0) {
+      deferredResync = true;
+      return;
+    }
     void resync();
   }, 250);
 }
