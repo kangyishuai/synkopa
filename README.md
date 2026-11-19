@@ -9,7 +9,7 @@
   Audio recording and vocal tuning are included, and an AI agent can edit the project you have open.
 </p>
 <p align="center">
-  <a href="https://github.com/miskibin/synkopa/releases/latest"><b>Download</b> (Windows, Linux)</a> ·
+  <a href="https://github.com/miskibin/synkopa/releases/latest"><b>Download</b> (Windows, macOS, Linux)</a> ·
   <a href="https://www.youtube.com/watch?v=wtuHDyIQpYk">Watch the video</a> ·
   <a href="https://miskibin.github.io/synkopa/">Hear a beat made in it</a> ·
   <a href="docs/cli.md">Command line</a>
@@ -22,7 +22,7 @@
 
 [![Synkopa: playlist, automation and the mixer. Click for the video.](site/img/hero.png)](https://www.youtube.com/watch?v=wtuHDyIQpYk)
 
-Synkopa is a desktop music production program (a DAW) for Windows and Linux. It is free, the
+Synkopa is a desktop music production program (a DAW) for Windows, macOS and Linux. It is free, the
 source is open, and it is made for one job: making a beat and recording
 a vocal over it, the way you would in FL Studio.
 
@@ -125,7 +125,7 @@ than twenty-five years behind it and wins on breadth.
 | Working with an AI agent | The agent edits the open project and measures its own renders | No command line into the open project |
 | Built-in instruments and effects | Wavetable synth, sampled grand, sampler and 19 effects | More than a hundred across the editions |
 | Third-party plugins | VST3 instruments and effects; LV2 effects on Linux; supported native plugin windows on Windows and Linux | VST instruments and effects, and more formats |
-| Platforms | Windows and Linux | Windows and macOS |
+| Platforms | Windows, macOS (Apple Silicon) and Linux | Windows and macOS |
 | Maturity | Version 0.9, growing with open-source contributors; expect rough edges | Since 1998, large community, tutorials, sample packs |
 
 FL Studio details as of November 2026; see Image-Line's edition comparison for current
@@ -145,7 +145,8 @@ a complete beat and a vocal session. What it does not do yet:
   `.deb` and `.rpm` packages install it; with the AppImage, LV2 works when the system has it and
   Synkopa says what to install when it does not. An LV2 plugin that needs a host feature Synkopa does
   not provide (for example a fixed block size) is listed with the reason and cannot be added;
-- no macOS build;
+- on macOS: Apple Silicon and macOS 13.4 or newer only, no VST3 plugins yet, and the app is not
+  notarized, so macOS asks once before the first start (see Install);
 - no Session view or clip launching;
 - no import of FL Studio projects (`.flp`); bring stems or samples over instead;
 - releases come often, so things still move. The [changelog](CHANGELOG.md) is written for
@@ -161,7 +162,9 @@ Found a bug or miss something from FL? [Open an issue](https://github.com/miskib
 and compatible VST3 plugins, it may cover your workflow. Plugin compatibility varies, and
 FL Studio's own plugins and `.flp` projects are not supported.
 
-**Does it run on a Mac?** No. Windows and Linux (deb, rpm, AppImage) only.
+**Does it run on a Mac?** Yes, on Apple Silicon (M1 or later) with macOS 13.4 or newer: download
+the `.dmg`. The built-in instruments and effects work; VST3 plugins are not hosted on macOS yet.
+There is no Intel Mac build.
 
 **Do I need an AI agent to use it?** No. It is a normal DAW with a mouse and a keyboard. The
 `synkopa` command is there if you want an agent, or your own script, to work in the project.
@@ -181,6 +184,11 @@ Windows to detect the interface before opening any ASIO driver, since ASIO disco
 On Windows, double-click a `.synkopa` project in File Explorer to open it in Synkopa.
 If Synkopa is already running, its window comes to the front and prompts you about any unsaved changes before switching projects.
 Linux packages are attached to the same release.
+
+**macOS:** open `Synkopa_…_aarch64.dmg` and drag Synkopa to Applications. The app is signed but
+not notarized by Apple yet, so the first start is blocked: open System Settings → Privacy &
+Security and click **Open Anyway** next to Synkopa (once). Updates then install by themselves,
+like on Windows and Linux.
 
 To share an editable project, choose **File → Export project as ZIP**. Unzip the whole archive
 and open the `.synkopa` file inside it. Keep the `Audio` folder beside the project. The ZIP includes

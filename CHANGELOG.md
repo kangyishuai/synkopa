@@ -4,6 +4,15 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## 0.9.29 — 2026-11-19
+
+### Added
+- **Synkopa runs on a Mac.** A `.dmg` for Apple Silicon (M1 or later, macOS 13.4 or newer) is part
+  of every release from now on, and it updates itself like the Windows and Linux versions. The app
+  is not notarized by Apple yet: the first time, open System Settings → Privacy & Security and
+  click **Open Anyway**. VST3 plugins are not hosted on macOS yet; the built-in instruments and
+  effects are all there.
+
 ## 0.9.28 — 2026-11-19
 
 ### Changed

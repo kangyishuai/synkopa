@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Synkopa: a free, open-source DAW that works the FL Studio way</title>
-<meta name="description" content="Synkopa is a free, open-source DAW for Windows and Linux that works the FL Studio way: patterns, Channel Rack, piano roll and playlist. Audio recording with comping and vocal pitch editing are included, and an AI agent can edit the open project through the synkopa command line. Rust audio engine, AGPL-3.0.">
+<meta name="description" content="Synkopa is a free, open-source DAW for Windows, macOS and Linux that works the FL Studio way: patterns, Channel Rack, piano roll and playlist. Audio recording with comping and vocal pitch editing are included, and an AI agent can edit the open project through the synkopa command line. Rust audio engine, AGPL-3.0.">
 <link rel="canonical" href="https://miskibin.github.io/synkopa/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://miskibin.github.io/synkopa/">
 <meta property="og:title" content="Synkopa: a free, open-source DAW that works the FL Studio way">
-<meta property="og:description" content="Patterns, Channel Rack, piano roll, playlist. Recording with comping and vocal tuning included. An AI agent can edit the open project. Windows and Linux, AGPL-3.0.">
+<meta property="og:description" content="Patterns, Channel Rack, piano roll, playlist. Recording with comping and vocal tuning included. An AI agent can edit the open project. Windows, macOS and Linux, AGPL-3.0.">
 <meta property="og:image" content="https://miskibin.github.io/synkopa/img/social-preview.png">
 <meta name="twitter:card" content="summary_large_image">
 <script type="application/ld+json">
@@ -19,8 +19,8 @@
   "name": "Synkopa",
   "applicationCategory": "MultimediaApplication",
   "applicationSubCategory": "Digital audio workstation",
-  "operatingSystem": "Windows, Linux",
-  "description": "Synkopa is a free, open-source DAW for Windows and Linux that works the FL Studio way: patterns, Channel Rack, piano roll and playlist. Audio recording with comping and vocal pitch editing are included, and an AI agent can edit the open project through the synkopa command line. Rust audio engine, AGPL-3.0.",
+  "operatingSystem": "Windows, macOS, Linux",
+  "description": "Synkopa is a free, open-source DAW for Windows, macOS and Linux that works the FL Studio way: patterns, Channel Rack, piano roll and playlist. Audio recording with comping and vocal pitch editing are included, and an AI agent can edit the open project through the synkopa command line. Rust audio engine, AGPL-3.0.",
   "url": "https://miskibin.github.io/synkopa/",
   "downloadUrl": "https://github.com/miskibin/synkopa/releases/latest",
   "codeRepository": "https://github.com/miskibin/synkopa",
@@ -230,6 +230,7 @@
     <p class="label">Patterns · Channel Rack · piano roll · playlist · recording · vocal tuning</p>
     <div class="keys">
       <a class="key amber" href="https://github.com/miskibin/synkopa/releases/latest">Download for Windows<small><span data-ver>latest release</span> · installer with ASIO</small></a>
+      <a class="key" href="https://github.com/miskibin/synkopa/releases/latest">Download for macOS<small>Apple Silicon · .dmg</small></a>
       <a class="key" href="https://github.com/miskibin/synkopa/releases/latest">Download for Linux<small>deb · rpm · AppImage</small></a>
     </div>
     <div class="video" id="video">
@@ -305,7 +306,7 @@
     <div class="label">Reason two</div>
     <h2>It runs on Linux. Natively.</h2>
     <p class="body">FL Studio has no Linux build. The usual open-source answer for the FL workflow is LMMS, which does not record audio. Synkopa is that workflow on Linux with recording: ALSA and JACK, including PipeWire's JACK, VST3 instruments and effects, LV2 effects, packaged as deb, rpm and AppImage.</p>
-    <p class="body">On Windows it speaks WASAPI and ASIO. There is no Mac build.</p>
+    <p class="body">On Windows it speaks WASAPI and ASIO. On a Mac (Apple Silicon, macOS 13.4 or newer) it plays through Core Audio; VST3 plugins are not hosted there yet.</p>
   </div>
 </section>
 
@@ -395,7 +396,7 @@
   <div class="label">The other half of an honest answer</div>
   <h2>Do not install it if</h2>
   <ul class="no">
-    <li><b>you are on a Mac.</b> There is no macOS build.</li>
+    <li><b>you need your VST3 plugins on a Mac, or have an Intel Mac.</b> The macOS build is Apple Silicon only and hosts no VST3 yet.</li>
     <li><b>your work lives in <code>.flp</code> files or FL's own plugins.</b> Neither opens here. Stems, samples and VST3 plugins do.</li>
     <li><b>you write by launching clips.</b> There is no Session view.</li>
     <li><b>you need twenty-five years of polish tonight.</b> FL Studio has it. This started in August 2026.</li>
@@ -408,7 +409,7 @@
   <p>There is no marketing budget and nothing to buy. On GitHub, stars decide whether the next musician looking for a free FL-style DAW ever sees this one. It takes one click, and it tells me to keep going.</p>
   <div class="keys">
     <a class="key amber" href="https://github.com/miskibin/synkopa">★ Star Synkopa on GitHub</a>
-    <a class="key" href="https://github.com/miskibin/synkopa/releases/latest">Download<small><span data-ver>latest release</span> · Windows · Linux</small></a>
+    <a class="key" href="https://github.com/miskibin/synkopa/releases/latest">Download<small><span data-ver>latest release</span> · Windows · macOS · Linux</small></a>
     <a class="key ghost" href="https://github.com/miskibin/synkopa/issues">Tell me what is missing</a>
   </div>
 </div>
