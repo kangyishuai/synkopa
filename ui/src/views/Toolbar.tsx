@@ -1,3 +1,4 @@
+import { isFullscreen, setFullscreen, toggleFullscreen } from '../state/fullscreen';
 import { curPat, newPattern, openRack, patMode, rackFloating, rollFloating, stepPattern, toggleRackShown, toggleRollShown } from '../state/pattern';
 import { patternMenu } from './patternShared';
 import { APP_GLYPH as G } from '../ui/menuIcons';
@@ -173,6 +174,7 @@ export function Toolbar() {
     // child of one (.tbmain holds every button: closest() swallowed their clicks).
     if (el !== e.currentTarget && !el.hasAttribute('data-drag')) return;
     const now = performance.now();
+    if (isFullscreen()) return; // nothing to drag or maximize: the window is the screen
     if (now - lastDown < 350) { lastDown = 0; void win.toggleMaximize(); return; }
     lastDown = now;
     void win.startDragging();
@@ -285,7 +287,12 @@ export function Toolbar() {
       <Show when={win}>
         <div class="winbtns">
           <button title={t('a.tb.minimize')} aria-label={t('a.tb.minimize')} onClick={() => void win!.minimize()}><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" /></svg></button>
-          <button title={maxed() ? t('a.tb.restore') : t('a.tb.maximize')} aria-label={maxed() ? t('a.tb.restore') : t('a.tb.maximize')} onClick={() => void win!.toggleMaximize()}>
+          <Show when={isFullscreen()}>
+            <button title={t('a.tb.exitFull')} aria-label={t('a.tb.exitFull')} onClick={() => void setFullscreen(false)}>
+              <svg width="10" height="10" viewBox="0 0 10 10"><path d="M3.5 .5v3h-3 M6.5 .5v3h3 M3.5 9.5v-3h-3 M6.5 9.5v-3h3" fill="none" stroke="currentColor" /></svg>
+            </button>
+          </Show>
+          <button hidden={isFullscreen()} title={maxed() ? t('a.tb.restore') : t('a.tb.maximize')} aria-label={maxed() ? t('a.tb.restore') : t('a.tb.maximize')} onClick={() => void win!.toggleMaximize()}>
             <Show when={maxed()} fallback={<svg width="10" height="10" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" fill="none" stroke="currentColor" /></svg>}>
               <svg width="10" height="10" viewBox="0 0 10 10"><path d="M2.5 2.5V.5h7v7h-2 M.5 2.5h7v7h-7z" fill="none" stroke="currentColor" /></svg>
             </Show>
@@ -364,6 +371,8 @@ function MenuBar() {
       { t: 'item', label: t('a.mn.follow'), kbd: 'F', checked: U.follow, act: () => setU('follow', !U.follow) },
       { t: 'item', label: t('a.mn.zoomIn'), glyph: G.zoomIn, kbd: 'Ctrl+=', act: () => A.zoomAt(1.25) },
       { t: 'item', label: t('a.mn.zoomOut'), glyph: G.zoomOut, kbd: 'Ctrl+−', act: () => A.zoomAt(0.8) },
+      { t: 'sep' },
+      { t: 'item', label: t('a.mn.fullscreen'), kbd: 'F11', checked: isFullscreen(), act: () => void toggleFullscreen() },
     ]],
     ['a.mn.help', () => [
       { t: 'item', label: t('d.ask.menu'), glyph: G.ask, kbd: 'F1', act: openAsk },
@@ -453,6 +462,7 @@ const shortcuts = (): [string, string][] => [
   [t('a.sc.11'), 'Home'],
   ['Browser', 'Alt+F8'],
   [t('a.sc.12'), 'F8'],
+  [t('a.mn.fullscreen'), 'F11'],
   [t('a.sc.13'), t('a.sc.14')],
   [t('a.sc.15'), t('a.sc.16')],
   [t('a.sc.17'), 'Esc'],

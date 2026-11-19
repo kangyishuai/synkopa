@@ -13,18 +13,24 @@ import { say, setU } from './state/ui';
 import { watchAudio } from './state/audioWatch';
 import { App } from './App';
 import { initTheme } from './ui/theme';
-import { initPrefs } from './state/prefs';
+import { initPrefs, prefs } from './state/prefs';
+import { setFullscreen, watchFullscreen } from './state/fullscreen';
 import { initUpdates, offerWelcome } from './state/updates';
 import { t } from './lib/i18n';
 import { loadStdLib } from './state/library';
 import { offerRecovery, projectOpen } from './state/actions';
 
+import { installSelectPopups } from './ui/SelectPopup';
+
 initTheme();
+installSelectPopups();
 initPrefs();
 if (import.meta.env.VITE_PERF) void import('./perfHook'); // perf harness only; compiled out otherwise
 
 async function boot() {
   const be = await getBackend();
+  watchFullscreen();
+  if (prefs().startFullscreen) void setFullscreen(true);
   const [catalog, state] = await Promise.all([be.fxCatalog(), be.getState()]);
   setS('catalog', catalog);
   replaceState(state);

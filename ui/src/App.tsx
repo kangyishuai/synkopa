@@ -1,3 +1,4 @@
+import { SelectPopup } from './ui/SelectPopup';
 import { AskDialog, toggleAsk } from './views/Ask';
 import { t as tl } from './lib/i18n';
 import { closeNotebook, NB } from './state/notebook';
@@ -340,6 +341,7 @@ export function App() {
       <NotebookHost />
       <Show when={U.ghost}>{g => <div class="ghost" style={{ left: g().x + 'px', top: g().y + 'px', 'box-shadow': `inset 0 0 0 1px ${g().color},0 6px 16px rgba(0,0,0,.45)` }}>{g().name}</div>}</Show>
       <ContextMenu />
+      <SelectPopup />
       <Help />
       <Palette />
       <ConfirmDialog />

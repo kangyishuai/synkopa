@@ -4,6 +4,24 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **Full screen.** F11 (or View → Full screen) fills the whole screen with Synkopa, no taskbar and
+  no window frame; F11 again, or the button in the top-right corner, goes back. Settings → Look →
+  "Start in full screen" opens the app that way every time.
+
+### Changed
+- **Drop-down lists match the app.** Snap, Edges, the audio and MIDI settings, the Piano roll and
+  pitch editor lists and every other drop-down open a dark list in the app's own style instead of
+  the system's white one, with the current choice ticked. Keyboard works as before: arrows, Enter,
+  Esc (closes only the list, not the dialog behind it) and typing the first letters.
+- **Docking shows one arrow per side.** Dragging a window's title bar shows just three arrows, left,
+  right and bottom, instead of a cluster of them in the middle of the screen.
+
+### Fixed
+- Clicking a sample in the Browser to hear it no longer hides the floating Channel rack.
+
 ## 0.9.29 — 2026-11-19
 
 ### Added

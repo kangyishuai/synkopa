@@ -5,6 +5,7 @@ import { setLang, type Lang } from '../lib/i18n';
 import { be } from '../api/backend';
 import * as A from './actions';
 import { U } from './ui';
+import { setFullscreen } from './fullscreen';
 
 export interface Prefs {
   /** interface language */
@@ -23,10 +24,12 @@ export interface Prefs {
   /** FL's CPU meter (load + underrun count) in the toolbar; off by default, the bar is short
    *  on room. The underrun count is always in Settings → Audio. */
   cpuMeter: boolean;
+  /** open the app in full screen (F11 toggles it any time) */
+  startFullscreen: boolean;
 }
 
 const KEY = 'wave.prefs';
-const DEFAULTS: Prefs = { lang: 'en', uiScale: 1, clipIcons: true, noteAudition: true, autosaveMin: 2, hints: true, cpuMeter: false };
+const DEFAULTS: Prefs = { lang: 'en', uiScale: 1, clipIcons: true, noteAudition: true, autosaveMin: 2, hints: true, cpuMeter: false, startFullscreen: false };
 
 function load(): Prefs {
   try { const v = JSON.parse(localStorage.getItem(KEY) ?? '{}'); return { ...DEFAULTS, ...v, lang: v.lang === 'pl' ? 'pl' : 'en' }; } catch { return { ...DEFAULTS }; }
@@ -53,6 +56,8 @@ let timer: ReturnType<typeof setInterval> | null = null;
 function applyPref(k: keyof Prefs, p: Prefs) {
   if (k === 'lang') setLang(p.lang);
   if (k === 'uiScale') void applyScale(p.uiScale);
+  // switching it on (or off) in Settings shows what it does now, not only at the next start
+  if (k === 'startFullscreen') void setFullscreen(p.startFullscreen);
   if (k === 'autosaveMin') {
     if (timer) clearInterval(timer);
     timer = null;
@@ -80,7 +85,8 @@ export function initPrefs() {
   const p = load();
   setPrefsSig(p);
   setLang(p.lang);
-  for (const k of Object.keys(p) as (keyof Prefs)[]) if (p[k] !== DEFAULTS[k]) applyPref(k, p);
+  // full screen needs the window (the backend): main.tsx applies it once that is up
+  for (const k of Object.keys(p) as (keyof Prefs)[]) if (k !== 'startFullscreen' && p[k] !== DEFAULTS[k]) applyPref(k, p);
   // autosave is a timer, not a value: it must start at the default interval too (it never ran
   // until the setting was changed once)
   if (p.autosaveMin === DEFAULTS.autosaveMin) applyPref('autosaveMin', p);

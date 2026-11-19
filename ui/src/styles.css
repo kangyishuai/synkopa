@@ -396,6 +396,17 @@ select.sel, select {
   background-repeat: no-repeat;
 }
 select option { background: var(--bg4); color: var(--fg); }
+/* the list every select opens (ui/SelectPopup.tsx): the menu's look, above dialogs */
+.backdrop.selpop-veil { z-index: 90; }
+.menu.selpop { z-index: 91; min-width: 0; max-width: min(420px, calc(100vw - 8px)); }
+.menu.selpop .mi { justify-content: flex-start; height: 24px; gap: 0; }
+.menu.selpop .mi.hot { background: var(--line2); }
+.menu.selpop .mi:hover:not(.hot) { background: transparent; }
+.menu.selpop .mi.cur { color: var(--blue-hi); }
+.menu.selpop .mi.cur .mico { color: var(--blue-hi); }
+.menu.selpop .mi.dis { color: var(--fg5); }
+.menu.selpop .mi .ell { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.menu.selpop .msec { flex: none; }
 
 /* ---------- knobs & small controls ---------- */
 .knob .cap { position: absolute; left: 9px; top: 9px; width: 18px; height: 18px; border-radius: 50%; background: var(--knob-cap); box-shadow: 0 1px 3px var(--shadow), inset 0 0 0 1px var(--line2); }
