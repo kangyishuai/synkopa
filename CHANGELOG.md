@@ -4,6 +4,24 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## 0.9.28 — 2026-11-19
+
+### Changed
+- **The Mixer hides like the Channel rack and the Piano roll.** Closed, it is gone: no more title
+  bar left at the bottom of the window that opened it on a stray click, and dragging its edge down
+  only resizes it instead of folding it away. F9, the Mixer button or View → Mixer bring it back
+  where it was.
+- **The top bar fits any window.** As room runs out, the least needed parts step aside one at a
+  time (the panel buttons' names first, then the count-in and monitor, the metronome, a shorter
+  pattern name, the song position while the tempo stays), so nothing overlaps or gets cut off any
+  more, with long pattern names and in every language too.
+- **The docked Channel rack is one bar wide by default**, so it no longer pushes the Playlist to
+  its narrowest; longer patterns scroll. A width you set yourself is kept.
+
+### Fixed
+- Double-clicking a track's **Ins** button shows that insert in the Mixer again (a single click
+  still opens the routing menu).
+
 ## 0.9.27 — 2026-11-19
 
 ### Added
