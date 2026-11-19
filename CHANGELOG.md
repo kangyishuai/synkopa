@@ -4,7 +4,7 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
-## Unreleased
+## 0.9.26 — 2026-11-19
 
 ### Added
 - **Extract stems from an audio clip.** Click the clip's menu → Extract stems…, tick drums, bass,
@@ -18,10 +18,30 @@ shown in the app after an update and is published as the release notes (see
   buffer is the cure; Reset starts a fresh count. Turn on "CPU meter in toolbar" there for FL
   Studio's CPU meter: how much of each audio buffer the mix takes to render (near 100 % the output
   crackles); it flashes red on an underrun and keeps the count until you click it.
+- **Ducking on the Delay.** A Ducking knob (0–12 dB, as on the Reverb) pulls the echoes under the
+  dry sound and lets them bloom back in the gaps; the delay window shows how much it is ducking.
+- **AIFF samples.** `.aif` and `.aiff` files load, preview and show in the Library.
+
+### Changed
+- **Reverb decay reaches 20 s** (was 6 s). Saved reverbs keep their decay.
+- **Export in place keeps effect tails.** The rendered clip runs on until the reverb or echo has
+  died away (up to 30 s) and lands on its own new track, so the tail is not cut at the selection's end.
+- **Dock guide previews show exactly where the panel lands.** The blue preview now covers the
+  area the dropped Channel Rack, Piano roll or Mixer will really take, at its docked size.
+- **Dragging a clip keeps its offset from the grid.** Moving or Shift-copying a clip placed between
+  grid lines snaps the distance moved, as in FL, instead of jumping the clip onto a line.
+- **Unnamed lanes show their clips' icon.** A playlist lane with no icon and a name that says
+  nothing ("Track 7") shows the most common icon of its clips; a pattern that plays one channel
+  shows that channel's icon.
 
 ### Fixed
 - A single dropout reported by the audio driver no longer restarts the audio device; it is counted
   as an underrun instead.
+- Samples with "Trap" or "Chord" in their name no longer get the vocal icon; Standard library
+  samples take the icon of their library group.
+- Zooming the Playlist with Ctrl+wheel no longer jumps sideways and back on Linux.
+- Mixer effect rows no longer flicker at one exact mixer height.
+- A waveform that failed to load is retried instead of staying empty.
 
 ## 0.9.25 — 2026-11-18
 
