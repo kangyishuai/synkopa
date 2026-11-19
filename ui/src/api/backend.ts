@@ -260,6 +260,9 @@ export interface WindowCtl {
   close(): Promise<void>;
   isMaximized(): Promise<boolean>;
   startDragging(): Promise<void>;
+  /** Full screen (F11): no taskbar, no window frame. */
+  isFullscreen(): Promise<boolean>;
+  setFullscreen(on: boolean): Promise<void>;
   /** Called on every window resize (maximise state may have changed). */
   onResized(cb: () => void): Promise<() => void>;
   /** The user asked to close the window (its X, Alt+F4): decide (save prompts) and call
@@ -278,6 +281,8 @@ function tauriWindow(): WindowCtl {
     close: async () => (await w()).close(),
     isMaximized: async () => (await w()).isMaximized(),
     startDragging: async () => (await w()).startDragging(),
+    isFullscreen: async () => (await w()).isFullscreen(),
+    setFullscreen: async on => (await w()).setFullscreen(on),
     onResized: async cb => (await w()).onResized(() => cb()),
     onCloseRequested: async cb => {
       const win = await w();

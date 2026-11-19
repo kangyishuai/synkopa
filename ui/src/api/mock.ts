@@ -124,7 +124,7 @@ export class MockBackend implements Backend {
   readonly isMock = true;
   /** No window chrome in a browser; `?chrome` previews the custom title bar with inert buttons. */
   readonly win = typeof location !== 'undefined' && new URLSearchParams(location.search).has('chrome')
-    ? { minimize: async () => {}, toggleMaximize: async () => {}, close: async () => {}, isMaximized: async () => false, startDragging: async () => {}, onResized: async () => () => {}, onCloseRequested: async () => () => {}, setZoom: async () => false }
+    ? { minimize: async () => {}, toggleMaximize: async () => {}, close: async () => {}, isMaximized: async () => false, startDragging: async () => {}, isFullscreen: async () => !!document.fullscreenElement, setFullscreen: async (on: boolean) => { if (on) await document.documentElement.requestFullscreen?.(); else if (document.fullscreenElement) await document.exitFullscreen(); }, onResized: async () => () => {}, onCloseRequested: async () => () => {}, setZoom: async () => false }
     : null;
   private cat: Catalog = mockCatalog();
   // perf harness hook: perf/ui_bench.mjs injects a generated long project here (see perf/README)

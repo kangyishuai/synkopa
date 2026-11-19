@@ -323,6 +323,7 @@ function LookSection() {
             pick={i => setPref('uiScale', SCALES[i])} />
         </Row>
         <Row label={t('d.set.clipicons')} desc={t('d.set.clipicons.tip')}><OnOff on={() => prefs().clipIcons} set={v => setPref('clipIcons', v)} /></Row>
+        <Row label={t('d.set.fullscreen')} desc={t('d.set.fullscreen.tip')}><OnOff on={() => prefs().startFullscreen} set={v => setPref('startFullscreen', v)} /></Row>
       </div>
     </>
   );
