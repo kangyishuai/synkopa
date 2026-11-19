@@ -7,6 +7,10 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Drag several patterns at once.** In the Browser's pattern list, Ctrl+click adds a pattern to
+  the selection and Shift+click selects a range; drag them onto the Playlist and each lands on its
+  own track, from the one you drop on down, all at the same time.
+- **A new project has 30 Playlist tracks**, so there is room to arrange from the start.
 - **Full screen.** F11 (or View → Full screen) fills the whole screen with Synkopa, no taskbar and
   no window frame; F11 again, or the button in the top-right corner, goes back. Settings → Look →
   "Start in full screen" opens the app that way every time.
@@ -17,7 +21,9 @@ shown in the app after an update and is published as the release notes (see
   the system's white one, with the current choice ticked. Keyboard works as before: arrows, Enter,
   Esc (closes only the list, not the dialog behind it) and typing the first letters.
 - **Docking shows one arrow per side.** Dragging a window's title bar shows just three arrows, left,
-  right and bottom, instead of a cluster of them in the middle of the screen.
+  right and bottom, instead of a cluster of them in the middle of the screen. A window docks next to
+  the Playlist: the Piano roll dropped on the bottom arrow goes above the docked Mixer, which stays
+  where it is.
 
 ### Fixed
 - Clicking a sample in the Browser to hear it no longer hides the floating Channel rack.

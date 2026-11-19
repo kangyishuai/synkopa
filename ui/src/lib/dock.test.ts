@@ -103,13 +103,14 @@ describe('dock guides', () => {
   const panes = [{ edge: 'bottom' as const, strip: 0, at: 0, rect: { x: 0, y: 555, w: 1600, h: 395 } }];
   // the row (Browser 0-300, Playlist 300-1300, a right strip 1300-1600) over a bottom strip, as in PatDock's Workspace
   const frame = { row: { x: 0, y: 50, w: 1600, h: 500 }, col: stage };
-  const gs = dockGuides(stage, center, panes, { left: 0, right: 1, bottom: 1 }, frame);
+  const gs = dockGuides(stage, center, panes, frame);
   const find = (pred: (g: Guide) => boolean) => gs.find(pred)!;
-  it('one arrow per side, each docking outside every strip on its edge (no compasses mid-screen)', () => {
+  it('one arrow per side, each docking next to the Playlist, inside the strips there (no compasses mid-screen)', () => {
     expect(gs.map(g => g.dir)).toEqual(['left', 'right', 'down']);
     expect(find(g => g.dir === 'left').target).toEqual({ kind: 'strip', edge: 'left', at: 0 });
-    expect(find(g => g.dir === 'right' && g.x > 1500).target).toEqual({ kind: 'strip', edge: 'right', at: 1 });
-    expect(find(g => g.dir === 'down' && g.y > 900).target).toEqual({ kind: 'strip', edge: 'bottom', at: 1 });
+    expect(find(g => g.dir === 'right').target).toEqual({ kind: 'strip', edge: 'right', at: 0 });
+    // the Mixer docked at the bottom stays at the bottom: a panel dropped there goes above it
+    expect(find(g => g.dir === 'down').target).toEqual({ kind: 'strip', edge: 'bottom', at: 0 });
     // each at the middle of its edge
     expect(find(g => g.dir === 'left')).toMatchObject({ x: 24, y: 500 });
     expect(find(g => g.dir === 'down')).toMatchObject({ x: 800, y: 926 });
@@ -137,16 +138,17 @@ describe('dock guide previews show where the panel lands (#161)', () => {
     { edge: 'bottom' as const, strip: 0, at: 0, rect: { x: 0, y: 604, w: 800, h: 296 } },
     { edge: 'bottom' as const, strip: 0, at: 1, rect: { x: 800, y: 604, w: 800, h: 296 } },
   ];
-  const gs = dockGuides(stage, center, panes, { left: 1, right: 0, bottom: 1 }, { row, col, want: { w: 460, h: 300 } });
+  const gs = dockGuides(stage, center, panes, { row, col, want: { w: 460, h: 300 } });
   const tgt = (t: object) => gs.filter(g => JSON.stringify(g.target) === JSON.stringify(t));
-  it('the outer left guide previews outside the left strips but inside the Browser, row high only', () => {
-    const [g] = tgt({ kind: 'strip', edge: 'left', at: 1 }).filter(g => g.x < 100);
-    expect(g.preview.x).toBe(200); expect(g.preview.h).toBe(560);
+  it('the left guide previews a strip between the left strips and the Playlist, row high only', () => {
+    const [g] = tgt({ kind: 'strip', edge: 'left', at: 0 });
+    expect(g.preview.x).toBe(505); expect(g.preview.w).toBe(460); expect(g.preview.h).toBe(560);
   });
-  it('the bottom guide previews a strip across the whole window, under the strips there', () => {
-    const [g] = tgt({ kind: 'strip', edge: 'bottom', at: 1 });
+  it('the bottom guide previews a strip across the whole window, right above the strips there', () => {
+    const [g] = tgt({ kind: 'strip', edge: 'bottom', at: 0 });
     expect(g.preview.x).toBe(0); expect(g.preview.w).toBe(1600);
-    expect(g.preview.y + g.preview.h).toBe(900);
+    expect(g.preview.y + g.preview.h).toBe(599); // above the Mixer's strip and its splitter
+    expect(g.preview.h).toBe(300); // the dragged panel's own docked height
   });
 });
 
