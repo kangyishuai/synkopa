@@ -21,6 +21,9 @@ shown in the app after an update and is published as the release notes (see
 
 ### Fixed
 - Clicking a sample in the Browser to hear it no longer hides the floating Channel rack.
+- **Synth sounds are named in your language.** In English, a channel made from a factory synth
+  sound (and its insert and split patterns) no longer carries a Polish name like "Arp Cyfrowy";
+  projects saved before are renamed when opened, and names you gave yourself are kept.
 
 ## 0.9.29 — 2026-11-19
 

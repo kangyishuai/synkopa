@@ -10,17 +10,17 @@ describe('synth catalog', () => {
     const n = synthParams(cat).length;
     expect(cat.presets.length).toBeGreaterThanOrEqual(30);
     for (const p of cat.presets) expect(Object.keys(p.params).length).toBe(n);
-    expect(cat.presets.some(p => p.name === '808 Głęboki')).toBe(true);
+    expect(cat.presets.some(p => p.name === '808 Deep')).toBe(true);
     expect(mockCatalog().synth.presets.length).toBe(cat.presets.length);
   });
 });
 
 describe('synth channels', () => {
   it('a new channel plays its preset, basses at a low root', () => {
-    const c = newSynthChannel(cat, 7, '808 Głęboki');
+    const c = newSynthChannel(cat, 7, '808 Deep');
     expect(c.kind).toBe('synth');
     if (c.kind !== 'synth') return;
-    expect(c.synth.preset).toBe('808 Głęboki');
+    expect(c.synth.preset).toBe('808 Deep');
     expect(c.root).toBe(36);
     const blank = newSynthChannel(cat, 8, null);
     if (blank.kind === 'synth') expect(blank.synth.params).toEqual(synthDefaults(cat));

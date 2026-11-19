@@ -1400,6 +1400,32 @@ impl Project {
         if self.channels.is_empty() {
             self.add_starter_kit();
         }
+        // synth presets were named in Polish before 0.9.30: the preset reference follows the
+        // rename, and so does a synth channel still called after a preset, and an insert named
+        // after such a channel (any other name is the user's and stays)
+        let renamed = |n: &str| crate::poly::presets::LEGACY_NAMES.iter().find(|(old, _)| *old == n).map(|(_, new)| new.to_string());
+        let mut moved: Vec<(String, String)> = vec![];
+        for ch in &mut self.channels {
+            if let ChannelSrc::Synth { synth } = &mut ch.src {
+                if let Some(new) = synth.preset.as_deref().and_then(renamed) {
+                    synth.preset = Some(new);
+                }
+                if let Some(new) = renamed(&ch.name) {
+                    moved.push((std::mem::replace(&mut ch.name, new.clone()), new));
+                }
+            }
+        }
+        for ins in &mut self.inserts {
+            if let Some((_, new)) = moved.iter().find(|(old, _)| *old == ins.name) {
+                ins.name = new.clone();
+            }
+        }
+        // a pattern split per channel is called "<pattern> – <channel>"
+        for pt in &mut self.patterns {
+            if let Some((old, new)) = moved.iter().find(|(old, _)| pt.name.ends_with(&format!(" – {old}"))) {
+                pt.name = format!("{} – {new}", &pt.name[..pt.name.len() - old.len() - " – ".len()]);
+            }
+        }
         // saturator parameters from before the character saturator
         for ins in &mut self.inserts {
             for fx in ins.fx.iter_mut().filter(|f| f.kind == FxKind::Sat) {

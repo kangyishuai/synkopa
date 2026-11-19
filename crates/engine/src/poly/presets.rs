@@ -10,6 +10,50 @@ use super::params::{defaults, ix, Patch};
 
 pub const CATEGORIES: &[&str] = &["808", "Bas", "Pluck", "Lead", "Pad", "Klawisze", "Dzwonki", "Dęte/Smyczki", "Arp", "Lo-fi", "FX"];
 
+/// Preset names before 0.9.30, when the factory names were Polish (the app now names them in
+/// English and translates them for display): old name → current name. Projects saved with an old
+/// name, and CLI calls using one, still find their preset.
+pub const LEGACY_NAMES: &[(&str, &str)] = &[
+    ("808 Głęboki", "808 Deep"),
+    ("808 Przester", "808 Distorted"),
+    ("808 Ślizg", "808 Glide"),
+    ("Sub Czysty", "Sub Clean"),
+    ("Reese Ruchomy", "Reese Moving"),
+    ("Growl Bas", "Growl Bass"),
+    ("FM Bas", "FM Bass"),
+    ("Sync Bas", "Sync Bass"),
+    ("Bas Formant", "Formant Bass"),
+    ("Bas Ciepły", "Warm Bass"),
+    ("Bas Klik", "Click Bass"),
+    ("Pluck Szkło", "Pluck Glass"),
+    ("Pluck Grzebień", "Pluck Comb"),
+    ("Pluck Wokal", "Pluck Vocal"),
+    ("Lead Gwizdek", "Lead Whistle"),
+    ("Lead Kremowy", "Lead Creamy"),
+    ("Pad Ciepły", "Pad Warm"),
+    ("Pad Chór", "Pad Choir"),
+    ("Pad Ruch", "Pad Motion"),
+    ("Pad Ciemny", "Pad Dark"),
+    ("Pad Szklany", "Pad Glass"),
+    ("Klawisz Miękki", "Keys Soft"),
+    ("Organy", "Organ"),
+    ("Dzwonek FM", "FM Bell"),
+    ("Vibrafon", "Vibraphone"),
+    ("Smyczki", "Strings"),
+    ("Flet", "Flute"),
+    ("Arp Cyfrowy", "Arp Digital"),
+    ("Lo-fi Klawisz", "Lo-fi Keys"),
+    ("Wznoszenie", "Uplifter"),
+    ("Zjazd Sub", "Sub Drop"),
+    ("Szum Wiatru", "Wind Noise"),
+    ("Uderzenie", "Impact"),
+];
+
+/// The current name of preset `name` (an old Polish name maps to its English one).
+pub fn current_name(name: &str) -> &str {
+    LEGACY_NAMES.iter().find(|(old, _)| *old == name).map_or(name, |(_, new)| new)
+}
+
 pub struct Preset {
     pub name: &'static str,
     pub category: &'static str,
@@ -115,7 +159,7 @@ pub fn all() -> Vec<Preset> {
     vec![
         // ------------------------------------------------ 808 / sub
         pr(
-            "808 Głęboki",
+            "808 Deep",
             "808",
             &[
                 (O1_WAVE, SINE),
@@ -139,7 +183,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, PITCH, st(20.0)), (MAC1, DRIVE, 70.0), (MAC2, SH1, 80.0)],
         ),
         pr(
-            "808 Przester",
+            "808 Distorted",
             "808",
             &[
                 (O1_WAVE, SINE),
@@ -167,7 +211,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, PITCH, st(30.0)), (MAC1, DRIVE, 40.0), (MAC2, CUT, oct(2.0))],
         ),
         pr(
-            "808 Ślizg",
+            "808 Glide",
             "808",
             &[
                 (O1_WAVE, SINE),
@@ -196,7 +240,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, PITCH, st(24.0)), (MENV, W1, 25.0), (MAC1, W1, 25.0), (MAC2, DRIVE, 60.0)],
         ),
         pr(
-            "Sub Czysty",
+            "Sub Clean",
             "808",
             &[
                 (O1_WAVE, SINE),
@@ -218,7 +262,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ bass
         pr(
-            "Reese Ruchomy",
+            "Reese Moving",
             "Bas",
             &[
                 (O1_WAVE, SAW),
@@ -250,7 +294,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, DETUNE, 35.0), (LFO1, CUT, oct(0.9)), (LFO2, PAN, 10.0), (MAC1, CUT, oct(3.0)), (MAC2, DRIVE, 60.0)],
         ),
         pr(
-            "Growl Bas",
+            "Growl Bass",
             "Bas",
             &[
                 (O1_WAVE, GROWL),
@@ -282,7 +326,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, SH1, 28.0), (LFO1, CUT, oct(1.6)), (MAC1, SH1, 40.0), (MAC2, CUT, oct(2.0)), (MAC1, RES, 15.0)],
         ),
         pr(
-            "FM Bas",
+            "FM Bass",
             "Bas",
             &[
                 (O1_WAVE, SINE),
@@ -312,7 +356,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, W1, 32.0), (VEL, W1, 12.0), (MAC1, W1, 40.0), (MAC2, DRIVE, 70.0)],
         ),
         pr(
-            "Sync Bas",
+            "Sync Bass",
             "Bas",
             &[
                 (O1_WAVE, SAW),
@@ -340,7 +384,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, W1, 55.0), (MAC1, W1, 35.0), (MAC2, CUT, oct(2.0))],
         ),
         pr(
-            "Bas Formant",
+            "Formant Bass",
             "Bas",
             &[
                 (O1_WAVE, FORMANT),
@@ -400,7 +444,7 @@ pub fn all() -> Vec<Preset> {
             &[(VEL, CUT, oct(1.6)), (MAC1, CUT, oct(2.5)), (MAC2, RES, 25.0)],
         ),
         pr(
-            "Bas Ciepły",
+            "Warm Bass",
             "Bas",
             &[
                 (O1_WAVE, SAW),
@@ -429,7 +473,7 @@ pub fn all() -> Vec<Preset> {
             &[(VEL, CUT, oct(0.8)), (RND, PITCH, st(0.06)), (MAC1, CUT, oct(2.0)), (MAC2, DRIVE, 60.0)],
         ),
         pr(
-            "Bas Klik",
+            "Click Bass",
             "Bas",
             &[
                 (O1_WAVE, BASIC),
@@ -457,7 +501,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ plucks
         pr(
-            "Pluck Szkło",
+            "Pluck Glass",
             "Pluck",
             &[
                 (O1_WAVE, HARM),
@@ -587,7 +631,7 @@ pub fn all() -> Vec<Preset> {
             &[(VEL, CUT, oct(1.5)), (MENV, NOISE, 32.0), (MAC1, CUT, oct(2.0))],
         ),
         pr(
-            "Pluck Grzebień",
+            "Pluck Comb",
             "Pluck",
             &[
                 (O1_WAVE, COMB),
@@ -620,7 +664,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, SH1, 55.0), (MAC1, SH1, 50.0), (MAC2, CUT, oct(2.0))],
         ),
         pr(
-            "Pluck Wokal",
+            "Pluck Vocal",
             "Pluck",
             &[
                 (O1_WAVE, FORMANT),
@@ -712,7 +756,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, W1, 45.0), (LFO1, PITCH, st(0.2)), (VIB, PITCH, st(0.3)), (MAC1, W1, 40.0), (MAC2, DRIVE, 50.0)],
         ),
         pr(
-            "Lead Gwizdek",
+            "Lead Whistle",
             "Lead",
             &[
                 (O1_WAVE, SINE),
@@ -741,7 +785,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, PITCH, st(0.2)), (MENV, NOISE, 12.0), (MAC1, SH1, 60.0), (MAC2, NOISE, 25.0)],
         ),
         pr(
-            "Lead Kremowy",
+            "Lead Creamy",
             "Lead",
             &[
                 (O1_WAVE, SAW),
@@ -839,7 +883,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ pads
         pr(
-            "Pad Ciepły",
+            "Pad Warm",
             "Pad",
             &[
                 (O1_WAVE, SAW),
@@ -876,7 +920,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, CUT, oct(0.5)), (LFO2, DETUNE, 15.0), (MAC1, CUT, oct(2.0)), (MAC2, DETUNE, 40.0)],
         ),
         pr(
-            "Pad Chór",
+            "Pad Choir",
             "Pad",
             &[
                 (O1_WAVE, FORMANT),
@@ -908,7 +952,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, SH1, 30.0), (LFO2, PITCH, st(0.08)), (MAC1, SH1, 70.0), (MAC2, CUT, oct(1.5))],
         ),
         pr(
-            "Pad Ruch",
+            "Pad Motion",
             "Pad",
             &[
                 (O1_WAVE, COMB),
@@ -942,7 +986,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, SH1, 75.0), (LFO2, PAN, 50.0), (LFO2, CUT, oct(1.0)), (LFO1, SH2, -35.0), (MAC1, CUT, oct(-2.0)), (MAC2, SH1, 40.0)],
         ),
         pr(
-            "Pad Ciemny",
+            "Pad Dark",
             "Pad",
             &[
                 (O1_WAVE, GROWL),
@@ -975,7 +1019,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, CUT, oct(1.2)), (LFO2, SH1, 25.0), (MAC1, CUT, oct(2.5)), (MAC2, SH1, 50.0)],
         ),
         pr(
-            "Pad Szklany",
+            "Pad Glass",
             "Pad",
             &[
                 (O1_WAVE, HARM),
@@ -1036,7 +1080,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, W1, 10.0), (VEL, W1, 14.0), (LFO1, PAN, 18.0), (MAC1, W1, 15.0), (MAC2, CUT, oct(-2.0))],
         ),
         pr(
-            "Klawisz Miękki",
+            "Keys Soft",
             "Klawisze",
             &[
                 (O1_WAVE, BASIC),
@@ -1064,7 +1108,7 @@ pub fn all() -> Vec<Preset> {
             &[(VEL, CUT, oct(1.8)), (RND, PITCH, st(0.04)), (MAC1, CUT, oct(2.0)), (MAC2, SH1, 60.0)],
         ),
         pr(
-            "Organy",
+            "Organ",
             "Klawisze",
             &[
                 (O1_WAVE, HARM),
@@ -1157,7 +1201,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ bells / mallets
         pr(
-            "Dzwonek FM",
+            "FM Bell",
             "Dzwonki",
             &[
                 (O1_WAVE, SINE),
@@ -1187,7 +1231,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, W1, 20.0), (VEL, W1, 10.0), (KEY, W1, -12.0), (MAC1, W1, 25.0), (MAC2, PITCH, st(12.0))],
         ),
         pr(
-            "Vibrafon",
+            "Vibraphone",
             "Dzwonki",
             &[
                 (O1_WAVE, SINE),
@@ -1266,7 +1310,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ brass / strings
         pr(
-            "Smyczki",
+            "Strings",
             "Dęte/Smyczki",
             &[
                 (O1_WAVE, SAW),
@@ -1334,7 +1378,7 @@ pub fn all() -> Vec<Preset> {
             &[(VEL, CUT, oct(1.0)), (LFO1, PITCH, st(0.12)), (MAC1, CUT, oct(1.8))],
         ),
         pr(
-            "Flet",
+            "Flute",
             "Dęte/Smyczki",
             &[
                 (O1_WAVE, SINE),
@@ -1361,7 +1405,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ arps
         pr(
-            "Arp Cyfrowy",
+            "Arp Digital",
             "Arp",
             &[
                 (O1_WAVE, DIGITAL),
@@ -1469,7 +1513,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ lo-fi
         pr(
-            "Lo-fi Klawisz",
+            "Lo-fi Keys",
             "Lo-fi",
             &[
                 (O1_WAVE, TRI),
@@ -1526,7 +1570,7 @@ pub fn all() -> Vec<Preset> {
         ),
         // ------------------------------------------------ fx
         pr(
-            "Wznoszenie",
+            "Uplifter",
             "FX",
             &[
                 (O1_WAVE, SAW),
@@ -1560,7 +1604,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, PITCH, st(7.0)), (MENV, DETUNE, 60.0), (LFO1, AMP, 30.0), (LFO2, CUT, oct(0.8))],
         ),
         pr(
-            "Zjazd Sub",
+            "Sub Drop",
             "FX",
             &[
                 (O1_WAVE, SINE),
@@ -1591,7 +1635,7 @@ pub fn all() -> Vec<Preset> {
             &[(MENV, PITCH, st(14.0))],
         ),
         pr(
-            "Szum Wiatru",
+            "Wind Noise",
             "FX",
             &[
                 (O1_LEVEL, 0.0),
@@ -1613,7 +1657,7 @@ pub fn all() -> Vec<Preset> {
             &[(LFO1, CUT, oct(1.8)), (LFO2, CUT, oct(0.3)), (LFO1, PAN, 60.0)],
         ),
         pr(
-            "Uderzenie",
+            "Impact",
             "FX",
             &[
                 (O1_WAVE, SINE),

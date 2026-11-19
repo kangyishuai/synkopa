@@ -75,11 +75,11 @@ fn peak(x: &[f32]) -> f32 {
 
 #[test]
 fn synth_channels_round_trip_and_old_projects_still_load() {
-    let (p, id) = song("Pad Ciepły", &[], 4.0);
+    let (p, id) = song("Pad Warm", &[], 4.0);
     let json = serde_json::to_value(&p).unwrap();
     let ch = json["channels"].as_array().unwrap().iter().find(|c| c["id"] == id).unwrap();
     assert_eq!(ch["kind"], "synth");
-    assert_eq!(ch["synth"]["preset"], "Pad Ciepły");
+    assert_eq!(ch["synth"]["preset"], "Pad Warm");
     assert_eq!(ch["synth"]["params"].as_object().unwrap().len(), params::COUNT);
     let back: Project = serde_json::from_value(json).unwrap();
     assert_eq!(back, p);
@@ -90,7 +90,7 @@ fn synth_channels_round_trip_and_old_projects_still_load() {
 
 #[test]
 fn put_channel_validates_synth_params_and_takes_the_fast_path() {
-    let (mut p, id) = song("Pad Ciepły", &[], 4.0);
+    let (mut p, id) = song("Pad Warm", &[], 4.0);
     let mut c = p.channel(id).unwrap().clone();
     if let ChannelSrc::Synth { synth } = &mut c.src {
         synth.params.insert("flt_cutoff".into(), 900.0);
@@ -147,7 +147,7 @@ fn run(rt: &mut Rt, frames: usize) -> f32 {
 
 #[test]
 fn the_midi_keyboard_plays_a_synth_channel_and_parameter_edits_reach_it() {
-    let (p, id) = song("Pad Ciepły", &[], 4.0);
+    let (p, id) = song("Pad Warm", &[], 4.0);
     let e = Engine::new(p, Arc::new(NoPlugins));
     let mut rt = e.create_rt(SR as f32, BLOCK);
     e.midi_configure(Some(id), true);
@@ -195,7 +195,7 @@ fn the_catalog_lists_sections_and_complete_presets() {
             assert!(*v >= d.min && *v <= d.max, "{}: {k} = {v} out of range", p.name);
         }
     }
-    for c in ["808 Głęboki", "808 Przester"] {
+    for c in ["808 Deep", "808 Distorted"] {
         assert!(names.contains(&c));
     }
     // the JSON the UI reads
@@ -238,18 +238,18 @@ fn stealing_retriggering_legato_and_preset_changes_do_not_click() {
     let ms = |x: f32| (x * sr / 1000.0) as u32;
     let all = presets::all();
     for name in [
-        "808 Głęboki",
-        "808 Przester",
-        "808 Ślizg",
+        "808 Deep",
+        "808 Distorted",
+        "808 Glide",
         "Supersaw Hymn",
-        "Growl Bas",
-        "FM Bas",
-        "Sync Bas",
-        "Bas Klik",
+        "Growl Bass",
+        "FM Bass",
+        "Sync Bass",
+        "Click Bass",
         "Pluck Progressive",
         "Lead Sync",
         "EP FM",
-        "Pad Ruch",
+        "Pad Motion",
     ] {
         let i = all.iter().position(|p| p.name == name).unwrap();
         let (p, next) = (&all[i], &all[(i + 1) % all.len()]);
@@ -434,7 +434,7 @@ fn chords_fit_below_full_scale_without_clicks() {
 #[test]
 fn switching_poly_and_mono_glides_the_headroom() {
     let sr = SR as f32;
-    let p = presets::all().into_iter().find(|p| p.name == "Pad Ciepły").unwrap();
+    let p = presets::all().into_iter().find(|p| p.name == "Pad Warm").unwrap();
     let mut s = SynthInst::new(1, p.patch, sr);
     s.note(0, (2.0 * sr) as u32, 60, 1.0, Dest::Click);
     let (mut l, mut r) = lab::run(&mut s, 0.5, sr);
@@ -533,4 +533,50 @@ fn an_lfo_rise_fades_its_depth_in_from_the_note_start() {
     let late = spread((0.6 * sr) as usize, (0.9 * sr) as usize);
     assert!(early <= 2.0, "pitch moves during the rise: {early}");
     assert!(late >= 6.0, "no vibrato after the rise: {late}");
+}
+
+#[test]
+fn old_polish_preset_names_load_as_their_english_names() {
+    // a project saved before 0.9.30: a synth channel named after its preset, an insert named
+    // after the channel, a sampler and a synth the user named themselves
+    let mut p = Project::empty();
+    let mut old = synth_channel(900, "Arp Digital");
+    old.name = "Arp Cyfrowy".into();
+    if let ChannelSrc::Synth { synth } = &mut old.src {
+        synth.preset = Some("Arp Cyfrowy".into());
+    }
+    let mut mine = synth_channel(901, "Organ");
+    mine.name = "My organ".into();
+    p.channels.push(old);
+    p.channels.push(mine);
+    p.inserts[1].name = "Arp Cyfrowy".into();
+    p.patterns[0].name = "Pattern 1 – Arp Cyfrowy".into();
+    let sampler_named = p.channels[0].name.clone();
+    p.channels[0].name = "Smyczki".into(); // a sampler: the user's own word, kept
+
+    p.migrate();
+    let ch = |id| p.channels.iter().find(|c| c.id == id).unwrap();
+    assert_eq!(ch(900).name, "Arp Digital");
+    match &ch(900).src {
+        ChannelSrc::Synth { synth } => assert_eq!(synth.preset.as_deref(), Some("Arp Digital")),
+        _ => unreachable!(),
+    }
+    assert_eq!(ch(901).name, "My organ");
+    assert_eq!(p.inserts[1].name, "Arp Digital");
+    assert_eq!(p.patterns[0].name, "Pattern 1 – Arp Digital");
+    assert_eq!(p.channels[0].name, "Smyczki", "{sampler_named} renamed by the user stays");
+    // the CLI still takes an old name
+    assert_eq!(poly::preset_state("Klawisz Miękki").unwrap().preset.as_deref(), Some("Keys Soft"));
+    // idempotent
+    let q = p.clone();
+    p.migrate();
+    assert_eq!(p, q);
+}
+
+#[test]
+fn every_legacy_name_points_at_a_preset() {
+    for (old, new) in presets::LEGACY_NAMES {
+        assert!(presets::all().iter().any(|p| p.name == *new), "{old} → {new}");
+        assert!(!presets::all().iter().any(|p| p.name == *old), "{old} is still a preset name");
+    }
 }
