@@ -95,11 +95,10 @@ function readGuides(id: PaneId): Guide[] {
     const r = rectOf(el), [edge, strip, at] = (el.dataset.dockpane ?? '').split(':');
     if (r && EDGES.includes(edge as Edge)) panes.push({ edge: edge as Edge, strip: +strip, at: +at, rect: r, id: U.dock[edge as Edge][+strip]?.[+at]?.id });
   }
-  const counts = { left: U.dock.left.length, right: U.dock.right.length, bottom: U.dock.bottom.length };
   // a rack docked at its automatic width (0) is as wide as the pattern's steps (PatDock)
   const want = { ...U.paneSize[id] };
   if (id === 'rack' && !want.w) { const pt = curPat(); want.w = rackDockFitWidth(pt ? stepsOf(pt) : 16, { left: RACK_LEFT, cw: STEP_W, pad: 2 * RACK_PAD_X + 2, min: RACK_MIN_W }); }
-  return dockGuides(stage, center, panes, counts, { row, col, drag: id, want });
+  return dockGuides(stage, center, panes, { row, col, drag: id, want });
 }
 
 /** A panel's floating place, read and moved through the same paths as its frame. */

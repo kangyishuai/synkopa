@@ -221,3 +221,17 @@ export function swapTrackOps(p: Project, i: number, j: number): Op[] {
   }
   return ops;
 }
+
+/**
+ * Several patterns dropped at once (Browser multi-selection): each on its own track, from the
+ * drop's track down, all starting at `start` (clipped to the song). Tracks missing below the last
+ * one are added. `lenOf`: a pattern's length in beats.
+ */
+export function stackPatternClips(refs: readonly number[], track: number, start: number, tracks: number, total: number,
+  lenOf: (ref: number) => number, newId: () => number): { clips: Clip[]; newTracks: number } {
+  const clips = refs.map((ref, i): Clip => {
+    const len = Math.max(1e-3, Math.min(lenOf(ref), total - start));
+    return { id: newId(), track: track + i, start, len, offset: 0, kind: 'pat', ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false };
+  });
+  return { clips, newTracks: Math.max(0, track + refs.length - tracks) };
+}

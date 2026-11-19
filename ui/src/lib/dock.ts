@@ -151,15 +151,16 @@ export interface DockFrame {
 
 /**
  * The dock guides while a panel is dragged: one arrow per side of the work area (left, right,
- * bottom), as FL Studio docks a window to a side. Each docks outside every strip already on its
- * edge. (A compass over the Playlist and over every docked panel put up to 15 arrows on screen,
+ * bottom), as FL Studio docks a window to a side. Each docks next to the Playlist, inside any
+ * strip already on that edge: a Piano roll dropped on the bottom arrow goes above the docked Mixer,
+ * which stays where it is (as View → Window layout docks it too). (A compass over the Playlist and over every docked panel put up to 15 arrows on screen,
  * most of them in the middle of the work; a saved layout with shared strips still loads.)
  *
  * Each guide's preview is the area the panel will take once dropped, laid out as PatDock lays out
- * the strips: a new strip spans its whole edge and sits outside the strips there, which (with the
- * Playlist) make room.
+ * the strips: a new strip spans its whole edge between the Playlist and the strips there; it and
+ * the Playlist make room.
  */
-export function dockGuides(stage: Rect, center: Rect, panes: PaneRect[], counts: Record<Edge, number>, frame: DockFrame): Guide[] {
+export function dockGuides(stage: Rect, center: Rect, panes: PaneRect[], frame: DockFrame): Guide[] {
   const g: Guide[] = [];
   const m = GUIDE / 2 + 8;
   const { row, col } = frame;
@@ -209,9 +210,9 @@ export function dockGuides(stage: Rect, center: Rect, panes: PaneRect[], counts:
     }
     return { x: col.x, y: col.y + col.h - outside - t, w: col.w, h: t };
   };
-  g.push({ x: stage.x + m, y: stage.y + stage.h / 2, dir: 'left', target: { kind: 'strip', edge: 'left', at: counts.left }, preview: newStrip('left', counts.left) });
-  g.push({ x: stage.x + stage.w - m, y: stage.y + stage.h / 2, dir: 'right', target: { kind: 'strip', edge: 'right', at: counts.right }, preview: newStrip('right', counts.right) });
-  g.push({ x: stage.x + stage.w / 2, y: stage.y + stage.h - m, dir: 'down', target: { kind: 'strip', edge: 'bottom', at: counts.bottom }, preview: newStrip('bottom', counts.bottom) });
+  g.push({ x: stage.x + m, y: stage.y + stage.h / 2, dir: 'left', target: { kind: 'strip', edge: 'left', at: 0 }, preview: newStrip('left', 0) });
+  g.push({ x: stage.x + stage.w - m, y: stage.y + stage.h / 2, dir: 'right', target: { kind: 'strip', edge: 'right', at: 0 }, preview: newStrip('right', 0) });
+  g.push({ x: stage.x + stage.w / 2, y: stage.y + stage.h - m, dir: 'down', target: { kind: 'strip', edge: 'bottom', at: 0 }, preview: newStrip('bottom', 0) });
   return g;
 }
 

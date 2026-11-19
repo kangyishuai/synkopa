@@ -96,6 +96,8 @@ export interface UiState {
   selCh: Id | null;
   /** More selected Channel Rack channels (Shift+click / Shift+Ctrl+click), `selCh` among them; empty = only `selCh`. */
   chSel: Id[];
+  /** Patterns selected together in the Browser (Ctrl / Shift+click), to drag onto the Playlist at once; empty = none. */
+  patSel: Id[];
   rackWin: PatWin | null;
   rollWin: PatWin | null;
   /** Which panels (Channel Rack, Piano roll, Mixer) are docked and where (`lib/dock.ts`); the others float. */
@@ -149,7 +151,7 @@ export const [U, setU] = createStore<UiState>({
   readout: t('d.ui.ready'),
   headW: 196, pickW: 220, pickOpen: true, browserTab: 'patterns',
   browserSec: { std: undefined, kits: undefined, folders: undefined },
-  ghost: null, dragOver: false, eqSel: {}, fetMode: {}, pitchEd: null, pat: 1, selCh: null, chSel: [], rackWin: null, rollWin: null,
+  ghost: null, dragOver: false, eqSel: {}, fetMode: {}, pitchEd: null, pat: 1, selCh: null, chSel: [], patSel: [], rackWin: null, rollWin: null,
   dock: defaultDock(), paneSize: defaultSizes(), dockHome: defaultHomes(), rackFloat: null, rollFloat: null, rollMax: true, mixWin: { x: 120, y: 140, w: 1100, h: 420, z: 0 },
   rackGraph: null, patPlaying: false, takesOpen: {}, compSel: null, autoSel: null, zTop: 1, marquee: null,
   playing: false, previewing: false, previewPath: null, stretchMode: false,

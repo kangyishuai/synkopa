@@ -7,7 +7,7 @@ import { STRETCH_MAX, STRETCH_MIN, VOL_UNITY, type Automation, type AutoPoint, t
 import { boundaries, boundaryXfade, moveBoundary, setBoundaryXfade, takeEnd, toComp, toTimeline, unusedTakes, usedBeats, writeRange } from '../lib/comp';
 import * as CA from '../state/comp';
 import { compById, LANE_H, takeRow, type TakeRow } from '../state/comp';
-import { clampMove, moveClips, paintCells, placeClipCopy, resizeClip, resizeClips, sliceAcross, stretchClip, stretchClips, sharedSound, TOTAL } from '../lib/clipOps';
+import { clampMove, moveClips, newTrack, paintCells, placeClipCopy, resizeClip, resizeClips, sliceAcross, stackPatternClips, stretchClip, stretchClips, sharedSound, TOTAL } from '../lib/clipOps';
 import { clamp, fmtPos, volText } from '../lib/format';
 import { snapFloor, snapRes, snapRound } from '../lib/snap';
 import * as A from '../state/actions';
@@ -84,6 +84,20 @@ export function dropClipAt(clientX: number, clientY: number, kind: Clip['kind'],
   const nc: Clip = { id: allocId(), track: p.track, start, len: Math.min(len, TOTAL - start), offset: 0, kind, ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false, ...(kind === 'audio' ? sharedSound(S.project.clips, ref) : {}) };
   commit([{ op: 'putClips', clips: [nc] }], tl('a.pl.insertClip'));
   setU('sel', [nc.id]);
+  return true;
+}
+
+/** Several patterns dropped at a client point: one per track from the one under the pointer (tracks added as needed), one undo step. */
+export function dropPatternsAt(clientX: number, clientY: number, refs: readonly Id[], alt: boolean): boolean {
+  const p = gridPoint(clientX, clientY);
+  if (!p.inside || p.track < 0 || !refs.length) return false;
+  const longest = Math.max(...refs.map(r => srcLenBeats('pat', r)));
+  const start = clamp(snapFloor(p.beat, unit(alt)), 0, TOTAL - Math.min(longest, TOTAL));
+  const n = S.project.tracks.length;
+  const r = stackPatternClips(refs, p.track, start, n, TOTAL, ref => srcLenBeats('pat', ref), allocId);
+  const ops: Op[] = Array.from({ length: r.newTracks }, (_, i) => ({ op: 'putTrack', track: newTrack(allocId(), n + i) }) as Op);
+  commit([...ops, { op: 'putClips', clips: r.clips }], tl('a.pl.insertClips', { n: refs.length }));
+  setU('sel', r.clips.map(c => c.id));
   return true;
 }
 

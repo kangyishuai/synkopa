@@ -207,7 +207,8 @@ Splitters: one on each strip's Playlist side (drag, arrow keys; a rack strip's d
 the pattern) and one between panels sharing a strip (`splitShares`). Dragging a title bar
 (`paneHeadDown`) moves the window — a docked panel floats off under the pointer first — and
 shows the dock guides (`dockGuides`): one arrow per side (left, right, bottom; FL Studio's), each
-docking outside every strip there. Only a drop on a guide docks; anywhere
+docking next to the Playlist, inside the strips there (a panel dropped on the bottom arrow goes above
+the docked Mixer). Only a drop on a guide docks; anywhere
 else the window stays floating. The title bar's dock button floats a panel or docks it back where
 it was (`U.dockHome`); its right-click menu and View → Window layout dock it to an edge without
 dragging, and *Reset window layout* restores the first-launch layout. Rows are keyed by strings,

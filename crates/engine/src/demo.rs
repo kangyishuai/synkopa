@@ -88,6 +88,9 @@ pub fn routed_project() -> Project {
     p
 }
 
+/// Playlist tracks a new project has.
+pub const EMPTY_TRACKS: usize = 30;
+
 /// What the program starts with. Playlist tracks are plain lanes, as in FL Studio: none is tied
 /// to a mixer insert (they play into the master); routing belongs to the channels, and a track
 /// is sent to an insert by hand. As in FL Studio's default template, the starter kit's Kick,
@@ -97,6 +100,22 @@ pub fn empty_project() -> Project {
     let mut p = routed_project();
     for t in &mut p.tracks {
         t.insert = 0;
+    }
+    // room to arrange from the start (FL Studio opens with many empty tracks): the first eight
+    // keep their colours, the rest are plain lanes like a track added later
+    for i in p.tracks.len()..EMPTY_TRACKS {
+        p.tracks.push(Track {
+            id: i as Id + 1,
+            name: format!("Track {}", i + 1),
+            color: "#8b93a1".into(),
+            muted: false,
+            solo: false,
+            arm: false,
+            vol: VOL_UNITY,
+            h: 56.0,
+            insert: 0,
+            icon: None,
+        });
     }
     let kit: Vec<(Id, String)> = p.channels.iter().take(STARTER_KIT.len()).map(|c| (c.id, c.name.clone())).collect();
     for (i, (ch, name)) in kit.into_iter().enumerate() {

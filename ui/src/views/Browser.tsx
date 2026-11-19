@@ -12,7 +12,8 @@ import { S } from '../state/store';
 import { openMenu, say, setU, U } from '../state/ui';
 import { dblCheck, track } from '../ui/drag';
 import { fitCanvas } from '../ui/frameLoop';
-import { dropClipAt, gridPoint } from './Playlist';
+import { dropClipAt, dropPatternsAt, gridPoint } from './Playlist';
+import { rangeSelect, toggleSelect } from '../lib/mixer';
 import { patternPreview } from './playlistDraw';
 import { addSampler, addSamplerFiles, chanById, channels, newPattern, openPattern, replaceWithFile, replaceWithSource, showPatternWindow, type SampleFile } from '../state/pattern';
 import { libGroup, STD_KIT } from '../state/library';
@@ -158,6 +159,38 @@ function PatPreview(props: { pat: Pattern; chans: Map<Id, Channel> }) {
   return <img ref={el} class="pprev" src={src() || undefined} alt="" draggable={false} />;
 }
 
+/**
+ * Press on a pattern in the Browser. Ctrl+click adds it to the selection or takes it out,
+ * Shift+click selects the range from the current one (as the Channel Rack's names do); a plain
+ * press on one of several selected drags them all onto the Playlist, one track each. A plain click
+ * elsewhere is a single pattern again.
+ */
+function pressPattern(p: Pattern, e: PointerEvent) {
+  if (e.button !== 0) return;
+  const anchor = U.cur?.kind === 'pat' ? U.cur.ref : null;
+  const order = S.project.patterns.map(x => x.id);
+  if (e.ctrlKey || e.metaKey || e.shiftKey) {
+    e.preventDefault();
+    const next = e.shiftKey ? rangeSelect(order, anchor, p.id) : toggleSelect(U.patSel, anchor, p.id);
+    setU('patSel', next.length > 1 ? next : []);
+    // the last one picked is the brush (and the range's anchor), unless it was just taken out
+    if (next.includes(p.id)) setU('cur', { kind: 'pat', ref: p.id, clipId: null });
+    else if (next.length) setU('cur', { kind: 'pat', ref: next[next.length - 1], clipId: null });
+    if (next.length > 1) say(t('d.br.patsSel', { n: next.length }));
+    return;
+  }
+  const many = U.patSel.length > 1 && U.patSel.includes(p.id);
+  if (!many) {
+    setU('patSel', []);
+    return pick('pat', p.id, p.name, p.color, e, () => openPattern(p.id));
+  }
+  e.preventDefault();
+  // in the Browser's order, so they land top to bottom as listed
+  const refs = order.filter(id => U.patSel.includes(id));
+  dragGhost(e, t('d.br.patsDrag', { n: refs.length }), p.color, () => { setU('patSel', []); setU('cur', { kind: 'pat', ref: p.id, clipId: null }); openPattern(p.id); },
+    (x, y, alt) => { dropPatternsAt(x, y, refs, alt); });
+}
+
 function PatternsTab() {
   const chanMap = createMemo(() => new Map((S.project.channels ?? []).map(c => [c.id, c])));
   return (
@@ -169,9 +202,9 @@ function PatternsTab() {
       <div class="plist">
         <For each={S.project.patterns}>
           {p => (
-            <div class="pitem" classList={{ on: U.cur?.kind === 'pat' && U.cur.ref === p.id }} title={t('d.br.pat.tip')} style={{ '--c': p.color }}
+            <div class="pitem" classList={{ on: U.patSel.length ? U.patSel.includes(p.id) : U.cur?.kind === 'pat' && U.cur.ref === p.id }} title={t('d.br.pat.tip')} style={{ '--c': p.color }}
               onContextMenu={e => { e.preventDefault(); patternItemMenu(p, e.clientX, e.clientY); }}
-              onPointerDown={e => pick('pat', p.id, p.name, p.color, e, () => openPattern(p.id))}>
+              onPointerDown={e => pressPattern(p, e)}>
               <div class="prow">
                 <Show when={patternIcon(p, chanMap(), (id: number) => S.project.sources.find(s => s.id === id))} fallback={<span style={{ width: '8px', height: '8px', 'border-radius': '2px', flex: 'none', background: p.color }} />}>
                   {id => <span class="picon" style={{ color: p.color }}><InstIcon id={id()} size={12} /></span>}
