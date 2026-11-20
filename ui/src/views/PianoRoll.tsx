@@ -3,8 +3,8 @@
 // follow the key). The pattern's other channels show as ghost notes; double right-click one to
 // switch to its channel. Drawing past the end makes the pattern longer (its length follows the
 // notes). Every edit is an op and one undo step.
-import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show, untrack } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { createMemo, For, Show, untrack } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Id, Note } from '../api/types';
 import { prefs } from '../state/prefs';
@@ -29,7 +29,7 @@ import { commit, Gesture, wheelEdit } from '../state/edit';
 import { audition, chanKindLabel, channels, closeRoll, curPat, moveNotesToNewPattern, patFrom, patLoopOf, patMode, patPlayhead, patStartOf, putNotes, rollFront, selChan,
   selectChannel, setPatLoop, setPatStart, toggleRollMax,
 } from '../state/pattern';
-import { arrVersion, S } from '../state/store';
+import { arrVersion, rawOf, S } from '../state/store';
 import { openMenu, say, setU, U } from '../state/ui';
 import { ChipSelect, ToolSeg, type ChipOption } from '../ui/EditorBar';
 import { selectionSpan, vocalsUnder } from '../lib/melody';
@@ -103,14 +103,14 @@ function Roll(props: { z: number; docked?: boolean }) {
   const ptM = createMemo(() => curPat()!), chM = createMemo(() => selChan()!);
   const pt = () => ptM(), ch = () => chM();
   /** The notes as plain data (canvas drawing and hit tests; redraws follow `data`/`arrVersion`). */
-  const notesRaw = () => unwrap(pt()).notes;
+  const notesRaw = () => rawOf(pt()).notes;
   const size = useSize(() => wrap);
   const laneSize = useSize(() => laneWrap);
   // grid + lane together stay the same height whether the lane shows or not, so this does not flip back and forth
   const [laneOn, setLaneOn] = createSignal(true);
   /** What the lane under the grid edits (FL's event editor target): the notes' velocity or their own pan. */
   const [laneMode, setLaneMode] = createSignal<'vel' | 'pan'>('vel');
-  createEffect(() => { const h = size().h; if (h > 0) setLaneOn(h + (untrack(laneOn) ? LANE_H : 0) >= LANE_SHOW_AT); });
+  effect(() => { const h = size().h; if (h > 0) setLaneOn(h + (untrack(laneOn) ? LANE_H : 0) >= LANE_SHOW_AT); });
   const data = useDataVersion();
   const layer = new Layer();
   const [sel, setSel] = createSignal<Set<number>>(new Set());
@@ -124,7 +124,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   /** The note properties popover (double-click a note): the notes it edits, the clicked one last. */
   const [propsFor, setPropsFor] = createSignal<number[] | null>(null);
   const [view, setViewS] = createSignal({ sx: 0, sy: 0, zoom: 1, rowH: ROW_H });
-  const pk = createMemo(projectKey, undefined, { equals: (a, b) => a.root === b.root && a.scale === b.scale });
+  const pk = createMemo(projectKey, { equals: (a, b) => a.root === b.root && a.scale === b.scale });
   // the note tools strip: verb + its declared fields (meaning per verb) + an optional seed
   const [toolId, setToolId] = createSignal<ToolId>('humanize');
   const [vals, setVals] = createSignal<unknown[]>(TOOL_META.humanize.fields.map(f => f.def));
@@ -134,7 +134,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   const [pop, setPop] = createSignal<'tools' | 'key' | null>(null);
   const toolsOpen = () => pop() === 'tools', setToolsOpen = (f: boolean | ((v: boolean) => boolean)) => setPop((typeof f === 'function' ? f(toolsOpen()) : f) ? 'tools' : null);
   let toolMenu!: HTMLDivElement, keyMenu!: HTMLDivElement;
-  createEffect(() => {
+  effect(() => {
     const open = pop(); if (!open) return;
     const away = (e: PointerEvent) => { if (!(open === 'key' ? keyMenu : toolMenu).contains(e.target as Node)) setPop(null); };
     document.addEventListener('pointerdown', away, true);
@@ -148,7 +148,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   };
   const root = () => pk().root;
   const scaleIdx = () => pk().scale;
-  const chansMap = createMemo(() => { arrVersion(); return new Map(unwrap(channels()).map(c => [c.id, c])); });
+  const chansMap = createMemo(() => { arrVersion(); return new Map(rawOf(channels()).map(c => [c.id, c])); });
   const mask = () => scaleMask(scaleIdx());
   /** A tool field's name without its "(0..1)" range note: the slider shows the range. */
   const shortLabel = (l: string) => l.replace(/\s*\(.*\)\s*$/, '');
@@ -167,7 +167,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   const [fitSteps, setFitSteps] = createSignal(stepsOf(pt()));
   // (a memo of the id: every note edit replaces the pattern object, only another pattern changes the id)
   const patId = createMemo(() => pt().id);
-  createEffect(on(patId, () => setFitSteps(stepsOf(untrack(pt)))));
+  watch(patId, () => setFitSteps(stepsOf(untrack(pt))));
   /** Px per step at zoom 1: the pattern as it was opened fits the window (within sensible limits). */
   const basePps = () => clamp(gridW() / fitSteps(), 6, 48);
   /** Smallest key height: never so small that the 128 keys leave the grid half empty. */
@@ -209,18 +209,18 @@ function Roll(props: { z: number; docked?: boolean }) {
   };
   const chanNotes = createMemo(() => {
     arrVersion();
-    const p = unwrap(pt()), id = ch().id;
+    const p = rawOf(pt()), id = ch().id;
     return p.notes.map((n, i) => ({ n, i })).filter(x => x.n.ch === id);
   });
   // keep the selection valid when the notes change underneath (undo, CLI)
-  createEffect(() => { const ok = new Set(chanNotes().map(x => x.i)); const s = sel(); if ([...s].some(i => !ok.has(i))) setSel(new Set([...s].filter(i => ok.has(i)))); });
+  effect(() => { const ok = new Set(chanNotes().map(x => x.i)); const s = sel(); if ([...s].some(i => !ok.has(i))) setSel(new Set([...s].filter(i => ok.has(i)))); });
   // the popover's notes gone (undo, another channel): it closes rather than edit other notes
-  createEffect(() => { const p = propsFor(); if (!p) return; const ok = new Set(chanNotes().map(x => x.i)); if (p.some(i => !ok.has(i))) setPropsFor(null); });
+  effect(() => { const p = propsFor(); if (!p) return; const ok = new Set(chanNotes().map(x => x.i)); if (p.some(i => !ok.has(i))) setPropsFor(null); });
   // another pattern: the selection is note indices of the old one, they would point at random notes
-  createEffect(on(patId, () => { setSel(new Set<number>()); setPropsFor(null); }, { defer: true }));
+  watch(patId, () => { setSel(new Set<number>()); setPropsFor(null); }, { defer: true });
   // initial vertical position: centred on the channel's notes (or its root)
   let centred = -1;
-  createEffect(() => {
+  effect(() => {
     const h = size().h, id = ch()?.id; if (!h || centred === id) return;
     centred = id;
     const ks = chanNotes().map(x => keyOf(x.n, ch()));
@@ -236,7 +236,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     const g = cv.getContext('2d')!, dpr = window.devicePixelRatio || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const lit = typingHeld();
-    drawRoll(g, w, h, geo(), layer, { pt: unwrap(pt()), ch: unwrap(ch()), chans: chansMap(), sel: sel(), root: root(), mask: mask(), grid: snapNow(), hoverKey: hoverKey(), lit, marquee: marq(), zoomBox: zbox(), stampGhost: stampGhost() });
+    drawRoll(g, w, h, geo(), layer, { pt: rawOf(pt()), ch: rawOf(ch()), chans: chansMap(), sel: sel(), root: root(), mask: mask(), grid: snapNow(), hoverKey: hoverKey(), lit, marquee: marq(), zoomBox: zbox(), stampGhost: stampGhost() });
   };
   const drawVel = () => {
     const { w, h } = laneSize(); if (!w || !h) return;
@@ -247,14 +247,14 @@ function Roll(props: { z: number; docked?: boolean }) {
     drawRollLane(g, w, h, { x0: KW, pps: G.pps, sx: G.sx, steps: G.steps, notes: chanNotes(), sel: sel(), muted: ch().mute, mode: lane() });
   };
   let rafMain = 0, rafVel = 0;
-  createEffect(() => {
+  effect(() => {
     data(); sel(); laneMode(); hoverKey(); marq(); zbox(); root(); mask(); rollSnap(); void fonts.epoch; size(); view(); typingHeld(); ch(); pt().len; stampGhost();
     if (U.mixView) return; // repainted on the way back from the Mix view
     if (!rafMain) rafMain = requestAnimationFrame(() => { rafMain = 0; untrack(drawMain); });
   });
   // the ghost belongs to the stamp tool: gone the moment another tool is picked
-  createEffect(() => { if (rollTool() !== 'stamp') setStampGhost(null); });
-  createEffect(() => {
+  effect(() => { if (rollTool() !== 'stamp') setStampGhost(null); });
+  effect(() => {
     data(); sel(); laneSize(); view(); size(); ch(); pt().len;
     if (U.mixView) return;
     if (!rafVel) rafVel = requestAnimationFrame(() => { rafVel = 0; untrack(drawVel); });
@@ -349,7 +349,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     if (xe < W) { g.fillStyle = rgba(T.viz, 0.55); g.fillRect(Math.max(0, xe), 0, W - Math.max(0, xe), RULER_H - 1); }
   };
   let rafRuler = 0;
-  createEffect(() => {
+  effect(() => {
     view(); size(); pt().len; pt().id; patLoopOf(pt().id); patStartOf(pt().id); rulerStart(); themeVersion(); void fonts.epoch;
     if (!rafRuler) rafRuler = requestAnimationFrame(() => { rafRuler = 0; untrack(drawRulerNow); });
   });
@@ -382,7 +382,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     const x = e.clientX - r.left, y = e.clientY - r.top;
     return { x, y, step: (x - KW + G.sx) / G.pps, key: clamp(127 - Math.floor((y + G.sy) / G.rowH), 0, 127) };
   };
-  const hitNote = (step: number, key: number) => noteAt(notesRaw(), ch().id, unwrap(ch()), step, key, geo().pps);
+  const hitNote = (step: number, key: number) => noteAt(notesRaw(), ch().id, rawOf(ch()), step, key, geo().pps);
   /** Index of another channel's note (a ghost) under (step, key), or −1. */
   const ghostAt = (step: number, key: number) => {
     const ns = notesRaw(), m = chansMap();
@@ -426,7 +426,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   window.addEventListener('blur', dropHeld);
   onCleanup(() => { window.removeEventListener('blur', dropHeld); holdNote(null); });
   const ctx: RollCtx = {
-    pt: () => pt(), ch: () => unwrap(ch()), notes: notesRaw, chanNotes: () => chanNotes(), chans: chansMap,
+    pt: () => pt(), ch: () => rawOf(ch()), notes: notesRaw, chanNotes: () => chanNotes(), chans: chansMap,
     geo, snap: () => snapNow(),
     hit: hitNote, edgeHit, ghostAt,
     tool: () => rollTool(),
@@ -678,7 +678,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   /** The note properties popover, under the clicked note (above it near the bottom). */
   function PropsPop(pp: { idx: number[] }) {
     let box!: HTMLDivElement, first!: HTMLInputElement;
-    const init = readProps(notesRaw(), pp.idx, unwrap(ch()));
+    const init = readProps(notesRaw(), pp.idx, rawOf(ch()));
     const shown = { vel: init.vel == null ? '' : String(init.vel), start: fmtStart(init.start), len: init.len == null ? '' : fmtLen(init.len), key: noteName(init.key),
       pan: (p => (p == null ? '' : panText(p)))(sharedPan(notesRaw(), pp.idx)) };
     const [err, setErr] = createSignal('');
@@ -704,7 +704,7 @@ function Roll(props: { z: number; docked?: boolean }) {
       if (k && k !== shown.key) { const x = parseKey(k); if (x == null) return bad(t('b.pr.pBadKey'), 'key'); ch0.key = x; }
       if (panPlays()) { const p = val('pan'); if (p && p !== shown.pan) { const x = parsePan(p); if (x == null) return bad(t('b.pr.pBadPan'), 'pan'); ch0.pan = x; } }
       if (!Object.keys(ch0).length) return close();
-      const notes = applyProps(notesRaw(), pp.idx, unwrap(ch()), ch0);
+      const notes = applyProps(notesRaw(), pp.idx, rawOf(ch()), ch0);
       if (!notes) { setErr(t('b.pr.pRange')); say(t('b.pr.pRange')); return; }
       commitNotes(notes, t('b.pr.props'));
       if (ch0.len != null) setLastLen(ch0.len);
@@ -712,12 +712,16 @@ function Roll(props: { z: number; docked?: boolean }) {
       close();
     };
     onMount(() => setTimeout(() => { first.focus(); first.select(); }, 0));
-    const field = (name: 'vel' | 'start' | 'len' | 'key' | 'pan', label: string, tip: string | undefined, ref?: (el: HTMLInputElement) => void) => (
-      <label class="rpf" title={tip}>
-        <span>{label}</span>
-        <input ref={ref} name={name} value={shown[name]} placeholder={shown[name] ? '' : t(name === 'len' && pp.idx.every(i => notesRaw()[i]?.trig) ? 'b.pr.trigger' : 'b.pr.pMixed')} spellcheck={false} autocomplete="off" onInput={() => setErr('')} />
-      </label>
-    );
+    const field = (name: 'vel' | 'start' | 'len' | 'key' | 'pan', label: string, tip: string | undefined, ref?: (el: HTMLInputElement) => void) => {
+      // a plain local: the value is written once, so a placeholder update (an edit, the language) keeps what is typed
+      const value = shown[name];
+      return (
+        <label class="rpf" title={tip}>
+          <span>{label}</span>
+          <input ref={ref} name={name} value={value} placeholder={value ? '' : t(name === 'len' && pp.idx.every(i => notesRaw()[i]?.trig) ? 'b.pr.trigger' : 'b.pr.pMixed')} spellcheck="false" autocomplete="off" onInput={() => setErr('')} />
+        </label>
+      );
+    };
     return (
       <div ref={box} class="menu rollprops" style={{ position: 'absolute', left: place().left + 'px', top: place().top + 'px', width: W + 'px' }}
         onPointerDown={e => e.stopPropagation()} onWheel={e => e.stopPropagation()}
@@ -740,7 +744,7 @@ function Roll(props: { z: number; docked?: boolean }) {
           }}>{t('b.pr.toHeld')}</button>
         </Show>
         {field('key', t('b.pr.pKey'), t('b.pr.pKeyTip'))}
-        <div class="rpfoot" classList={{ err: !!err() }}>{err() || t('b.pr.pFoot')}</div>
+        <div class={["rpfoot", { err: !!err() }]}>{err() || t('b.pr.pFoot')}</div>
       </div>
     );
   }
@@ -767,7 +771,7 @@ function Roll(props: { z: number; docked?: boolean }) {
         {/* the song's key, always in view: a tiny keyboard marks the scale's notes (root brightest), the name beside it;
             a click opens the root and scale pickers. One key for the whole project. */}
         <div class="toolmenu" ref={keyMenu}>
-          <button class="keybadge" classList={{ on: pop() === 'key' }} aria-expanded={pop() === 'key'} title={S.project.key == null ? t('b.pe.keyAuto') : t('b.pr.songKeyTip')} onClick={() => setPop(v => v === 'key' ? null : 'key')}>
+          <button class={['keybadge', { on: pop() === 'key' }]} aria-expanded={pop() === 'key' ? 'true' : 'false'} title={S.project.key == null ? t('b.pe.keyAuto') : t('b.pr.songKeyTip')} onClick={() => setPop(v => v === 'key' ? null : 'key')}>
             <svg class="minikeys" width="43" height="16" viewBox="0 0 43 16">
               <For each={[0, 2, 4, 5, 7, 9, 11]}>{(pc, i) => <rect x={i() * 6 + 0.5} y="0.5" width="5" height="15" rx="1" class={pcClass(pc)} />}</For>
               <For each={[[1, 0], [3, 1], [6, 3], [8, 4], [10, 5]]}>{([pc, i]) => <rect x={i * 6 + 4} y="0" width="4" height="9" rx="1" class={'bk ' + pcClass(pc)} />}</For>
@@ -781,12 +785,12 @@ function Roll(props: { z: number; docked?: boolean }) {
               <div class="tphd">{t('b.pr.songKey')}</div>
               <div class="rootgrid" role="radiogroup">
                 <For each={NOTE_NAMES}>{(n, i) => (
-                  <button role="radio" aria-checked={root() === i()} classList={{ on: root() === i(), bk: n.length > 1 }} onClick={() => commit([setKeyOp(i(), scaleIdx())], t('b.pr.keySet'))}>{n}</button>
+                  <button role="radio" aria-checked={root() === i() ? 'true' : 'false'} class={{ on: root() === i(), bk: n.length > 1 }} onClick={() => commit([setKeyOp(i(), scaleIdx())], t('b.pr.keySet'))}>{n}</button>
                 )}</For>
               </div>
               <div class="scalelist" role="radiogroup">
                 <For each={SCALES}>{([l, id]) => (
-                  <button role="radio" aria-checked={scaleIdx() === id} classList={{ on: scaleIdx() === id }} onClick={() => commit([setKeyOp(root(), id)], t('b.pr.keySet'))}>{t(l)}</button>
+                  <button role="radio" aria-checked={scaleIdx() === id ? 'true' : 'false'} class={{ on: scaleIdx() === id }} onClick={() => commit([setKeyOp(root(), id)], t('b.pr.keySet'))}>{t(l)}</button>
                 )}</For>
               </div>
               <div class="tpnote">{t('b.pr.songKeyNote')}</div>
@@ -801,14 +805,14 @@ function Roll(props: { z: number; docked?: boolean }) {
           <button class="smallbtn" style={{ 'align-self': 'center' }} title={t('b.pe.toNewPatTip')} onClick={e => { moveSelToPattern(); backToRoll(e.currentTarget); }}>{t('b.pe.toNewPat')}</button>
         </Show>
         <div class="toolmenu" ref={toolMenu}>
-          <button class="chip" classList={{ on: toolsOpen() }} aria-expanded={toolsOpen()} title={t('b.pr.toolsTip')} onClick={() => setToolsOpen(v => !v)}>
+          <button class={['chip', { on: toolsOpen() }]} aria-expanded={toolsOpen() ? 'true' : 'false'} title={t('b.pr.toolsTip')} onClick={() => setToolsOpen(v => !v)}>
             {t('b.pr.tools')}<svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
           </button>
           <Show when={toolsOpen()}>
             <div class="toolpop" onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); setToolsOpen(false); } }}>
               <div class="toolgrid" role="radiogroup">
                 <For each={Object.keys(TOOL_META) as ToolId[]}>{v => (
-                  <button role="radio" aria-checked={toolId() === v} classList={{ on: toolId() === v }} onClick={() => { setToolId(v); setVals(TOOL_META[v].fields.map(f => f.def)); }}>
+                  <button role="radio" aria-checked={toolId() === v ? 'true' : 'false'} class={{ on: toolId() === v }} onClick={() => { setToolId(v); setVals(TOOL_META[v].fields.map(f => f.def)); }}>
                     <Icon d={TOOL_META[v].icon} size={15} sw={1.8} /><span>{t(TOOL_META[v].label)}</span>
                   </button>
                 )}</For>
@@ -877,10 +881,10 @@ function Roll(props: { z: number; docked?: boolean }) {
           <canvas ref={laneCv} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', 'touch-action': 'none', cursor: 'ns-resize' }}
             onPointerDown={laneDown} onPointerMove={laneHover} onContextMenu={e => e.preventDefault()} />
 <div class="laneswitch" role="radiogroup" aria-label={t('b.pr.laneTarget')}>
-            <button role="radio" class="vel" aria-checked={lane() === 'vel'} classList={{ on: lane() === 'vel' }} title={t('b.pr.laneVelTip')} onClick={e => { setLaneMode('vel'); backToRoll(e.currentTarget); }}>
+            <button role="radio" class={['vel', { on: lane() === 'vel' }]} aria-checked={lane() === 'vel' ? 'true' : 'false'} title={t('b.pr.laneVelTip')} onClick={e => { setLaneMode('vel'); backToRoll(e.currentTarget); }}>
               <Icon d="M5 20v-6 M12 20V9 M19 20V4" size={12} sw={2.4} /><span>{t('b.pr.laneVel')}</span>
             </button>
-            <button role="radio" class="pan" aria-checked={lane() === 'pan'} classList={{ on: lane() === 'pan' }} disabled={!panPlays()} title={t(panPlays() ? 'b.pr.lanePanTip' : 'b.pr.lanePanOff')} onClick={e => { setLaneMode('pan'); backToRoll(e.currentTarget); }}>
+            <button role="radio" class={['pan', { on: lane() === 'pan' }]} aria-checked={lane() === 'pan' ? 'true' : 'false'} disabled={!panPlays()} title={t(panPlays() ? 'b.pr.lanePanTip' : 'b.pr.lanePanOff')} onClick={e => { setLaneMode('pan'); backToRoll(e.currentTarget); }}>
               <Icon d="M9 7l-5 5 5 5 M15 7l5 5-5 5" size={12} sw={2.4} /><span>{t('b.pr.lanePan')}</span>
             </button>
           </div>

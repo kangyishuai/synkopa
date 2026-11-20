@@ -3,7 +3,9 @@
 // from `U.dock` (`lib/dock.ts`). A strip has a splitter on its Playlist side (its thickness is its
 // first panel's, `U.paneSize`, clamped by `fitStrips` so the Playlist keeps room) and splitters
 // between the panels sharing it. While a title bar is dragged the dock guides show (`DockGuides`).
-import { createMemo, For, Show, type JSX } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { captureOn } from '../lib/reactive';
 import { t } from '../lib/i18n';
 import { clamp } from '../lib/format';
 import { PLAYLIST_MIN_H, PLAYLIST_MIN_W, SPLIT } from '../lib/layout';
@@ -109,7 +111,7 @@ export function Workspace() {
   const Strip = (p: { k: string; splitFirst: boolean }) => (
     <Show when={byKey().get(p.k)}>{v => (() => {
           const split = (
-            <div class={side(v().edge) ? 'vsplit' : 'docksplit'} role="separator" aria-orientation={side(v().edge) ? 'vertical' : 'horizontal'} tabIndex={0}
+            <div class={side(v().edge) ? 'vsplit' : 'docksplit'} role="separator" aria-orientation={side(v().edge) ? 'vertical' : 'horizontal'} tabindex={0}
               aria-label={t('b.dk.resizeStrip')} title={splitTip(v())} onPointerDown={e => stripSplit(v())(e)} onKeyDown={e => stripKey(v())(e)}
               onDblClick={() => { if (v().panes[0].p.id === 'rack' && side(v().edge)) setU('paneSize', 'rack', 'w', 0); }} />
           );
@@ -136,8 +138,7 @@ export function Workspace() {
   return (
     // the Mix view (F9) covers this; it stays laid out (scroll, zoom and sizes are kept) but is not painted or reachable
     // a plain click in it (docked panels, Playlist; not the Browser) sends the floating windows behind it
-    <div ref={col} class="workcol" classList={{ away: U.mixView }} inert={U.mixView} aria-hidden={U.mixView}
-      on:pointerdown={{ capture: true, handleEvent: tuckOnClick }}>
+    <div ref={[e => (col = e), captureOn('pointerdown', tuckOnClick)]} class={['workcol', { away: U.mixView }]} inert={U.mixView} aria-hidden={U.mixView ? 'true' : undefined}>
       <div ref={row} class="workrow">
         <Show when={U.pickOpen}><Browser /></Show>
         {/* left strips: the outermost first, each with its splitter on the Playlist side */}
@@ -171,7 +172,7 @@ function PaneBody(props: { id: PaneId }): JSX.Element {
 /** A docked panel with nothing to show (no pattern, no channel): says why and offers the way out; it can still float or hide. */
 function DockEmpty(props: { which: 'rack' | 'roll'; msg: string; action?: { label: string; act: () => void } }): JSX.Element {
   return (
-    <div tabIndex={0} class={'win patwin docked ' + (props.which === 'rack' ? 'rackwin' : 'rollwin')} onKeyDown={e => guardKeys(e)}>
+    <div tabindex={0} class={'win patwin docked ' + (props.which === 'rack' ? 'rackwin' : 'rollwin')} onKeyDown={e => guardKeys(e)}>
       <div class="winhd" onPointerDown={e => paneHeadDown(e, props.which)} onContextMenu={e => openDockMenu(e, props.which)}>
         <span class="wintitle">{props.which === 'rack' ? 'Channel rack' : 'Piano roll'}</span>
         <div style={{ flex: 1 }} />
@@ -197,7 +198,7 @@ export function DockGuides() {
       <div class="dockguides" aria-hidden="true">
         <Show when={gs().hot}>{h => <div class="dockpreview" style={{ left: h().preview.x + 'px', top: h().preview.y + 'px', width: h().preview.w + 'px', height: h().preview.h + 'px' }} />}</Show>
         <For each={gs().list}>{g => (
-          <div class="dockguide" classList={{ hot: gs().hot === g, faint: gs().hot !== g }} style={{ left: g.x - 16 + 'px', top: g.y - 16 + 'px' }}>
+          <div class={['dockguide', { hot: gs().hot === g, faint: gs().hot !== g }]} style={{ left: g.x - 16 + 'px', top: g.y - 16 + 'px' }}>
             <svg viewBox="0 0 24 24" width="18" height="18"><path d={ARROW[g.dir]} fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" /></svg>
           </div>
         )}</For>

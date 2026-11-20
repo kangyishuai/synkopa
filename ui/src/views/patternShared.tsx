@@ -1,6 +1,6 @@
 // What the Channel Rack and the Piano roll windows share: sizing hooks, the window frame
 // (move, resize and focus live in PanelFrame; here: keys that must not reach the playlist), channel and pattern menus.
-import { createEffect, createSignal, onCleanup, onMount } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { t, tName } from '../lib/i18n';
 import type { Channel, LibFile, Note, Pattern } from '../api/types';
 import { FACTORY_KIT, LIB_SCHEME } from '../lib/factory';
@@ -36,7 +36,7 @@ export function useSize(el: () => HTMLElement | undefined) {
 export function useDataVersion() {
   const [v, setV] = createSignal(0);
   // arrVersion bumps on every arrangement change: no deep JSON walk of a 2000-note pattern per edit
-  createEffect(() => { arrVersion(); curPat(); channels(); theme.epoch; setV(x => x + 1); });
+  effect(() => { arrVersion(); curPat(); channels(); theme.epoch; setV(x => x + 1); });
   return v;
 }
 

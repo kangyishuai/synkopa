@@ -4,8 +4,8 @@
 // roll. The graph editor (G) edits the selected channel's per-step velocity and key.
 // It floats in the effect-window layer, or is docked left of the Playlist (`U.rackDock`); every
 // edit is an op and one undo step.
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, untrack } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { createMemo, For, Show, untrack } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { t } from '../lib/i18n';
 import { TOTAL_BEATS, VOL_UNITY, type Channel } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
@@ -18,7 +18,7 @@ import {
   addBar, RACK_MIN_W, STEP_W, audition, chanById, chanKindLabel, chanOp, channels, closeRack, curPat, openRoll, patOp, playStep, putNotes, RACK_LEFT, RACK_ROW,
   rackFront, rackPlaceFor, removeBar, selChan, selectChannel, selectChannelRange, toggleChannelSelected, isChannelSelected, stepPattern, toggleChanMute, toggleChanSolo,
 } from '../state/pattern';
-import { arrVersion, S } from '../state/store';
+import { arrVersion, rawOf, S } from '../state/store';
 import { ensurePluginScan } from '../state/pluginScan';
 import { say, setU, U } from '../state/ui';
 import { edgeScroller, track } from '../ui/drag';
@@ -72,28 +72,28 @@ function Rack(props: { z: number; docked?: boolean }) {
   // the grid's own height: the add-channel row below the channels scrolls with them
   const contentH = () => (chans().length + 1) * RACK_ROW;
   const maxScroll = () => { const G = geo(); return { x: Math.max(0, gridW(G.steps, G.cw) - size().w), y: Math.max(0, contentH() - size().h) }; };
-  createEffect(() => { const m = maxScroll(), s = scroll(); if (s.x > m.x || s.y > m.y) setScroll({ x: Math.min(s.x, m.x), y: Math.min(s.y, m.y) }); });
-  const rollRowsM = createMemo(() => { arrVersion(); const notes = unwrap(pt()).notes; return new Set(unwrap(chans()).filter(c => isRollRow(notes, c)).map(c => c.id)); });
+  effect(() => { const m = maxScroll(), s = scroll(); if (s.x > m.x || s.y > m.y) setScroll({ x: Math.min(s.x, m.x), y: Math.min(s.y, m.y) }); });
+  const rollRowsM = createMemo(() => { arrVersion(); const notes = rawOf(pt()).notes; return new Set(rawOf(chans()).filter(c => isRollRow(notes, c)).map(c => c.id)); });
   const rollRows = () => rollRowsM();
   const graph = () => U.rackGraph;
 
-  createEffect(() => {
+  effect(() => {
     data(); const G = geo(), { w, h } = size(); void fonts.epoch;
     if (!w || !h || U.mixView) return; // repainted on the way back from the Mix view
     fitCanvas(cv, w, h); fitCanvas(head, w, h);
     const g = cv.getContext('2d')!, dpr = window.devicePixelRatio || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawRack(g, w, h, G, layer, unwrap(pt()), unwrap(chans()), selCh()?.id ?? null, rollRows(), chans().some(c => c.solo));
+    drawRack(g, w, h, G, layer, rawOf(pt()), rawOf(chans()), selCh()?.id ?? null, rollRows(), chans().some(c => c.solo));
     lastHead = -2;
   });
-  createEffect(() => {
+  effect(() => {
     const mode = graph(); if (!mode || U.mixView) return;
     data(); const G = geo(), { w, h } = graphSize(), c = selCh();
     if (!w || !h) return;
     fitCanvas(graphCv, w, h);
     const g = graphCv.getContext('2d')!, dpr = window.devicePixelRatio || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    const p = unwrap(pt()), notes = c ? p.notes.map((n, i) => ({ n, i })).filter(x => x.n.ch === c.id) : [];
+    const p = rawOf(pt()), notes = c ? p.notes.map((n, i) => ({ n, i })).filter(x => x.n.ch === c.id) : [];
     const roll = !!c && rollRows().has(c.id);
     if (mode === 'vel') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: laneColor('vel'), cells: !roll, beatGap: true, muted: !!c?.mute });
     else drawKeyGraph(g, w, h, { cw: G.cw, sx: G.sx, steps: G.steps, notes, color: c?.color ?? '#4f8ef7', root: c?.root ?? 60, span: KEY_SPAN, off: roll });
@@ -135,7 +135,7 @@ function Rack(props: { z: number; docked?: boolean }) {
     const g = new Gesture(on ? t('b.pe.gestSteps') : t('b.pe.gestDelSteps'));
     // freeze the grid (and the window's width) before the first step can make the pattern longer
     setHold({ cw: G.cw, steps: G.steps });
-    let notes = setStep(unwrap(pt()).notes, c.id, step, on);
+    let notes = setStep(rawOf(pt()).notes, c.id, step, on);
     g.update([putNotes(pt(), notes)]);
     if (on) audition(c.id, undefined, 0.8);
     let last = { row, step };
@@ -167,7 +167,7 @@ function Rack(props: { z: number; docked?: boolean }) {
     const G = geo(), r = graphCv.getBoundingClientRect();
     const at = (ev: PointerEvent) => ({ s: stepAt(ev.clientX - r.left + G.sx, G.cw), f: clamp(1 - (ev.clientY - r.top - 6) / (r.height - 9), 0, 1) });
     const g = new Gesture(mode === 'vel' ? 'Velocity' : t('b.rk.keyGest'));
-    let notes = unwrap(pt()).notes, last = at(e);
+    let notes = rawOf(pt()).notes, last = at(e);
     const keyFor = (f: number) => clamp(Math.round(c.root - KEY_SPAN + f * 2 * KEY_SPAN), 0, 127);
     const apply = (s: number, f: number) => {
       if (mode === 'key') { notes = setKeyAt(notes, c, s, keyFor(f)); return; }
@@ -218,7 +218,7 @@ function Rack(props: { z: number; docked?: boolean }) {
   // while steps are painted (`hold`): on release. Docked, the panel keeps the width the user gave
   // it and the grid scrolls.
   let fitted = stepsOf(pt()), fittedId = pt().id;
-  createEffect(() => {
+  effect(() => {
     const steps = stepsOf(pt()), id = pt().id;
     if (hold() || (steps === fitted && id === fittedId)) return;
     const other = id !== fittedId;
@@ -233,7 +233,7 @@ function Rack(props: { z: number; docked?: boolean }) {
   /** Ctrl+C / X / V: copy, cut, paste the selected channel's notes in the current pattern (FL). */
   const editClipboard = (c: Channel, k: 'c' | 'x' | 'v') => {
     const p = pt();
-    const notes = unwrap(p).notes;
+    const notes = rawOf(p).notes;
     if (k === 'v') {
       if (!rackClip) { say(t('b.rk.clipEmpty')); return; }
       commit([putNotes(p, pasteChannelNotes(notes, c.id, rackClip))], t('b.rk.gestPaste'));
@@ -318,7 +318,7 @@ function Rack(props: { z: number; docked?: boolean }) {
     }
     const shiftSteps = (d: number) => {
       const c = selCh(); if (!c) return;
-      commit([putNotes(pt(), rotate(unwrap(pt()).notes, c.id, stepsOf(pt()), d))], t('b.pe.shiftSteps'));
+      commit([putNotes(pt(), rotate(rawOf(pt()).notes, c.id, stepsOf(pt()), d))], t('b.pe.shiftSteps'));
       say(c.name + ' · ' + t(d < 0 ? 'b.pe.shiftL' : 'b.pe.shiftR'));
     };
     // FL: Shift+Ctrl+← / → shifts the selected channel's steps by one, wrapping around the pattern
@@ -354,7 +354,7 @@ function Rack(props: { z: number; docked?: boolean }) {
     if (e.altKey) return;
     if (e.key.toLowerCase() === 'g') { e.preventDefault(); e.stopPropagation(); toggleGraph(); }
   };
-  const notesCount = createMemo(() => { arrVersion(); return unwrap(pt()).notes.length; });
+  const notesCount = createMemo(() => { arrVersion(); return rawOf(pt()).notes.length; });
   // Shift+wheel over the title bar: previous / next pattern (FL). A plain wheel does nothing here, so
   // scrolling the channel list and drifting onto the title bar no longer switches the pattern
   let headAcc = 0;
@@ -382,7 +382,7 @@ function Rack(props: { z: number; docked?: boolean }) {
           <NumField label="SWING" width={58} value={() => Math.round((pt().swing ?? 0) * 100)} text={v => Math.round(v) + '%'} parse={parseNum}
             drag={(v, d) => clamp(Math.round(v + d * 0.5), 0, 100)} apply={applySwing} title={t('b.pe.swingTitle')} />
         </div>
-        <button class="iconbtn" classList={{ on: !!graph() }} title={t('b.rk.graphTitle')} onClick={toggleGraph}><Icon d={GRAPH_ICON} size={13} /></button>
+        <button class={['iconbtn', { on: !!graph() }]} title={t('b.rk.graphTitle')} onClick={toggleGraph}><Icon d={GRAPH_ICON} size={13} /></button>
       </>}>
       <div class="rack">
         <div class="rackbody" onWheel={wheel}>
@@ -412,8 +412,8 @@ function Rack(props: { z: number; docked?: boolean }) {
         <div class="lanerow" style={{ height: GRAPH_H + 'px', display: graph() ? 'flex' : 'none' }}>
             <div class="lanelab" style={{ width: RACK_LEFT + 'px' }}>
               <div class="seg graphtabs">
-                <button classList={{ on: graph() === 'vel' }} onClick={() => setU('rackGraph', 'vel')}>{t('b.rk.vel')}</button>
-                <button classList={{ on: graph() === 'key' }} onClick={() => setU('rackGraph', 'key')}>{t('b.rk.key')}</button>
+                <button class={{ on: graph() === 'vel' }} onClick={() => setU('rackGraph', 'vel')}>{t('b.rk.vel')}</button>
+                <button class={{ on: graph() === 'key' }} onClick={() => setU('rackGraph', 'key')}>{t('b.rk.key')}</button>
               </div>
               <div class="lanetitle"><span class="ell" style={{ color: selCh()?.color ?? 'var(--fg3)' }}>{selCh()?.name ?? '—'}</span></div>
             </div>
@@ -461,11 +461,11 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
     toggleChannelWindow(c().id);
   };
   return (
-    <div class="crow" data-ch={c().id} classList={{ sel: sel(), muted: c().mute || (anySolo() && !c().solo) }} style={{ height: RACK_ROW + 'px' }}
+    <div class={['crow', { sel: sel(), muted: c().mute || (anySolo() && !c().solo) }]} data-ch={c().id} style={{ height: RACK_ROW + 'px' }}
       onPointerDown={e => { if (e.button === 0 && !e.shiftKey) selectChannel(c().id); }}
       onContextMenu={e => props.onMenu(c(), e)}>
       <span class="cstrip" style={{ color: c().color }} title={t('b.rk.dragChannel')} onPointerDown={e => props.onMove(c(), e)} />
-      <button class="mini m rkm" classList={{ on: c().mute, solo: c().solo && !c().mute, quiet: anySolo() && !c().solo && !c().mute }}
+      <button class={['mini m rkm', { on: c().mute, solo: c().solo && !c().mute, quiet: anySolo() && !c().solo && !c().mute }]}
         title={t('b.pe.ledTitle', { state: t(c().mute ? 'b.pe.ledMuted' : c().solo ? 'b.pe.ledSolo' : 'b.pe.ledActive') })}
         onPointerDown={e => {
           e.stopPropagation(); e.preventDefault();
@@ -483,16 +483,16 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
         onStart={() => { vg = new Gesture(t('b.cw.volCh')); }} onChange={v => { vg?.update([volOp(v)]); say(c().name + ' · ' + volText(v)); }}
         onEnd={() => { vg?.end(); vg = null; }} onReset={() => commit([volOp(VOL_UNITY)], t('b.cw.volCh'))}
         onWheel={v => commit([volOp(v)], t('b.cw.volCh'))} />
-      <button class="cins" classList={{ auto: c().insert == null }} title={insTitle(c())}
+      <button class={['cins', { auto: c().insert == null }]} title={insTitle(c())}
         onPointerDown={e => e.stopPropagation()} onClick={insClick}
         onWheel={e => wheelInsert(chanInsertChoice(c()), e)}>{insLabel(c())}</button>
-      <button class="cname" classList={{ sel: sel() }}
+      <button class={['cname', { sel: sel() }]}
         title={t(c().kind === 'plugin' ? 'b.pe.cnameTitlePlugin' : 'b.pe.cnameTitle', { name: c().name, kind: chanKindLabel(c()) }) + (S.fxErrors[c().id] ? '\n' + t('c.fx.instNotLoaded', { e: S.fxErrors[c().id] }) : '')}
         onPointerDown={nameDown}>
         <span class="cicon" style={{ color: c().color }}><InstIcon id={channelIcon(c(), (id: number) => S.project.sources.find(s => s.id === id))} size={11} /></span>
         <span class="ell">{c().name}</span>
         <Show when={c().kind === 'keys'}><span class="ckind">KEYS</span></Show>
-        <Show when={c().kind === 'plugin'}><span class="ckind" classList={{ err: !!S.fxErrors[c().id] }}>{S.fxErrors[c().id] ? '! VST3' : 'VST3'}</span></Show>
+        <Show when={c().kind === 'plugin'}><span class={['ckind', { err: !!S.fxErrors[c().id] }]}>{S.fxErrors[c().id] ? '! VST3' : 'VST3'}</span></Show>
       </button>
     </div>
   );
