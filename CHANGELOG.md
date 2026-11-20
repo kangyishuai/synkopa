@@ -7,6 +7,10 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **File → Open recent.** The last ten projects you opened or saved, newest first, one click away.
+  Two projects with the same name show their folders. A project that was moved or deleted is
+  shown as missing, and "Remove missing projects" and "Clear list" tidy the list. Opening one
+  asks about unsaved changes first, like Open.
 - **Chop, glue and arpeggiate in the Piano roll, as in FL Studio.** Ctrl+U chops the selected
   notes (or every note of the channel) into pieces one snap step long, for rolls, stutters and
   hi-hat or 808 rhythms; Ctrl+G glues touching notes of the same key back into one. The

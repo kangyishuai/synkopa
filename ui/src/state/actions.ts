@@ -25,6 +25,7 @@ import { recTarget, recUntil } from '../lib/recTarget';
 import { curBeat, markPlayCmd } from './telemetry';
 import { confirmRecover, confirmUnsaved } from '../ui/Confirm';
 import { showPlugin } from './pluginWindows';
+import { refreshRecent } from './recent';
 
 // ---------- transport ----------
 /** Recording is on but no track is armed: the engine plays and records nothing. */
@@ -264,7 +265,7 @@ export async function projectOpen(path?: string) {
     say(r.warnings.length ? t('d.act.openedwarn', { path: openedPath, n: r.warnings.length, first: r.warnings[0] }) : t('d.act.opened', { path: openedPath }));
     offerRelink();
   } catch (e) { say(t('d.act.openfail', { err: String(e) })); }
-  finally { setU('openingProject', false); }
+  finally { setU('openingProject', false); void refreshRecent(); }
 }
 /** A project just loaded with audio files missing: show them with the ways to find them. */
 export function offerRelink() {
@@ -295,7 +296,7 @@ export async function projectSave(saveAs = false, version = false): Promise<bool
     const r = await enqueue(() => be().projectSave(saveAs, version));
     if (r.cancelled) return false; // the save dialog was dismissed: nothing was written
     if (r.path) rememberProjView(r.path);
-    say(t('d.act.saved', { path: r.path })); await resync(); return true;
+    say(t('d.act.saved', { path: r.path })); void refreshRecent(); await resync(); return true;
   } catch (e) { say(t('d.act.savefail', { err: String(e) })); return false; }
 }
 export async function projectExportZip() {

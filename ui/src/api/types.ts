@@ -610,6 +610,8 @@ export type OpenResult =
   | { cancelled?: false; state: StateDto; warnings: string[] };
 /** Result of `projectSave`; `{ cancelled: true }` when the save dialog was dismissed. */
 export type SaveResult = { cancelled: true } | { cancelled?: false; path: string };
+/** File → Open recent: a project opened or saved lately; `exists` false = moved or deleted since. */
+export interface RecentProject { path: string; name: string; dir: string; exists: boolean }
 /** An unsaved project a Synkopa that crashed or was killed left behind (`recovery_list`). */
 /** `project`: the file the unsaved changes belong to (absent: a project that was never saved). */
 export interface RecoveredProject { id: string; savedMs: number; project?: string }

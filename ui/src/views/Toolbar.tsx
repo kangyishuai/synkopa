@@ -2,6 +2,8 @@ import { isFullscreen, setFullscreen, toggleFullscreen } from '../state/fullscre
 import { curPat, newPattern, openRack, patMode, rackFloating, rollFloating, stepPattern, toggleRackShown, toggleRollShown } from '../state/pattern';
 import { patternMenu } from './patternShared';
 import { APP_GLYPH as G } from '../ui/menuIcons';
+import { forgetRecent, recent, recentLabels, refreshRecent } from '../state/recent';
+import { samePath } from '../lib/paths';
 import { t, type TranslationKey } from '../lib/i18n';
 import { setTypingOn, typingBase, typingOn } from '../state/typingKeys';
 import { noteName } from '../lib/pitch';
@@ -316,10 +318,27 @@ function MenuBar() {
   const win = be().win;
   const none = () => !U.sel.length;
   const wins = () => U.plugs.length + (rackFloating() ? 1 : 0) + (rollFloating() ? 1 : 0);
+  onMount(() => void refreshRecent());
+  /** File → Open recent: newest first, the open project ticked, a moved or deleted file shown but not openable. */
+  const recentItems = (): MenuItem[] => {
+    const list = recent();
+    if (!list.length) return [{ t: 'item', label: t('a.mn.recentNone'), disabled: true, act: () => {} }];
+    const labels = recentLabels(list);
+    const items: MenuItem[] = list.map((r, i) => r.exists
+      ? { t: 'item', label: labels[i], title: r.path, checked: samePath(r.path, S.path), disabled: U.openingProject, act: () => void A.projectOpen(r.path) }
+      : { t: 'item', label: t('a.mn.recentMissing', { name: labels[i] }), title: t('a.mn.recentMissingTip', { path: r.path }), disabled: true, act: () => {} });
+    items.push({ t: 'sep' });
+    if (list.some(r => !r.exists)) {
+      items.push({ t: 'item', label: t('a.mn.recentPrune'), act: () => { void (async () => { for (const r of list.filter(x => !x.exists)) await forgetRecent(r.path); })(); } });
+    }
+    items.push({ t: 'item', label: t('a.mn.recentClear'), act: () => void forgetRecent() });
+    return items;
+  };
   const menus: [TranslationKey, () => MenuItem[]][] = [
     ['a.mn.file', () => [
       { t: 'item', label: t('a.mn.new'), glyph: G.new, kbd: 'Ctrl+Shift+N', disabled: U.openingProject, act: () => void A.projectNew() },
       { t: 'item', label: t('a.mn.open'), glyph: G.open, kbd: 'Ctrl+O', disabled: U.openingProject, act: () => void A.projectOpen() },
+      { t: 'sub', label: t('a.mn.openRecent'), glyph: G.open, items: recentItems() },
       { t: 'item', label: t('a.mn.openDemo'), glyph: G.open, disabled: U.openingProject, act: () => void A.projectNew(true) },
       { t: 'sep' },
       { t: 'item', label: t('a.mn.save'), glyph: G.save, kbd: 'Ctrl+S', act: () => void A.projectSave(false) },
