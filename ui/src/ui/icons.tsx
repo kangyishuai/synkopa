@@ -49,7 +49,7 @@ export function Icon(props: { d: string; size?: number; sw?: number }) {
 /** Coloured flat effect icon (no background); `dim` greys it out for bypassed effects. */
 export function FxTile(props: { type: FxKind; size: number; icon?: number; dim?: boolean }) {
   return (
-    <span class="fxart" classList={{ dim: !!props.dim }} style={{ width: props.size + 'px', height: props.size + 'px' }}
+    <span class={['fxart', { dim: !!props.dim }]}style={{ width: props.size + 'px', height: props.size + 'px' }}
       innerHTML={FX_ART[props.type] ?? ''} />
   );
 }

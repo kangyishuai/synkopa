@@ -1,7 +1,7 @@
 // Every <select> opens the themed list instead of the OS popup; the select keeps its value,
 // change events, focus and keyboard behaviour.
 import { fireEvent, render, screen, within } from '@solidjs/testing-library';
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { settle } from '../test/settle';
 import { closeSelectPopup, installSelectPopups, SelectPopup } from './SelectPopup';

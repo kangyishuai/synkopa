@@ -10,7 +10,7 @@ export function ToolSeg<T extends string>(props: { label: string; tools: BarTool
   return (
     <div class="seg tools" role="radiogroup" aria-label={props.label}>
       <For each={props.tools}>{tl => (
-        <button role="radio" aria-checked={props.value === tl.id} classList={{ on: props.value === tl.id }} title={tl.title} onClick={e => props.onPick(tl.id, e.currentTarget)}>
+        <button role="radio" aria-checked={props.value === tl.id ? 'true' : 'false'} class={{ on: props.value === tl.id }} title={tl.title} onClick={e => props.onPick(tl.id, e.currentTarget)}>
           <Icon d={tl.icon} size={props.size ?? 14} sw={props.sw} />
         </button>
       )}</For>

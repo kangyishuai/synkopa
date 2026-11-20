@@ -1,6 +1,6 @@
 // Knob, MiniKnob, Segmented and NumField: the continuous controls of every effect and channel window.
 import { fireEvent, render, screen } from '@solidjs/testing-library';
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { settle } from '../test/settle';
 import { resetDblCheck } from './drag';

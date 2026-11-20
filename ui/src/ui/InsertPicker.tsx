@@ -2,12 +2,11 @@
 // the mixer inserts, and the mouse wheel over it steps through them (down = next), one undo
 // step per burst of wheel ticks.
 import { For, Show } from 'solid-js';
-import { unwrap } from 'solid-js/store';
 import type { Id, Op } from '../api/types';
 import { t } from '../lib/i18n';
 import { routeToFreeInsert } from '../lib/mixer';
 import { commit, wheelEdit } from '../state/edit';
-import { allocId, insName, S } from '../state/store';
+import { allocId, insName, rawOf, S } from '../state/store';
 import { say, setU } from '../state/ui';
 
 /** What an insert choice is made of: shared by the picker and the Channel Rack's mixer box. */
@@ -46,7 +45,7 @@ export function pickInsert(p: InsertChoice, id: Id | null) {
  */
 export function pickFreeInsert(p: InsertChoice) {
   if (!p.free) return;
-  const plan = routeToFreeInsert(unwrap(S.project), p.free.name, p.free.color, allocId, p.ops);
+  const plan = routeToFreeInsert(rawOf(S.project), p.free.name, p.free.color, allocId, p.ops);
   commit(plan.ops, p.label);
   select(plan.insert.id);
   const n = S.project.inserts.findIndex(m => m.id === plan.insert.id);

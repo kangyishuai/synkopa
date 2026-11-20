@@ -1,7 +1,7 @@
 // The zooming scrollbar of the Playlist, Piano roll and Pitch editor. jsdom has no layout, so the
 // bar is given a 400 px track here; the range math itself is pinned in lib/zoomBar.test.ts.
 import { fireEvent, render, screen } from '@solidjs/testing-library';
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { ZRange } from '../lib/zoomBar';
 import { settle } from '../test/settle';

@@ -6,7 +6,8 @@ import { t, type TranslationKey } from '../lib/i18n';
 import { setTypingOn, typingBase, typingOn } from '../state/typingKeys';
 import { noteName } from '../lib/pitch';
 import { prefs } from '../state/prefs';
-import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import { clamp, fmtClock, fmtPos, TapTracker } from '../lib/format';
 import { snapLabel } from '../lib/snap';
@@ -182,7 +183,7 @@ export function Toolbar() {
   const wins = () => U.plugs.length + (rackFloating() ? 1 : 0) + (rollFloating() ? 1 : 0);
   const hint = () => t('a.tb.statusHint', { tool: t(TOOLS.find(x => x[0] === U.tool)![2]), hint: t(TOOL_HINT[U.tool]), snap: U.alt ? 'off' : snapLabel(U.snap, U.bw).replace('Snap: ', '') });
   return (
-    <div ref={barEl} class="toolbar" classList={{ native: !!win }} onMouseDown={dragDown}>
+    <div ref={barEl} class={['toolbar', { native: !!win }]} onMouseDown={dragDown}>
       {/* left: the menus over the hint line (FL): what the last action did, and what the tool does */}
       <div class="tbleft" data-drag>
         <div class="tbmenu" data-drag>
@@ -214,23 +215,23 @@ export function Toolbar() {
       </div>
       <div class="tbmid" data-drag>
       <div class="seg">
-        <button title={patMode() ? t('a.tb.playPat') : t('a.tb.playSong')} data-act="play" classList={{ play: U.playing || U.patPlaying }} onClick={() => void A.togglePlay()}>
+        <button title={patMode() ? t('a.tb.playPat') : t('a.tb.playSong')} data-act="play" class={{ play: U.playing || U.patPlaying }} onClick={() => void A.togglePlay()}>
           <svg width="11" height="11" viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
         </button>
         <button title={t('a.tb.stopTip')} onClick={() => void A.stop(!(U.playing || U.patPlaying))}><svg width="10" height="10" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1" fill="currentColor" /></svg></button>
-        <button title={t('a.tb.recTip', { what: A.recFilterName() })} class="rec" classList={{ armed: T().rec }} onClick={A.toggleRec} onContextMenu={recMenu}>
+        <button title={t('a.tb.recTip', { what: A.recFilterName() })} class={['rec', { armed: T().rec }]} onClick={A.toggleRec} onContextMenu={recMenu}>
           <svg width="10" height="10" viewBox="0 0 12 12"><circle cx="6" cy="6" r="5" fill="currentColor" /></svg>
         </button>
-        <button title={t('a.tb.monTip')} class="mon monbtn" classList={{ on: T().monitor }} onClick={A.toggleMonitor}>
+        <button title={t('a.tb.monTip')} class={['mon monbtn', { on: T().monitor }]} onClick={A.toggleMonitor}>
           <Icon d="M4 15v-3a8 8 0 0 1 16 0v3 M3 14h4v7H3z M17 14h4v7h-4z" size={13} />
         </button>
-        <button title={t('a.tb.metroTip')} class="metrobtn" classList={{ on: T().metro, dim: !T().metro }} onClick={() => void A.setTransportFlag('metro', !T().metro)}>
+        <button title={t('a.tb.metroTip')} class={['metrobtn', { on: T().metro, dim: !T().metro }]} onClick={() => void A.setTransportFlag('metro', !T().metro)}>
           <Icon d="M9 3h6l4 18H5z M12 16l6-9" size={13} />
         </button>
-        <button class="count" classList={{ on: T().countIn }} title={t('a.tb.countTip')} onClick={() => void A.setTransportFlag('countIn', !T().countIn)}>1 BAR</button>
+        <button class={['count', { on: T().countIn }]} title={t('a.tb.countTip')} onClick={() => void A.setTransportFlag('countIn', !T().countIn)}>1 BAR</button>
       </div>
       {/* an input mode, like record and monitor: beside the transport, not among the panel buttons */}
-      <button class="tbtn icon typkb" aria-pressed={typingOn()} classList={{ on: typingOn() }} title={typingOn() ? t('a.tb.typOn', { z: noteName(typingBase()), q: noteName(typingBase() + 12) }) : t('a.tb.typOff')}
+      <button class={['tbtn icon typkb', { on: typingOn() }]} aria-pressed={typingOn() ? 'true' : 'false'} title={typingOn() ? t('a.tb.typOn', { z: noteName(typingBase()), q: noteName(typingBase() + 12) }) : t('a.tb.typOff')}
         onClick={() => setTypingOn(!typingOn())}>
         <Icon d="M3 6h18v12H3z M7 6v7 M11 6v7 M15 6v7 M19 6v7 M3 13h18" size={14} />
         <span class="lbl">{t('a.tb.typLabel')}</span>
@@ -239,8 +240,8 @@ export function Toolbar() {
       <MainVolume />
       <MasterOut />
       <div class="seg patsong" title={t('a.tb.patSongTip')}>
-        <button class="pat" classList={{ on: patMode() }} onClick={() => A.switchMode(true)}>PAT</button>
-        <button class="song" classList={{ on: !patMode() }} onClick={() => A.switchMode(false)}>SONG</button>
+        <button class={['pat', { on: patMode() }]} onClick={() => A.switchMode(true)}>PAT</button>
+        <button class={['song', { on: !patMode() }]} onClick={() => A.switchMode(false)}>SONG</button>
       </div>
       <PatSelector />
       <div class="clockbox" onContextMenu={bpmMenu}>
@@ -248,7 +249,7 @@ export function Toolbar() {
         <div class="clocksep" />
         <span class="bpm" title={t('a.tb.bpmTip')} onPointerDown={bpmDown} onWheel={bpmWheel}>{S.project.bpm.toFixed(2)}</span>
         <span class="tag9">BPM</span>
-        <button class="tapbtn" classList={{ on: tapping() }} data-tap title={t('a.tb.tapTip')} onClick={e => doTap(e)}>TAP</button>
+        <button class={['tapbtn', { on: tapping() }]} data-tap title={t('a.tb.tapTip')} onClick={e => doTap(e)}>TAP</button>
       </div>
       </div>
       <div class="tbright" data-drag>
@@ -256,32 +257,32 @@ export function Toolbar() {
       <div data-drag class="dragfill" />
       <Show when={prefs().cpuMeter}><CpuMeter /></Show>
       <Show when={wins()}>
-        <button class="tbtn icon winsbtn" classList={{ on: !anyTucked() }} onClick={() => (anyTucked() ? A.showPlugs() : A.playlistFront())}
+        <button class={['tbtn icon winsbtn', { on: !anyTucked() }]} onClick={() => (anyTucked() ? A.showPlugs() : A.playlistFront())}
           title={anyTucked() ? t('a.tb.showWins', { n: wins() }) : t('a.tb.hideWins')} aria-label={t('a.tb.windows', { n: wins() })}>
           <Icon d="M4 7h12v12H4z M8 3h12v12" size={14} /><span class="cnt mono">{wins()}</span>
         </button>
       </Show>
       {/* FL's window buttons: what is open is lit; a click brings a closed (or buried) window back */}
-      <button class="tbtn icon panelbtn" classList={{ on: U.pickOpen }} onClick={() => setU('pickOpen', !U.pickOpen)} title={t('a.tb.browserTip')} aria-label={t('a.mn.browser')} aria-pressed={U.pickOpen}>
+      <button class={['tbtn icon panelbtn', { on: U.pickOpen }]} onClick={() => setU('pickOpen', !U.pickOpen)} title={t('a.tb.browserTip')} aria-label={t('a.mn.browser')} aria-pressed={U.pickOpen ? 'true' : 'false'}>
         <Icon d="M3 5h18v14H3z M9 5v14 M5 9h2 M5 12h2 M5 15h2" size={14} />
         <span class="lbl">{t('a.mn.browser')}</span>
       </button>
-      <button class="tbtn icon panelbtn" classList={{ on: !!U.rackWin }} onClick={toggleRackShown} title={t('a.tb.rackTip')} aria-label={t('a.mn.rack')} aria-pressed={!!U.rackWin}>
+      <button class={['tbtn icon panelbtn', { on: !!U.rackWin }]} onClick={toggleRackShown} title={t('a.tb.rackTip')} aria-label={t('a.mn.rack')} aria-pressed={U.rackWin ? 'true' : 'false'}>
         <Icon d="M3 5h4v4H3z M10 5h4v4h-4z M17 5h4v4h-4z M3 15h4v4H3z M10 15h4v4h-4z M17 15h4v4h-4z" size={14} />
         <span class="lbl">{t('a.mn.rack')}</span>
       </button>
-      <button class="tbtn icon panelbtn" classList={{ on: !!U.rollWin }} onClick={toggleRollShown} title={t('a.tb.rollTip')} aria-label={t('a.mn.roll')} aria-pressed={!!U.rollWin}>
+      <button class={['tbtn icon panelbtn', { on: !!U.rollWin }]} onClick={toggleRollShown} title={t('a.tb.rollTip')} aria-label={t('a.mn.roll')} aria-pressed={U.rollWin ? 'true' : 'false'}>
         <Icon d="M3 4h18v16H3z M3 9h18 M3 14h18 M7 6.5h5 M13 11.5h6 M5 16.5h7" size={14} />
         <span class="lbl">{t('a.mn.roll')}</span>
       </button>
-      <button class="tbtn icon panelbtn" classList={{ on: !U.mixMin }} onClick={toggleMixer} title={t('a.tb.mixerTip')} aria-label={t('a.mn.mixer')} aria-pressed={!U.mixMin}>
+      <button class={['tbtn icon panelbtn', { on: !U.mixMin }]} onClick={toggleMixer} title={t('a.tb.mixerTip')} aria-label={t('a.mn.mixer')} aria-pressed={!U.mixMin ? 'true' : 'false'}>
         <Icon d="M5 21v-7M5 10V3M12 21v-9M12 8V3M19 21v-5M19 12V3M2 14h6M9 8h6M16 16h6" size={14} />
         <span class="lbl">{t('a.mn.mixer')}</span>
       </button>
       <Show when={midiStatus()?.selected}>
         <button class="ibtn midibtn" onClick={() => setU('settings', true)}
           title={midiStatus()?.connected ? t('a.tb.midiOn', { name: midiStatus()!.connected!.name }) : t('a.tb.midiOff')}>
-          <span class="midiled" classList={{ on: !!midiStatus()?.connected, hit: midiFlash() }} /><span class="tag9">MIDI</span>
+          <span class={['midiled', { on: !!midiStatus()?.connected, hit: midiFlash() }]} /><span class="tag9">MIDI</span>
         </button>
       </Show>
       <Show when={win}>
@@ -312,7 +313,7 @@ export function Toolbar() {
  */
 function MenuBar() {
   const [open, setOpen] = createSignal(-1);
-  createEffect(() => { if (!U.menu) setOpen(-1); });
+  effect(() => { if (!U.menu) setOpen(-1); });
   const win = be().win;
   const none = () => !U.sel.length;
   const wins = () => U.plugs.length + (rackFloating() ? 1 : 0) + (rollFloating() ? 1 : 0);
@@ -396,10 +397,10 @@ function MenuBar() {
     setOpen(i);
   };
   return (
-    <div class="menubar" classList={{ open: open() >= 0 }} role="menubar">
+    <div class={['menubar', { open: open() >= 0 }]} role="menubar">
       <For each={menus}>
         {([key], i) => (
-          <button class="mbtn" role="menuitem" aria-haspopup="menu" aria-expanded={open() === i()} classList={{ on: open() === i() }}
+          <button class={['mbtn', { on: open() === i() }]} role="menuitem" aria-haspopup="menu" aria-expanded={open() === i() ? 'true' : 'false'}
             onPointerDown={e => { if (e.button !== 0) return; e.preventDefault(); if (open() === i()) { if (byPress) closeMenu(); } else { byPress = true; show(i(), e.currentTarget); } }}
             onPointerEnter={e => { if (open() >= 0 && open() !== i()) { byPress = false; show(i(), e.currentTarget); } }}>{t(key)}</button>
         )}
@@ -615,9 +616,9 @@ function MasterOut() {
     r.style.transform = `scaleX(${1 - meterPos(hr)})`;
   })));
   // a clip belongs to the mix it happened in
-  createEffect(on(() => S.path, () => resetMasterClip(), { defer: true }));
+  watch(() => S.path, () => resetMasterClip(), { defer: true });
   return (
-    <button class="masterout" classList={{ clip: !!masterClip() }} title={masterClipTip()} aria-label={masterClipTip()}
+    <button class={['masterout', { clip: !!masterClip() }]} title={masterClipTip()} aria-label={masterClipTip()}
       onClick={() => { if (masterClip()) { resetMasterClip(); say(t('a.tb.clipReset')); } }}>
       <span class="mobars" style={{ '--full': FULL_POS }}>
         <span class="mobar"><span ref={l} /></span>
@@ -682,7 +683,7 @@ function CpuMeter() {
     else openAudioSettings();
   };
   return (
-    <button class={'cpumeter ' + cpuBand(load())} classList={{ flash: underrunFlash(), xrun: underruns() > 0, off: off() }}
+    <button class={['cpumeter ' + cpuBand(load()), { flash: underrunFlash(), xrun: underruns() > 0, off: off() }]}
       title={tip()} aria-label={tip()} onClick={click}>
       <span class="cpuval mono">{off() ? '—' : cpuText(load())}</span>
       <span class="cpubar"><span ref={bar} /></span>

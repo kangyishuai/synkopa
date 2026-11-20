@@ -1,5 +1,8 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { ICONS } from '../ui/icons';
+import { kept } from '../ui/keptValue';
 import { be } from '../api/backend';
 import { PLUGIN_FORMAT_LABEL, type AudioConfig, type AudioDevices, type AudioHost, type AudioStatus, type CliStatus, type MidiDevice, type PluginInfo, type PluginScan } from '../api/types';
 import * as A from '../state/actions';
@@ -29,11 +32,12 @@ function SettingsDialog() {
   const [devs, setDevs] = createSignal<AudioDevices>({ outputs: [], inputs: [] });
   const [cli, setCli] = createSignal<CliStatus | null>(null);
   const [err, setErr] = createSignal<string | null>(null);
-  if (takeAudioTabRequest()) lastTab = 'audio';
+  // the request itself is taken by the effect below (no write while rendering)
+  if (audioTabRequested()) lastTab = 'audio';
   const [tab, setTab] = createSignal<Tab>(lastTab);
   const pickTab = (t: Tab) => { lastTab = t; setTab(t); };
   // "Audio settings" on a notice while Settings is already open switches it to the Audio tab
-  createEffect(() => { if (audioTabRequested() && takeAudioTabRequest()) pickTab('audio'); });
+  effect(() => { if (audioTabRequested() && takeAudioTabRequest()) pickTab('audio'); });
   const cur = () => TABS.find(x => x.id === tab()) ?? TABS[0];
   const st = audioStatus;
   const busy = audioBusy;
@@ -43,7 +47,7 @@ function SettingsDialog() {
     be().cliStatus().then(setCli).catch(() => {});
   });
   const settingsHost = createMemo(() => tab() === 'audio' ? st()?.host : undefined);
-  createEffect(() => {
+  effect(() => {
     const host = settingsHost();
     if (host === undefined) return;
     let current = true;
@@ -61,6 +65,7 @@ function SettingsDialog() {
     return applyAudioConfig(cfg);
   };
   const opt = (v: string | number | null) => v == null ? '' : String(v);
+  let hostSel!: HTMLSelectElement, outSel!: HTMLSelectElement, inSel!: HTMLSelectElement, chanSel!: HTMLSelectElement, rateSel!: HTMLSelectElement, bufSel!: HTMLSelectElement;
   return (
     <div class="overlay" onPointerDown={() => setU('settings', false)}>
       <div class="dialog setdlg" role="dialog" aria-modal="true" aria-label={t('d.set.title')} onPointerDown={e => e.stopPropagation()} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }}>
@@ -73,7 +78,7 @@ function SettingsDialog() {
         }}>
           <div class="settitle"><TabIcon d={ICONS.gear} color="var(--fg3)" plain />{t('d.set.title')}</div>
           <For each={TABS}>{x => (
-            <button role="tab" data-tab={x.id} aria-selected={tab() === x.id} tabIndex={tab() === x.id ? 0 : -1} classList={{ on: tab() === x.id }} onClick={() => pickTab(x.id)}>
+            <button role="tab" data-tab={x.id} aria-selected={tab() === x.id ? 'true' : 'false'} tabindex={tab() === x.id ? 0 : -1} class={{ on: tab() === x.id }} onClick={() => pickTab(x.id)}>
               <TabIcon d={x.icon} color={x.color} />
               <span>{t(x.label)}</span>
             </button>
@@ -99,14 +104,14 @@ function SettingsDialog() {
             <div class="form">
               <label>{t('d.set.driver')}</label>
               <div class="row" style={{ gap: '8px' }}>
-                <select class="sel" value={s().host} disabled={busy()} onChange={e => apply({ host: e.currentTarget.value })}>
+                <select ref={hostSel} class="sel" value={kept(hostSel, s().host)} disabled={busy()} onChange={e => apply({ host: e.currentTarget.value })}>
                   <Show when={!hosts().some(h => h.id === s().host)}><option value={s().host}>{s().host || t('d.set.default')}</option></Show>
                   <For each={hosts()}>{h => <option value={h.id}>{h.name}</option>}</For>
                 </select>
               </div>
               <Show when={!s().asioCompiled}><span /><span class="note warn">{t('d.set.noasio')}</span></Show>
               <label>{t('d.set.output')}</label>
-              <select class="sel" value={opt(s().output)} disabled={busy()} onChange={e => apply({ output: e.currentTarget.value || null })}>
+              <select ref={outSel} class="sel" value={kept(outSel, opt(s().output))} disabled={busy()} onChange={e => apply({ output: e.currentTarget.value || null })}>
                 <option value="">{t('d.set.default')}</option>
                 <Show when={s().output}>{output => <Show when={!devs().outputs.includes(output())}>
                   <option value={output()}>{output()}</option>
@@ -115,13 +120,13 @@ function SettingsDialog() {
               </select>
               <label>{t('d.set.input')}</label>
               <Show when={s().host !== 'asio'} fallback={<span class="note">{t('d.set.asio.sharedinput')}</span>}>
-                <select class="sel" value={opt(s().input)} disabled={busy()} onChange={e => apply({ input: e.currentTarget.value || null })}>
+                <select ref={inSel} class="sel" value={kept(inSel, opt(s().input))} disabled={busy()} onChange={e => apply({ input: e.currentTarget.value || null })}>
                   <option value="">{t('d.set.defaultnone')}</option>
                   <For each={devs().inputs}>{d => <option value={d}>{d}</option>}</For>
                 </select>
               </Show>
               <label>{t('d.set.inchan')}</label>
-              <select class="sel" value={String(s().inputChannel ?? 0)} disabled={busy() || s().inputChannels < 2}
+              <select ref={chanSel} class="sel" value={kept(chanSel, String(s().inputChannel ?? 0))} disabled={busy() || s().inputChannels < 2}
                 title={s().inputChannels ? t('d.set.inchan.tip') : t('d.set.inchan.tip0')}
                 onChange={e => apply({ inputChannel: +e.currentTarget.value })}>
                 <For each={Array.from({ length: Math.max(s().inputChannels, (s().inputChannel ?? 0) + 1) }, (_, i) => i)}>{i => <option value={String(i)}>{t('d.set.inmono', { n: i + 1 })}</option>}</For>
@@ -130,19 +135,19 @@ function SettingsDialog() {
             <div class="sechd">{t('d.set.sec.perf')}</div>
             <div class="form">
               <label>{t('d.set.rate')}</label>
-              <select class="sel" value={opt(s().sampleRate)} disabled={busy() || serverFixed(s().host)} title={serverFixed(s().host) ? t('d.set.serverfixed') : ''} onChange={e => apply({ sampleRate: e.currentTarget.value ? +e.currentTarget.value : null })}>
+              <select ref={rateSel} class="sel" value={kept(rateSel, opt(s().sampleRate))} disabled={busy() || serverFixed(s().host)} title={serverFixed(s().host) ? t('d.set.serverfixed') : ''} onChange={e => apply({ sampleRate: e.currentTarget.value ? +e.currentTarget.value : null })}>
                 <option value="">{t('d.set.auto')}</option>
                 <For each={RATES}>{r => <option value={String(r)}>{r} Hz</option>}</For>
               </select>
               <label>{t('d.set.buffer')}</label>
-              <select class="sel" value={opt(s().bufferSize)} disabled={busy() || serverFixed(s().host)} title={serverFixed(s().host) ? t('d.set.serverfixed') : ''} onChange={e => apply({ bufferSize: e.currentTarget.value ? +e.currentTarget.value : null })}>
+              <select ref={bufSel} class="sel" value={kept(bufSel, opt(s().bufferSize))} disabled={busy() || serverFixed(s().host)} title={serverFixed(s().host) ? t('d.set.serverfixed') : ''} onChange={e => apply({ bufferSize: e.currentTarget.value ? +e.currentTarget.value : null })}>
                 <option value="">{t('d.set.auto')}</option>
                 <For each={BUFFERS}>{b => <option value={String(b)}>{t('d.set.samples', { n: b })}</option>}</For>
               </select>
               {/* FL's "Underruns" sits by the buffer length: a larger buffer is the cure */}
               <label title={t('d.set.underruns.tip')}>{t('d.set.underruns')}</label>
               <span class="note underruns" title={t('d.set.underruns.tip')}>
-                <span classList={{ warn: underruns() > 0 }}>{underruns() ? t('d.set.underruns.note', { n: underruns() }) : t('d.set.underruns.none')}</span>
+                <span class={{ warn: underruns() > 0 }}>{underruns() ? t('d.set.underruns.note', { n: underruns() }) : t('d.set.underruns.none')}</span>
                 <Show when={underruns() > 0}>
                   <button class="smallbtn" onClick={resetUnderruns}>{t('d.set.underruns.reset')}</button>
                 </Show>
@@ -210,7 +215,7 @@ let lastTab: Tab = 'general';
 function TabIcon(p: { d: string; color: string; big?: boolean; plain?: boolean }) {
   const size = p.big ? 18 : 14;
   return (
-    <span class="settile" classList={{ big: !!p.big, plain: !!p.plain }} style={{ color: p.color, background: p.plain ? 'transparent' : `color-mix(in srgb, ${p.color} 18%, transparent)` }}>
+    <span class={['settile', { big: !!p.big, plain: !!p.plain }]} style={{ color: p.color, background: p.plain ? 'transparent' : `color-mix(in srgb, ${p.color} 18%, transparent)` }}>
       <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d={p.d} /></svg>
     </span>
   );
@@ -278,7 +283,7 @@ const pickTheme = (id: string, name: string) => { setTheme(id); say(t('d.set.say
 function ThemeCard(p: { th: ThemeDef }) {
   const k = () => p.th.t;
   return (
-    <button class="themecard" role="radio" aria-checked={themeMode() === p.th.id} classList={{ on: themeMode() === p.th.id }}
+    <button class={['themecard', { on: themeMode() === p.th.id }]} role="radio" aria-checked={themeMode() === p.th.id ? 'true' : 'false'}
       onClick={() => pickTheme(p.th.id, themeName(p.th))} title={themeName(p.th)}>
       <span class="tprev" style={{ background: k().bg1, 'border-color': k().line }}>
         <span class="tbar" style={{ background: k().bg5 }}><i style={{ background: k().blue }} /><i style={{ background: k().fg5 }} /><i style={{ background: k().fg5 }} /></span>
@@ -310,7 +315,7 @@ function LookSection() {
         <div class="themegrid"><For each={dark}>{th => <ThemeCard th={th} />}</For></div>
         <div class="tglab">{t('d.set.theme.lightgrp')}</div>
         <div class="themegrid"><For each={light}>{th => <ThemeCard th={th} />}</For></div>
-        <button class="themesys" role="radio" aria-checked={themeMode() === 'system'} classList={{ on: themeMode() === 'system' }}
+        <button class={['themesys', { on: themeMode() === 'system' }]} role="radio" aria-checked={themeMode() === 'system' ? 'true' : 'false'}
           onClick={() => { setTheme('system'); say(t('d.set.say.theme.sys')); }}>
           <span class="sw" />
           <span class="systx"><b>{t('d.set.theme.sys')}</b><small>{t('d.set.theme.sys.tip')}</small></span>
@@ -340,6 +345,7 @@ function MidiSection() {
   let lastFixed = st()?.fixedVelocity ?? DEFAULT_FIXED_VELOCITY;
   const pitched = () => (S.project.channels ?? []);
   const targetVal = () => (midiFollow() ? 'follow' : String(st()?.target ?? ''));
+  let devSel!: HTMLSelectElement, targetSel!: HTMLSelectElement, velSel!: HTMLSelectElement, velIn!: HTMLInputElement;
   const pickTarget = (v: string) => {
     if (v === 'follow') { setMidiFollow(true); const ch = U.selCh; if (ch != null) run(setMidiTarget(ch)); return; }
     setMidiFollow(false); run(setMidiTarget(v === '' ? null : +v));
@@ -350,7 +356,7 @@ function MidiSection() {
       <div class="form">
         <label>{t('d.set.device')}</label>
         <div class="row" style={{ gap: '8px' }}>
-          <select class="sel" style={{ flex: 1 }} value={st()?.selected?.id ?? ''} onChange={e => run(selectMidiDevice(e.currentTarget.value || null))}>
+          <select ref={devSel} class="sel" style={{ flex: 1 }} value={kept(devSel, st()?.selected?.id ?? '')} onChange={e => run(selectMidiDevice(e.currentTarget.value || null))}>
             <option value="">{t('d.set.none')}</option>
             <Show when={st()?.selected && !devs().some(d => d.id === st()!.selected!.id)}>
               <option value={st()!.selected!.id}>{t('d.set.disconnected', { name: st()!.selected!.name })}</option>
@@ -360,7 +366,7 @@ function MidiSection() {
           <button class="smallbtn" style={{ height: '26px' }} onClick={refresh} title={t('d.set.refresh.tip')}>{t('d.set.refresh')}</button>
         </div>
         <label>{t('d.set.playson')}</label>
-        <select class="sel" value={targetVal()} onChange={e => pickTarget(e.currentTarget.value)}
+        <select ref={targetSel} class="sel" value={kept(targetSel, targetVal())} onChange={e => pickTarget(e.currentTarget.value)}
           title={t('d.set.playson.tip')}>
           <option value="follow">{t('d.set.follow')}</option>
           <option value="">{t('d.set.firstinst')}</option>
@@ -368,13 +374,13 @@ function MidiSection() {
         </select>
         <label>{t('d.set.vel')}</label>
         <div class="row" style={{ gap: '8px' }} title={t('d.set.vel.tip')}>
-          <select class="sel" style={{ flex: 1 }} value={st()?.fixedVelocity == null ? 'kbd' : 'fixed'}
+          <select ref={velSel} class="sel" style={{ flex: 1 }} value={kept(velSel, st()?.fixedVelocity == null ? 'kbd' : 'fixed')}
             onChange={e => run(setMidiVelocity(e.currentTarget.value === 'fixed' ? lastFixed : null))}>
             <option value="kbd">{t('d.set.vel.kbd')}</option>
             <option value="fixed">{t('d.set.vel.fixed')}</option>
           </select>
           <Show when={st()?.fixedVelocity != null}>
-            <input class="textin" type="number" min="1" max="127" step="1" style={{ width: '64px' }} value={st()!.fixedVelocity!}
+            <input ref={velIn} class="textin" type="number" min="1" max="127" step="1" style={{ width: '64px' }} value={kept(velIn, st()!.fixedVelocity!)}
               aria-label={t('d.set.vel.fixed')}
               onChange={e => {
                 const v = Math.round(+e.currentTarget.value);
@@ -386,7 +392,7 @@ function MidiSection() {
         </div>
         <label>{t('d.set.state')}</label>
         <span class="note mono row" style={{ gap: '6px' }}>
-          <span class="midiled" classList={{ on: !!st()?.connected, hit: midiFlash() }} />
+          <span class={['midiled', { on: !!st()?.connected, hit: midiFlash() }]} />
           <Show when={st()?.connected} fallback={<span style={{ color: 'var(--fg4)' }}>{st()?.selected ? t('d.set.waiting') : t('d.set.notchosen')}</span>}>
             {c => <span style={{ color: 'var(--green)' }}>{c().name}</span>}
           </Show>
@@ -454,6 +460,7 @@ function RecCalib(props: { st: AudioStatus; apply: (p: Partial<AudioConfig>) => 
   const [meas, setMeas] = createSignal(false);
   const [msg, setMsg] = createSignal<string | null>(null);
   const off = () => props.st.recOffsetMs ?? 0;
+  let offIn!: HTMLInputElement;
   const set = (v: number) => void props.apply({ recOffsetMs: Math.round(Math.max(-200, Math.min(200, v)) * 10) / 10 });
   const measure = async () => {
     if (meas()) return;
@@ -468,7 +475,7 @@ function RecCalib(props: { st: AudioStatus; apply: (p: Partial<AudioConfig>) => 
   return (
     <div style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
       <div class="row" style={{ gap: '8px' }}>
-        <input class="textin" type="number" step="0.5" style={{ width: '80px' }} value={off()} disabled={props.busy}
+        <input ref={offIn} class="textin" type="number" step="0.5" style={{ width: '80px' }} value={kept(offIn, off())} disabled={props.busy}
           title={t('d.set.offset.tip')}
           onChange={e => { const v = parseFloat(e.currentTarget.value); if (isFinite(v)) set(v); }} />
         <span class="note">ms</span>

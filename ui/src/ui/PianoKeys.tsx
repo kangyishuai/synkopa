@@ -3,7 +3,8 @@
 // slide. Right button on a key makes it the root note (the key at which a sample plays at its own
 // pitch), when the owner allows it; the root key is tinted and named. Keys held on the MIDI keyboard
 // or the typing keyboard light up too.
-import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Id } from '../api/types';
 import { t } from '../lib/i18n';
@@ -79,14 +80,14 @@ export function PianoKeys(props: {
       onPointerUp={release} onPointerCancel={release} onLostPointerCapture={release}
       onContextMenu={menu}>
       <For each={whites()}>{(k, i) => (
-        <div class="w" classList={{ on: lit(k), root: isRoot(k) }} style={{ left: (i() / whites().length) * 100 + '%', width: 100 / whites().length + '%' }}>
+        <div class={['w', { on: lit(k), root: isRoot(k) }]} style={{ left: (i() / whites().length) * 100 + '%', width: 100 / whites().length + '%' }}>
           <Show when={isRoot(k) || (k % 12 === 0 && (props.root == null || Math.abs(k - props.root) > 2))}>
             <span class="lbl">{noteName(k)}</span>
           </Show>
         </div>
       )}</For>
       <For each={blacks()}>{b => (
-        <div class="b" classList={{ on: lit(b.key), root: isRoot(b.key) }} style={{ left: 'calc(' + (b.at / whites().length) * 100 + '% - ' + (32 / whites().length) + '%)', width: 64 / whites().length + '%' }} />
+        <div class={['b', { on: lit(b.key), root: isRoot(b.key) }]} style={{ left: 'calc(' + (b.at / whites().length) * 100 + '% - ' + (32 / whites().length) + '%)', width: 64 / whites().length + '%' }} />
       )}</For>
     </div>
   );

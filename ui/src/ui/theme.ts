@@ -1,7 +1,7 @@
 // Colour tokens. CSS reads the same names as variables (styles.css, `:root` / `[data-theme=light]`);
 // canvas code reads them from `T`, which is mutated in place when the theme changes. Cached
 // canvas layers include `theme.epoch` in their key (frameLoop `Layer`), so they re-render.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { t } from '../lib/i18n';
 import type { TranslationKey } from '../lib/i18n';
 

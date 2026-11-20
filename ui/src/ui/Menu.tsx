@@ -1,9 +1,9 @@
-import { createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { For, Match, Show, Switch } from 'solid-js';
+import { createSignal, onCleanup, onMount } from '../lib/reactive';
 import type { MenuItem } from '../state/ui';
 import { CHECK_GLYPH, menuGlyph, type MenuGlyph } from './menuIcons';
 import { closeMenu, U } from '../state/ui';
-import { S } from '../state/store';
+import { rawOf, S } from '../state/store';
 import { commit } from '../state/edit';
 import { clamp, dbText } from '../lib/format';
 import { t } from '../lib/i18n';
@@ -11,6 +11,9 @@ import { Icon } from './icons';
 import { SWATCHES } from '../lib/color';
 import { INST_ICONS, InstIcon } from './instIcons';
 import { isPointerEvent, pressKeepsMenu } from './menuPress';
+
+/** An optional boolean as Solid 1 wrote it into an `aria-*` attribute: "true" / "false", absent when unset. */
+const ariaBool = (v: boolean | undefined): 'true' | 'false' | undefined => (v == null ? undefined : v ? 'true' : 'false');
 
 /**
  * The one context menu (items are built by whoever opens it).
@@ -79,7 +82,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
   const glyph = (it: { label: string; glyph?: MenuGlyph; checked?: boolean }) => it.checked != null ? (it.checked ? CHECK_GLYPH : null) : it.glyph ?? menuGlyph(it.label);
   return (
     <>
-          <div ref={el} class="menu ctxmenu" classList={{ submenu: !!props.sub }} style={{ left: pos().x + 'px', top: pos().y + 'px' }} onPointerDown={e => e.stopPropagation()}>
+          <div ref={el} class={['menu ctxmenu', { submenu: !!props.sub }]} style={{ left: pos().x + 'px', top: pos().y + 'px' }} onPointerDown={e => e.stopPropagation()}>
             <For each={props.items}>
               {it => (
                 <Switch>
@@ -90,7 +93,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                     {i => {
                       const idx = props.items.indexOf(i());
                       return (
-                        <button class="mi" classList={{ hot: open()?.i === idx }} onPointerEnter={e => openSub(idx, e.currentTarget)} onClick={e => openSub(idx, e.currentTarget)}>
+                        <button class={['mi', { hot: open()?.i === idx }]} onPointerEnter={e => openSub(idx, e.currentTarget)} onClick={e => openSub(idx, e.currentTarget)}>
                           <span class="row" style={{ gap: '8px' }}><MenuIco g={glyph(i())} /><span>{i().label}</span></span>
                           <span class="kbd">›</span>
                         </button>
@@ -99,7 +102,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                   </Match>
                   <Match when={it.t === 'item' && it}>
                     {i => (
-                      <button class="mi" role={i().checked != null ? 'menuitemcheckbox' : 'menuitem'} aria-checked={i().checked} aria-disabled={i().disabled} classList={{ danger: !!i().danger, dis: !!i().disabled }} title={i().title ?? ''} onPointerEnter={() => setOpen(null)}
+                      <button role={i().checked != null ? 'menuitemcheckbox' : 'menuitem'} aria-checked={ariaBool(i().checked)} aria-disabled={ariaBool(i().disabled)} class={['mi', { danger: !!i().danger, dis: !!i().disabled }]} title={i().title ?? ''} onPointerEnter={() => setOpen(null)}
                         onClick={() => { if (i().disabled) return; closeMenu(); i().act(); }}>
                         <span class="row" style={{ gap: '8px' }}>
                           <Show when={i().icon} fallback={<MenuIco g={glyph(i())} />}>
@@ -124,7 +127,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                     {i => (
                       <div class="iconpick">
                         <For each={Object.entries(INST_ICONS)}>{([id, g]) => (
-                          <button title={id === i().current ? t('d.ui.iconremove', { label: g.label }) : g.label} classList={{ on: id === i().current }}
+                          <button title={id === i().current ? t('d.ui.iconremove', { label: g.label }) : g.label} class={{ on: id === i().current }}
                             style={{ color: id === i().current ? (i().color ?? 'var(--fg-hi)') : undefined }}
                             onClick={() => { i().pick(id === i().current ? null : id); closeMenu(); }}>
                             <InstIcon id={id} size={14} />
@@ -140,7 +143,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                       const set = (d: number) => {
                         const c = clip(); if (!c) return;
                         const cs = U.sel.includes(c.id) ? S.project.clips.filter(x => U.sel.includes(x.id)) : [c];
-                        commit([{ op: 'putClips', clips: cs.map(x => ({ ...unwrap(x), gain: clamp(x.gain + d, -24, 12) })) }], t('d.ui.clipvol'));
+                        commit([{ op: 'putClips', clips: cs.map(x => ({ ...rawOf(x), gain: clamp(x.gain + d, -24, 12) })) }], t('d.ui.clipvol'));
                       };
                       return (
                         <div class="gainrow">
@@ -154,11 +157,11 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                   </Match>
                   <Match when={it.t === 'chips' && it}>
                     {i => (
-                      <div class="chiprow" classList={{ dis: !!i().disabled }}>
+                      <div class={['chiprow', { dis: !!i().disabled }]}>
                         <Show when={i().label}><span class="cl">{i().label}</span></Show>
                         <div class="chips">
                           <For each={i().options}>{(o, k) => (
-                            <button classList={{ on: i().active === k() }} disabled={i().disabled}
+                            <button class={{ on: i().active === k() }} disabled={i().disabled}
                               onClick={() => { if (i().disabled) return; if (i().close !== false) closeMenu(); i().pick(k()); }}>{o}</button>
                           )}</For>
                         </div>

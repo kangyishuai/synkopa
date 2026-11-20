@@ -1,6 +1,6 @@
 // The M / S pair on Playlist tracks and Mixer strips (FL gestures).
 import { fireEvent, render, screen } from '@solidjs/testing-library';
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { describe, expect, it, vi } from 'vitest';
 import { settle } from '../test/settle';
 import { MuteSolo } from './MuteSolo';

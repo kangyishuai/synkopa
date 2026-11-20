@@ -1,6 +1,7 @@
 // "Unsaved changes" question before New / Open / closing the window, and the offer to
 // recover an unsaved project after a crash.
-import { createSignal, Show } from 'solid-js';
+import { Show } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { lang, t } from '../lib/i18n';
 import { S } from '../state/store';
 
