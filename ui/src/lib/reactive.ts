@@ -103,6 +103,10 @@ export function effect(fn: () => void): void {
 /**
  * Solid 1's `createEffect(on(deps, fn, { defer }))`: `fn(value, prev)` runs untracked whenever
  * `deps` (an accessor, or an array of accessors) changes; with `defer` not on the first run.
+ * As in Solid 1, "changes" means a source read by `deps` notified, not that its value differs:
+ * `() => a() && b()` runs `fn(false, false)` when `a` toggles (Solid 2.0.3's effects do not compare
+ * the computed value). `prev` is the value of the previous call (`undefined` on the first, also
+ * after a deferred first run). Solid 1's third argument (`fn`'s previous return) is not passed.
  * Unlike Solid 1, `deps` itself runs at creation, before the component's refs are set: it may only
  * read reactive state.
  */

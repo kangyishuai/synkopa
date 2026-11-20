@@ -186,6 +186,62 @@ describe('effects', () => {
     expect(deferred).toEqual([[1, 11], [2, 11]]);
   });
 
+  // Solid 1's `on` runs `fn` on every run of the effect, i.e. whenever a source read by `deps`
+  // notified, even when the value `deps` returns is equal (solid-js 1.9 `on`; the expected values
+  // below are what 1.9.18 printed for the same code)
+  it('watch: runs when a source of deps changed even if the deps value is equal (Solid 1 `on`)', () => {
+    const [a, setA] = createSignal(false), [b] = createSignal(false), [n, setN] = createSignal(0);
+    const and: unknown[] = [], mod: unknown[] = [];
+    createRoot(() => {
+      watch(() => a() && b(), (v, prev) => { and.push([v, prev]); });
+      watch(() => n() % 2, (v, prev) => { mod.push([v, prev]); });
+    });
+    flush();
+    setA(true); setA(false);
+    setN(2); setN(3);
+    expect(and).toEqual([[false, undefined], [false, false], [false, false]]);
+    expect(mod).toEqual([[0, undefined], [0, 0], [1, 0]]);
+  });
+
+  it('watch: an unchanged memo or an equal write does not run it (no notification, as in Solid 1)', () => {
+    const [n, setN] = createSignal(0);
+    const seen: unknown[] = [];
+    createRoot(() => {
+      const big = createMemo(() => n() > 5);
+      watch(big, (v, prev) => { seen.push([v, prev]); });
+    });
+    flush();
+    setN(0); setN(1); setN(7);
+    expect(seen).toEqual([[false, undefined], [true, false]]);
+  });
+
+  it('watch: with defer the first call gets prev undefined; the array form gets a fresh array per run', () => {
+    const [a, setA] = createSignal(1), [b, setB] = createSignal(2);
+    const one: unknown[] = [], arr: unknown[] = [], arrDefer: unknown[] = [];
+    createRoot(() => {
+      watch(a, (v, prev) => { one.push([v, prev]); }, { defer: true });
+      watch([a, b], (v, prev) => { arr.push([v, prev]); });
+      watch([a], (v, prev) => { arrDefer.push([v, prev]); }, { defer: true });
+    });
+    flush();
+    setB(3);
+    batch(() => { setA(5); setB(6); });
+    setA(6);
+    expect(one).toEqual([[5, undefined], [6, 5]]);
+    expect(arr).toEqual([[[1, 2], undefined], [[1, 3], [1, 2]], [[5, 6], [1, 3]], [[6, 6], [5, 6]]]);
+    expect(arrDefer).toEqual([[[5], undefined], [[6], [5]]]);
+  });
+
+  it('watch: a write to its own source inside fn runs it again once, then settles', () => {
+    const [n, setN] = createSignal(0);
+    const seen: number[] = [];
+    createRoot(() => watch(n, v => { seen.push(v); if (v === 1) setN(2); }));
+    flush();
+    setN(1);
+    expect(seen).toEqual([0, 1, 2]);
+    expect(n()).toBe(2);
+  });
+
   it('createDetachedRoot works inside an effect callback and outlives the owner it was made under', () => {
     const [n, setN] = createSignal(0), [go, setGo] = createSignal(false);
     let runs = 0;
