@@ -12,7 +12,7 @@ import { clamp, panText, volText } from '../lib/format';
 import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setPanAt, setShiftAt, setStep, setVelAt, shiftOf, MAX_SHIFT, stepsOf, type ChannelClip } from '../lib/pattern';
 import { moveIndex, rackMoveIndex } from '../lib/rack';
 import { noteName } from '../lib/pitch';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
 import { commit, Gesture } from '../state/edit';
 import {
   addBar, RACK_MIN_W, STEP_W, audition, chanById, chanKindLabel, chanOp, channels, closeRack, curPat, openRoll, patOp, playStep, putNotes, RACK_LEFT, RACK_ROW,
@@ -492,7 +492,7 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
   const c = () => props.c;
   const sel = () => isChannelSelected(c().id);
   const anySolo = () => channels().some(x => x.solo);
-  let vg: Gesture | null = null, pg: Gesture | null = null;
+  let vg: Tweak | null = null, pg: Tweak | null = null;
   // one click opens the insert menu, a double-click goes to that insert in the mixer instead
   let insTimer = 0;
   onCleanup(() => clearTimeout(insTimer));
@@ -530,15 +530,15 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
         }}
         onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}>{c().solo && !c().mute ? 'S' : 'M'}</button>
       <MiniKnob key={'cp' + c().id} color="var(--pan)" t={() => ((autoDisplay(panT()) ?? c().pan) + 1) / 2} title={t('b.pe.panTitle', { v: panText(autoDisplay(panT()) ?? c().pan) })}
-        automated={() => isAutomated(panT())} onMenu={(x, y) => paramMenu(x, y, panT(), () => commit([panOp(0.5)], t('b.cw.panCh')), c().color)}
-        onStart={() => { pg = new Gesture(t('b.cw.panCh')); }} onChange={v => { pg?.update([panOp(v)]); say(c().name + ' · pan ' + panText(v * 2 - 1)); }}
+        automated={() => isAutomated(panT())} overridden={() => isOverridden(panT())} onMenu={(x, y) => paramMenu(x, y, panT(), () => commit([panOp(0.5)], t('b.cw.panCh')), c().color)}
+        onStart={() => { pg = autoTweak(panT(), t('b.cw.panCh'), v => [panOp(v)]); }} onChange={v => { pg?.move(v); say(c().name + ' · pan ' + panText(v * 2 - 1)); }}
         onEnd={() => { pg?.end(); pg = null; }} onReset={() => commit([panOp(0.5)], t('b.cw.panCh'))}
-        onWheel={v => commit([panOp(v)], t('b.cw.panCh'))} />
+        onWheel={v => autoWheel(panT(), 'cp' + c().id, t('b.cw.panCh'), v, vv => [panOp(vv)])} />
       <MiniKnob key={'cv' + c().id} t={() => autoDisplay(volT()) ?? c().vol} title={t('b.pe.volTitle', { v: volText(autoDisplay(volT()) ?? c().vol) })}
-        automated={() => isAutomated(volT())} onMenu={(x, y) => paramMenu(x, y, volT(), () => commit([volOp(VOL_UNITY)], t('b.cw.volCh')), c().color)}
-        onStart={() => { vg = new Gesture(t('b.cw.volCh')); }} onChange={v => { vg?.update([volOp(v)]); say(c().name + ' · ' + volText(v)); }}
+        automated={() => isAutomated(volT())} overridden={() => isOverridden(volT())} onMenu={(x, y) => paramMenu(x, y, volT(), () => commit([volOp(VOL_UNITY)], t('b.cw.volCh')), c().color)}
+        onStart={() => { vg = autoTweak(volT(), t('b.cw.volCh'), v => [volOp(v)]); }} onChange={v => { vg?.move(v); say(c().name + ' · ' + volText(v)); }}
         onEnd={() => { vg?.end(); vg = null; }} onReset={() => commit([volOp(VOL_UNITY)], t('b.cw.volCh'))}
-        onWheel={v => commit([volOp(v)], t('b.cw.volCh'))} />
+        onWheel={v => autoWheel(volT(), 'cv' + c().id, t('b.cw.volCh'), v, vv => [volOp(vv)])} />
       <button class="cins" classList={{ auto: c().insert == null }} title={insTitle(c())}
         onPointerDown={e => e.stopPropagation()} onClick={insClick}
         onWheel={e => wheelInsert(chanInsertChoice(c()), e)}>{insLabel(c())}</button>

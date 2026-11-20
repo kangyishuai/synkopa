@@ -316,7 +316,7 @@ fn pat_mode_records_nothing_with_notes_unticked_and_starts_when_record_is_turned
     let mut rt = e.create_rt(SR as f32, BLOCK);
     e.midi_configure(None, true);
     // Notes unticked: the keys play, nothing is recorded
-    e.set_rec_filter(None, Some(false));
+    e.set_rec_filter(None, Some(false), None, None);
     e.set_transport(None, Some(false), Some(true), None);
     e.pattern_play(Some(pid), 0.0, None).unwrap();
     run(&mut rt, 4000);
@@ -326,7 +326,7 @@ fn pat_mode_records_nothing_with_notes_unticked_and_starts_when_record_is_turned
     e.pattern_play(None, 0.0, None).unwrap();
     assert_eq!(e.project().patterns[0].notes.len(), 1);
     // Notes ticked, Record off while the loop plays; turning Record on records from there
-    e.set_rec_filter(None, Some(true));
+    e.set_rec_filter(None, Some(true), None, None);
     e.set_transport(None, None, Some(false), None);
     e.pattern_play(Some(pid), 0.0, None).unwrap();
     run(&mut rt, 4000);
@@ -379,7 +379,7 @@ fn the_computer_keyboard_records_a_midi_take_in_the_song() {
     let e = engine(p);
     let mut rt = e.create_rt(SR as f32, BLOCK);
     let beat = |b: f64| (b * 60.0 / bpm * SR as f64) as usize;
-    e.set_rec_filter(Some(false), None); // notes only: no audio take
+    e.set_rec_filter(Some(false), None, None, None); // notes only: no audio take
     e.set_transport(None, Some(false), Some(true), None);
     e.play(0.0);
     run(&mut rt, beat(2.0));
@@ -420,7 +420,7 @@ fn a_pattern_loop_cannot_start_during_a_notes_only_song_recording() {
     let e = engine(p);
     let _rt = e.create_rt(SR as f32, BLOCK);
     e.midi_configure(None, true);
-    e.set_rec_filter(Some(false), Some(true));
+    e.set_rec_filter(Some(false), Some(true), None, None);
     e.set_transport(None, Some(false), Some(true), None);
     e.play(0.0);
     assert!(e.pattern_play(Some(pid), 0.0, None).is_err(), "the song take keeps running");

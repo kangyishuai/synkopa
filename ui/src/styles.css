@@ -413,9 +413,13 @@ select option { background: var(--bg4); color: var(--fg); }
 .knob .ptr { position: absolute; left: 17px; top: 9px; width: 2px; height: 7px; border-radius: 1px; background: var(--knob-ptr); transform-origin: 1px 9px; }
 .knob .ends { display: flex; justify-content: space-between; width: 66px; margin: -2px 0 1px; gap: 6px; font: 500 8px var(--sans); color: var(--fg5); letter-spacing: .02em; }
 .autodot { position: absolute; right: -2px; top: -1px; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 2px var(--bg4); }
+.autodot.ovr { background: var(--fg5); }
 .knob.auto .val { color: var(--amber); }
+/* a tweak overrode the envelope while playing: the knob shows its manual value (Ableton's grey LED) */
+.knob.ovr .val, .miniknob.ovr::after { color: var(--fg5); }
 .miniknob { display: inline-flex; width: 22px; height: 22px; flex: none; cursor: ns-resize; touch-action: none; position: relative; }
 .miniknob.auto::after { content: ''; position: absolute; right: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+.miniknob.ovr::after { background: var(--fg5); }
 .lvol.auto .thumb, .fader.auto .cap { box-shadow: 0 0 0 2px var(--amber); }
 .pandial { position: relative; width: 30px; height: 30px; cursor: ns-resize; touch-action: none; }
 .pandial .pcap { position: absolute; left: 8px; top: 8px; width: 14px; height: 14px; border-radius: 50%; background: var(--knob-cap); box-shadow: inset 0 0 0 1px var(--line2); }

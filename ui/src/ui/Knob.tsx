@@ -24,6 +24,8 @@ export interface KnobProps {
   ends?: [string, string];
   /** Automated by a playlist clip: shows a marker; `t`/`text` then show the automated value. */
   automated?: () => boolean;
+  /** A manual tweak overrode the envelope while playing (grey marker; "Re-enable automation" in the menu). */
+  overridden?: () => boolean;
   /** Arc colour (defaults to the accent). */
   color?: string;
   /** Size tier: `lg` 56 px for an effect's one or two main controls, `md` 38 px standard, `sm` 26 px trims. */
@@ -63,7 +65,7 @@ export function Knob(p: KnobProps) {
     p.onWheel(clamp(p.t() + (d < 0 ? 1 : -1) * 0.02 * (e.shiftKey ? 0.2 : 1), 0, 1));
   };
   return (
-    <div class={'knob ' + (p.size ?? 'md')} classList={{ auto: !!p.automated?.() }}>
+    <div class={'knob ' + (p.size ?? 'md')} classList={{ auto: !!p.automated?.(), ovr: !!p.overridden?.() }}>
       <div class="dial" style={{ width: geo().s + 'px', height: geo().s + 'px' }} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()}
         title={p.title ?? t('d.ui.knob.tip')}>
         <svg width={geo().s} height={geo().s} viewBox={`0 0 ${geo().s} ${geo().s}`} style={{ position: 'absolute', inset: 0 }}>
@@ -73,6 +75,7 @@ export function Knob(p: KnobProps) {
         <div class="cap" style={{ left: (geo().s - d().cap) / 2 + 'px', top: (geo().s - d().cap) / 2 + 'px', width: d().cap + 'px', height: d().cap + 'px' }} />
         <div class="ptr" style={{ left: geo().c - 1 + 'px', top: (geo().s - d().cap) / 2 + 'px', height: d().ptr + 'px', 'transform-origin': `1px ${d().cap / 2}px`, transform: `rotate(${arc().angle}deg)` }} />
         <Show when={p.automated?.()}><span class="autodot" title={t('d.ui.knob.auto')} /></Show>
+        <Show when={!p.automated?.() && p.overridden?.()}><span class="autodot ovr" title={t('d.ui.knob.autoOvr')} /></Show>
       </div>
       <Show when={p.ends}>{e => <div class="ends"><span>{e()[0]}</span><span>{e()[1]}</span></div>}</Show>
       <span class="val">{p.text()}</span>
@@ -82,7 +85,7 @@ export function Knob(p: KnobProps) {
 }
 
 /** 22 px knob for dense rows (mixer slots, window headers): drag ↕, wheel, 2× click = default, right-click = menu. */
-export function MiniKnob(p: { t: () => number; key: string; title: string; color?: string; onStart: () => void; onChange: (t: number) => void; onEnd: () => void; onReset: () => void; onWheel: (t: number) => void; onMenu?: (x: number, y: number) => void; automated?: () => boolean }) {
+export function MiniKnob(p: { t: () => number; key: string; title: string; color?: string; onStart: () => void; onChange: (t: number) => void; onEnd: () => void; onReset: () => void; onWheel: (t: number) => void; onMenu?: (x: number, y: number) => void; automated?: () => boolean; overridden?: () => boolean }) {
   const R = 8, L = 2 * Math.PI * R * 0.75, C = 2 * Math.PI * R;
   const down = (e: PointerEvent) => {
     e.stopPropagation();
@@ -101,7 +104,7 @@ export function MiniKnob(p: { t: () => number; key: string; title: string; color
   };
   const t = () => clamp(p.t(), 0, 1);
   return (
-    <span class="miniknob" classList={{ auto: !!p.automated?.() }} title={p.title} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()} onClick={e => e.stopPropagation()}>
+    <span class="miniknob" classList={{ auto: !!p.automated?.(), ovr: !!p.overridden?.() }} title={p.title} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()} onClick={e => e.stopPropagation()}>
       <svg width="22" height="22" viewBox="0 0 22 22">
         <circle cx="11" cy="11" r={R} fill="none" transform="rotate(135 11 11)" style={{ stroke: 'var(--knob-track)', 'stroke-width': '2.5px', 'stroke-linecap': 'round', 'stroke-dasharray': `${L}px ${C}px` }} />
         <circle cx="11" cy="11" r={R} fill="none" transform="rotate(135 11 11)" style={{ stroke: p.color ?? 'var(--blue)', 'stroke-width': '2.5px', 'stroke-linecap': 'round', 'stroke-dasharray': `${t() * L}px ${C}px` }} />

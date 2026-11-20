@@ -139,7 +139,9 @@ export class MockBackend implements Backend {
   private gesture: Project | null = null;
   /** A gesture's transient batches changed the project without a state event (engine.rs gesture_unreported). */
   private gestureUnreported = false;
-  private tr: TransportDto = { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0 };
+  private tr: TransportDto = { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0, recAutomation: true, recAutoLatch: false };
+  /** Automations a manual tweak overrode while playing (engine.rs `auto_overrides`). */
+  private overriddenAutos = new Set<Id>();
   private listeners = new Map<string, Set<(p: unknown) => void>>();
   private teleCb: ((b: ArrayBuffer) => void) | null = null;
   private watched: Id[] = [];
@@ -213,7 +215,8 @@ export class MockBackend implements Backend {
   private dto(): StateDto {
     return structuredClone({ project: this.p, revision: this.revision, canUndo: this.undoStack.length > 0, canRedo: this.redoStack.length > 0,
       undoLabel: this.undoStack.at(-1)?.label ?? null, redoLabel: this.redoStack.at(-1)?.label ?? null,
-      transport: this.tr, path: this.path, dirty: this.revision !== this.savedRev, audition: this.liveAudition(), missing: this.missing(), fxErrors: this.fxErrors() });
+      transport: this.tr, path: this.path, dirty: this.revision !== this.savedRev, audition: this.liveAudition(), missing: this.missing(), fxErrors: this.fxErrors(),
+      overriddenAutos: [...this.overriddenAutos].sort((a, b) => a - b) });
   }
   /**
    * Like the engine's `fx_errors`: LV2 slots whose plugin is not "installed" here, or cannot run, and plugin
@@ -368,12 +371,19 @@ export class MockBackend implements Backend {
   async transportSilence() { this.preview = null; }
   async transportSet(patch: Partial<TransportDto>) {
     const wasRec = this.tr.rec;
-    // like the engine: the recording filter keeps one kind on
+    // like the engine: one capturer stays on (audio, notes or automation)
     const ra = patch.recAudio ?? this.tr.recAudio, rn = patch.recNotes ?? this.tr.recNotes;
-    if (!ra && !rn) patch = { ...patch, recAudio: this.tr.recAudio, recNotes: this.tr.recNotes };
+    const au = patch.recAutomation ?? this.tr.recAutomation;
+    if (!ra && !rn && !au) patch = { ...patch, recAudio: this.tr.recAudio, recNotes: this.tr.recNotes, recAutomation: this.tr.recAutomation };
     this.tr = { ...this.tr, ...patch };
     if (wasRec && !this.tr.rec) this.finishRec();
     if (!wasRec && this.tr.rec && this.tr.playing) this.startRec(this.beatNow());
+    this.changedTransport();
+    return { ...this.tr };
+  }
+  /** Like the engine: an overridden automation stops driving; re-enabling rebuilds the mock's one project (already the truth). */
+  async automationOverride(id: Id, on: boolean) {
+    if (on) this.overriddenAutos.add(id); else this.overriddenAutos.delete(id);
     this.changedTransport();
     return { ...this.tr };
   }

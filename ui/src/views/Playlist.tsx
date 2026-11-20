@@ -31,7 +31,7 @@ import { PlaylistTools } from './PlaylistTools';
 import type { ZRange } from '../lib/zoomBar';
 import { laneOverlaps } from '../lib/overlaps';
 import { damageRects, followScroll, planTile, snapPx, type Rect, type Tile } from './playlistTile';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, isAutomated, paramMenu } from '../state/automation';
 import { autoValueText, parseAutoValue, cyclesOf, stairsOf } from '../lib/automation';
 import { addPoint, deletePoints, dragTension, hitEnv, insetGeom, movePoints, pointsInBox, setShape, type EnvHit } from '../lib/envEdit';
 import { autoById } from '../state/store';
@@ -1539,11 +1539,11 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
     e.preventDefault(); e.stopPropagation();
     if (e.altKey || dblCheck('lvol' + props.i)) { A.setTrack(props.i, { vol: VOL_UNITY }, tl('a.pl.volume')); say(t().name + ' · 0.0 dB'); return; }
     const w = (e.currentTarget as HTMLElement).getBoundingClientRect().width;
-    const g = new Gesture(tl('a.pl.trackVolume'));
+    const g = autoTweak(volTarget(), tl('a.pl.trackVolume'), n => [{ op: 'putTrack', track: { ...plain(t()), vol: n } }]);
     let v = t().vol, lx = e.clientX;
     track(ev => {
       v = clamp(v + (ev.clientX - lx) / w * fineMul(ev), 0, 1); lx = ev.clientX;
-      g.update([{ op: 'putTrack', track: { ...plain(t()), vol: v } }]);
+      g.move(v);
       say(t().name + ' · ' + volText(v));
     }, () => g.end(), 'ew-resize');
   };
