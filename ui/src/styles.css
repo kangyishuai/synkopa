@@ -704,7 +704,6 @@ select option { background: var(--bg4); color: var(--fg); }
 /* "Restart to update" is the one control the update needs: it never shrinks, the readout and hint before it do */
 .tbhint .updchip { flex: none; margin-left: auto; height: 16px; padding: 0 9px; border-radius: 8px; font-size: 10.5px; }
 .menubar { flex: none; display: flex; gap: 1px; margin-left: -7px; }
-.menubar.open { position: relative; z-index: 52; }
 .mbtn { height: 22px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--fg2); font: 500 12px var(--sans); cursor: default; }
 .mbtn:hover, .mbtn.on { background: var(--line); color: var(--fg-hi); }
 .tbmenu .projName { flex: 0 1 auto; min-width: 0; max-width: none; }
