@@ -1,0 +1,1763 @@
+{
+ "meta": {
+  "label": "baseline-solid1-noteEdit",
+  "date": "2026-11-20T12:56:50.918Z",
+  "mode": "prod",
+  "runs": 3,
+  "quick": false,
+  "git": {
+   "sha": "4452f37bd20968d3038d866f64f0d940c4364bbb",
+   "branch": "HEAD",
+   "dirtyFiles": []
+  },
+  "versions": {
+   "solid-js": "1.9.18",
+   "vite-plugin-solid": "2.11.17",
+   "vite": "8.3.8",
+   "node": "v24.11.1",
+   "playwright": "1.65.0"
+  },
+  "machine": {
+   "os": "Windows_NT 10.0.26300 x64",
+   "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
+   "cores": 12,
+   "memGiB": 32
+  },
+  "browser": {
+   "gpu": true,
+   "cpuThrottle": 1,
+   "viewport": {
+    "width": 1600,
+    "height": 900
+   },
+   "deviceScaleFactor": 1,
+   "headless": true,
+   "chromium": "156.0.8078.4",
+   "executable": "chromium_headless_shell-1248/chrome-headless-shell-win64/chrome-headless-shell.exe",
+   "webglRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5060 Ti (0x00002D04) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "fixtures": {
+   "generator": 1,
+   "large": {
+    "tracks": 40,
+    "inserts": 41,
+    "effects": 169,
+    "clips": 1400,
+    "clipKinds": {
+     "audio": 1200,
+     "pat": 170,
+     "auto": 26,
+     "comp": 4
+    },
+    "patterns": 25,
+    "maxPatternNotes": 2000,
+    "automations": 26,
+    "sources": 40,
+    "jsonKiB": 970,
+    "fingerprint": "1b751b48156386df"
+   },
+   "small": {
+    "tracks": 8,
+    "inserts": 9,
+    "effects": 36,
+    "clips": 77,
+    "clipKinds": {
+     "audio": 60,
+     "pat": 12,
+     "auto": 4,
+     "comp": 1
+    },
+    "patterns": 7,
+    "maxPatternNotes": 2000,
+    "automations": 4,
+    "sources": 8,
+    "jsonKiB": 156,
+    "fingerprint": "bb5465a217ec4258"
+   }
+  }
+ },
+ "bundle": {
+  "total": {
+   "raw": 1811648,
+   "gzip": 544371,
+   "brotli": 442694
+  },
+  "js": {
+   "raw": 1674593,
+   "gzip": 517682
+  },
+  "otherAssetsRaw": 148244,
+  "chunks": [
+   {
+    "file": "assets/index.js",
+    "raw": 1524868,
+    "gzip": 472140,
+    "brotli": 379764
+   },
+   {
+    "file": "assets/index.css",
+    "raw": 135366,
+    "gzip": 25803,
+    "brotli": 22190
+   },
+   {
+    "file": "assets/mock.js",
+    "raw": 133208,
+    "gzip": 41307,
+    "brotli": 36296
+   },
+   {
+    "file": "assets/window.js",
+    "raw": 13229,
+    "gzip": 3143,
+    "brotli": 2817
+   },
+   {
+    "file": "assets/webview.js",
+    "raw": 3288,
+    "gzip": 1092,
+    "brotli": 973
+   },
+   {
+    "file": "index.html",
+    "raw": 1689,
+    "gzip": 886,
+    "brotli": 654
+   }
+  ]
+ },
+ "runs": [
+  {
+   "session_start": {
+    "metrics": {
+     "heapAfterGcMiB": 24.55,
+     "domNodes": 3715,
+     "jsEventListeners": 130,
+     "documents": 3,
+     "detachedNodes": 1
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "note_delete": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 50.1,
+     "frame.max": 83.4,
+     "frames.dropped": 16,
+     "longTasks": 2,
+     "longTaskMs": 117,
+     "loaf": 6,
+     "scriptMs": 444.83,
+     "layoutMs": 8.25,
+     "styleMs": 2.91,
+     "taskMs": 1136.13,
+     "scriptMsPerInteraction": 74.14,
+     "heapMiB": 65.45,
+     "deleteKey.task.median": 21.2,
+     "deleteKey.task.p95": 27.9,
+     "deleteKey.task.max": 27.9,
+     "deleteKey.frame.median": 52.2,
+     "deleteKey.frame.p95": 64.3,
+     "deleteKey.frame.max": 64.3,
+     "deleteKey.settled.median": 52.85,
+     "deleteKey.settled.p95": 65.4,
+     "deleteKey.settled.max": 65.4,
+     "undoKey.task.median": 70.4,
+     "undoKey.task.p95": 102.1,
+     "undoKey.task.max": 102.1,
+     "undoKey.frame.median": 70.55,
+     "undoKey.frame.p95": 102.2,
+     "undoKey.frame.max": 102.2,
+     "undoKey.settled.median": 79.7,
+     "undoKey.settled.p95": 166.7,
+     "undoKey.settled.max": 166.7,
+     "deleteKey.timeouts": 0,
+     "undoKey.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "deleteKey.task.median": "ms",
+     "deleteKey.task.p95": "ms",
+     "deleteKey.task.max": "ms",
+     "deleteKey.frame.median": "ms",
+     "deleteKey.frame.p95": "ms",
+     "deleteKey.frame.max": "ms",
+     "deleteKey.settled.median": "ms",
+     "deleteKey.settled.p95": "ms",
+     "deleteKey.settled.max": "ms",
+     "undoKey.task.median": "ms",
+     "undoKey.task.p95": "ms",
+     "undoKey.task.max": "ms",
+     "undoKey.frame.median": "ms",
+     "undoKey.frame.p95": "ms",
+     "undoKey.frame.max": "ms",
+     "undoKey.settled.median": "ms",
+     "undoKey.settled.p95": "ms",
+     "undoKey.settled.max": "ms",
+     "deleteKey.timeouts": "count",
+     "undoKey.timeouts": "count"
+    },
+    "extra": {
+     "notes": 2000,
+     "deletedByFirst": 2000,
+     "afterUndo": 2000
+    }
+   },
+   "note_nudge": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.4,
+     "frames.dropped": 3,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 800.74,
+     "layoutMs": 9.1,
+     "styleMs": 5.21,
+     "taskMs": 1623.52,
+     "scriptMsPerInteraction": 40.04,
+     "heapMiB": 66,
+     "nudgeKey.task.median": 31.5,
+     "nudgeKey.task.p95": 39.8,
+     "nudgeKey.task.max": 51.8,
+     "nudgeKey.frame.median": 61.85,
+     "nudgeKey.frame.p95": 74.9,
+     "nudgeKey.frame.max": 78.9,
+     "nudgeKey.settled.median": 75.15,
+     "nudgeKey.settled.p95": 89.3,
+     "nudgeKey.settled.max": 103.2,
+     "nudgeKey.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "nudgeKey.task.median": "ms",
+     "nudgeKey.task.p95": "ms",
+     "nudgeKey.task.max": "ms",
+     "nudgeKey.frame.median": "ms",
+     "nudgeKey.frame.p95": "ms",
+     "nudgeKey.frame.max": "ms",
+     "nudgeKey.settled.median": "ms",
+     "nudgeKey.settled.p95": "ms",
+     "nudgeKey.settled.max": "ms",
+     "nudgeKey.timeouts": "count"
+    },
+    "extra": {
+     "notes": 2000,
+     "movedByFirst": 2000
+    }
+   },
+   "session_end": {
+    "metrics": {
+     "heapAfterGcMiB": 48.73,
+     "domNodes": 3827,
+     "jsEventListeners": 143,
+     "documents": 3,
+     "detachedNodes": 13
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "console_errors": []
+  },
+  {
+   "session_start": {
+    "metrics": {
+     "heapAfterGcMiB": 24.55,
+     "domNodes": 3715,
+     "jsEventListeners": 130,
+     "documents": 3,
+     "detachedNodes": 1
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "note_delete": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 66.7,
+     "frame.max": 66.7,
+     "frames.dropped": 18,
+     "longTasks": 2,
+     "longTaskMs": 103,
+     "loaf": 6,
+     "scriptMs": 397.16,
+     "layoutMs": 9.17,
+     "styleMs": 3.21,
+     "taskMs": 1065.97,
+     "scriptMsPerInteraction": 66.19,
+     "heapMiB": 68.28,
+     "deleteKey.task.median": 21.1,
+     "deleteKey.task.p95": 24.8,
+     "deleteKey.task.max": 24.8,
+     "deleteKey.frame.median": 51,
+     "deleteKey.frame.p95": 56.7,
+     "deleteKey.frame.max": 56.7,
+     "deleteKey.settled.median": 51.75,
+     "deleteKey.settled.p95": 57.4,
+     "deleteKey.settled.max": 57.4,
+     "undoKey.task.median": 80.7,
+     "undoKey.task.p95": 100.9,
+     "undoKey.task.max": 100.9,
+     "undoKey.frame.median": 80.95,
+     "undoKey.frame.p95": 101.1,
+     "undoKey.frame.max": 101.1,
+     "undoKey.settled.median": 88.45,
+     "undoKey.settled.p95": 117.5,
+     "undoKey.settled.max": 117.5,
+     "deleteKey.timeouts": 0,
+     "undoKey.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "deleteKey.task.median": "ms",
+     "deleteKey.task.p95": "ms",
+     "deleteKey.task.max": "ms",
+     "deleteKey.frame.median": "ms",
+     "deleteKey.frame.p95": "ms",
+     "deleteKey.frame.max": "ms",
+     "deleteKey.settled.median": "ms",
+     "deleteKey.settled.p95": "ms",
+     "deleteKey.settled.max": "ms",
+     "undoKey.task.median": "ms",
+     "undoKey.task.p95": "ms",
+     "undoKey.task.max": "ms",
+     "undoKey.frame.median": "ms",
+     "undoKey.frame.p95": "ms",
+     "undoKey.frame.max": "ms",
+     "undoKey.settled.median": "ms",
+     "undoKey.settled.p95": "ms",
+     "undoKey.settled.max": "ms",
+     "deleteKey.timeouts": "count",
+     "undoKey.timeouts": "count"
+    },
+    "extra": {
+     "notes": 2000,
+     "deletedByFirst": 2000,
+     "afterUndo": 2000
+    }
+   },
+   "note_nudge": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.3,
+     "frame.max": 33.4,
+     "frames.dropped": 9,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 2,
+     "scriptMs": 1019.46,
+     "layoutMs": 10.57,
+     "styleMs": 5.64,
+     "taskMs": 1987.43,
+     "scriptMsPerInteraction": 50.97,
+     "heapMiB": 61.04,
+     "nudgeKey.task.median": 34.6,
+     "nudgeKey.task.p95": 45.8,
+     "nudgeKey.task.max": 50.7,
+     "nudgeKey.frame.median": 69.4,
+     "nudgeKey.frame.p95": 84.6,
+     "nudgeKey.frame.max": 85,
+     "nudgeKey.settled.median": 91.75,
+     "nudgeKey.settled.p95": 104.3,
+     "nudgeKey.settled.max": 108,
+     "nudgeKey.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "nudgeKey.task.median": "ms",
+     "nudgeKey.task.p95": "ms",
+     "nudgeKey.task.max": "ms",
+     "nudgeKey.frame.median": "ms",
+     "nudgeKey.frame.p95": "ms",
+     "nudgeKey.frame.max": "ms",
+     "nudgeKey.settled.median": "ms",
+     "nudgeKey.settled.p95": "ms",
+     "nudgeKey.settled.max": "ms",
+     "nudgeKey.timeouts": "count"
+    },
+    "extra": {
+     "notes": 2000,
+     "movedByFirst": 2000
+    }
+   },
+   "session_end": {
+    "metrics": {
+     "heapAfterGcMiB": 48.73,
+     "domNodes": 3827,
+     "jsEventListeners": 143,
+     "documents": 3,
+     "detachedNodes": 13
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "console_errors": []
+  },
+  {
+   "session_start": {
+    "metrics": {
+     "heapAfterGcMiB": 24.55,
+     "domNodes": 3715,
+     "jsEventListeners": 130,
+     "documents": 3,
+     "detachedNodes": 1
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "note_delete": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 50,
+     "frame.max": 83.3,
+     "frames.dropped": 15,
+     "longTasks": 1,
+     "longTaskMs": 57,
+     "loaf": 6,
+     "scriptMs": 426.79,
+     "layoutMs": 7.44,
+     "styleMs": 2.65,
+     "taskMs": 1086.08,
+     "scriptMsPerInteraction": 71.13,
+     "heapMiB": 62.75,
+     "deleteKey.task.median": 22.65,
+     "deleteKey.task.p95": 31.3,
+     "deleteKey.task.max": 31.3,
+     "deleteKey.frame.median": 52.3,
+     "deleteKey.frame.p95": 60.8,
+     "deleteKey.frame.max": 60.8,
+     "deleteKey.settled.median": 53.05,
+     "deleteKey.settled.p95": 61.6,
+     "deleteKey.settled.max": 61.6,
+     "undoKey.task.median": 69.25,
+     "undoKey.task.p95": 97.2,
+     "undoKey.task.max": 97.2,
+     "undoKey.frame.median": 69.35,
+     "undoKey.frame.p95": 97.4,
+     "undoKey.frame.max": 97.4,
+     "undoKey.settled.median": 80.15,
+     "undoKey.settled.p95": 174.7,
+     "undoKey.settled.max": 174.7,
+     "deleteKey.timeouts": 0,
+     "undoKey.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "deleteKey.task.median": "ms",
+     "deleteKey.task.p95": "ms",
+     "deleteKey.task.max": "ms",
+     "deleteKey.frame.median": "ms",
+     "deleteKey.frame.p95": "ms",
+     "deleteKey.frame.max": "ms",
+     "deleteKey.settled.median": "ms",
+     "deleteKey.settled.p95": "ms",
+     "deleteKey.settled.max": "ms",
+     "undoKey.task.median": "ms",
+     "undoKey.task.p95": "ms",
+     "undoKey.task.max": "ms",
+     "undoKey.frame.median": "ms",
+     "undoKey.frame.p95": "ms",
+     "undoKey.frame.max": "ms",
+     "undoKey.settled.median": "ms",
+     "undoKey.settled.p95": "ms",
+     "undoKey.settled.max": "ms",
+     "deleteKey.timeouts": "count",
+     "undoKey.timeouts": "count"
+    },
+    "extra": {
+     "notes": 2000,
+     "deletedByFirst": 2000,
+     "afterUndo": 2000
+    }
+   },
+   "note_nudge": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.3,
+     "frame.max": 33.4,
+     "frames.dropped": 7,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 1,
+     "scriptMs": 955.61,
+     "layoutMs": 10.21,
+     "styleMs": 5.69,
+     "taskMs": 1919.02,
+     "scriptMsPerInteraction": 47.78,
+     "heapMiB": 64.23,
+     "nudgeKey.task.median": 32.1,
+     "nudgeKey.task.p95": 45.4,
+     "nudgeKey.task.max": 46.1,
+     "nudgeKey.frame.median": 67.65,
+     "nudgeKey.frame.p95": 83.7,
+     "nudgeKey.frame.max": 88.3,
+     "nudgeKey.settled.median": 92,
+     "nudgeKey.settled.p95": 116.1,
+     "nudgeKey.settled.max": 124.9,
+     "nudgeKey.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "nudgeKey.task.median": "ms",
+     "nudgeKey.task.p95": "ms",
+     "nudgeKey.task.max": "ms",
+     "nudgeKey.frame.median": "ms",
+     "nudgeKey.frame.p95": "ms",
+     "nudgeKey.frame.max": "ms",
+     "nudgeKey.settled.median": "ms",
+     "nudgeKey.settled.p95": "ms",
+     "nudgeKey.settled.max": "ms",
+     "nudgeKey.timeouts": "count"
+    },
+    "extra": {
+     "notes": 2000,
+     "movedByFirst": 2000
+    }
+   },
+   "session_end": {
+    "metrics": {
+     "heapAfterGcMiB": 48.72,
+     "domNodes": 3827,
+     "jsEventListeners": 143,
+     "documents": 3,
+     "detachedNodes": 13
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "console_errors": []
+  }
+ ],
+ "profile": {
+  "session_start": {
+   "units": {
+    "heapAfterGcMiB": "MiB",
+    "domNodes": "count",
+    "jsEventListeners": "count",
+    "documents": "count",
+    "detachedNodes": "count"
+   }
+  },
+  "note_delete": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "deleteKey.task.median": "ms",
+    "deleteKey.task.p95": "ms",
+    "deleteKey.task.max": "ms",
+    "deleteKey.frame.median": "ms",
+    "deleteKey.frame.p95": "ms",
+    "deleteKey.frame.max": "ms",
+    "deleteKey.settled.median": "ms",
+    "deleteKey.settled.p95": "ms",
+    "deleteKey.settled.max": "ms",
+    "undoKey.task.median": "ms",
+    "undoKey.task.p95": "ms",
+    "undoKey.task.max": "ms",
+    "undoKey.frame.median": "ms",
+    "undoKey.frame.p95": "ms",
+    "undoKey.frame.max": "ms",
+    "undoKey.settled.median": "ms",
+    "undoKey.settled.p95": "ms",
+    "undoKey.settled.max": "ms",
+    "deleteKey.timeouts": "count",
+    "undoKey.timeouts": "count"
+   },
+   "extra": {
+    "notes": 2000,
+    "deletedByFirst": 2000,
+    "afterUndo": 2000
+   },
+   "hot": {
+    "busyMs": 1002.26,
+    "functions": [
+     {
+      "name": "dto src/api/mock.ts:213",
+      "selfMs": 209.87
+     },
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 97.13
+     },
+     {
+      "name": "applyAll src/lib/applyOps.ts:254",
+      "selfMs": 82.62
+     },
+     {
+      "name": "toDataURL",
+      "selfMs": 58.03
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 47.85
+     },
+     {
+      "name": "projectEq src/lib/projectEq.ts:10",
+      "selfMs": 35.46
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 32.31
+     },
+     {
+      "name": "rect",
+      "selfMs": 30.22
+     },
+     {
+      "name": "fill",
+      "selfMs": 29.27
+     },
+     {
+      "name": "guessIcon src/ui/instIcons.tsx:63",
+      "selfMs": 21.17
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 17.29
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 12.34
+     },
+     {
+      "name": "wrap$1 solid-js/store/dist/store.js:7",
+      "selfMs": 11.73
+     },
+     {
+      "name": "patSig src/views/playlistDraw.ts:81",
+      "selfMs": 11.62
+     },
+     {
+      "name": "fillRect",
+      "selfMs": 11.13
+     }
+    ],
+    "files": [
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 214.26
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 185.9
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 136.41
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 82.84
+     },
+     {
+      "name": "src/lib/applyOps.ts",
+      "selfMs": 82.62
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 55.94
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 47.85
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 41.22
+     },
+     {
+      "name": "src/lib/projectEq.ts",
+      "selfMs": 39.19
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 16.76
+     }
+    ],
+    "owners": [
+     {
+      "name": "mock backend",
+      "selfMs": 336.07
+     },
+     {
+      "name": "app",
+      "selfMs": 248.18
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 185.9
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 184.27
+     },
+     {
+      "name": "gc",
+      "selfMs": 47.85
+     }
+    ]
+   }
+  },
+  "note_nudge": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "nudgeKey.task.median": "ms",
+    "nudgeKey.task.p95": "ms",
+    "nudgeKey.task.max": "ms",
+    "nudgeKey.frame.median": "ms",
+    "nudgeKey.frame.p95": "ms",
+    "nudgeKey.frame.max": "ms",
+    "nudgeKey.settled.median": "ms",
+    "nudgeKey.settled.p95": "ms",
+    "nudgeKey.settled.max": "ms",
+    "nudgeKey.timeouts": "count"
+   },
+   "extra": {
+    "notes": 2000,
+    "movedByFirst": 2000
+   },
+   "hot": {
+    "busyMs": 1860.93,
+    "functions": [
+     {
+      "name": "applyAll src/lib/applyOps.ts:254",
+      "selfMs": 277.02
+     },
+     {
+      "name": "dto src/api/mock.ts:213",
+      "selfMs": 260.25
+     },
+     {
+      "name": "projectEq src/lib/projectEq.ts:10",
+      "selfMs": 120.4
+     },
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 119.42
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 94.91
+     },
+     {
+      "name": "applyPatternOp src/lib/pattern.ts:119",
+      "selfMs": 58.62
+     },
+     {
+      "name": "wrap$1 solid-js/store/dist/store.js:7",
+      "selfMs": 58.2
+     },
+     {
+      "name": "rect",
+      "selfMs": 51.81
+     },
+     {
+      "name": "guessIcon src/ui/instIcons.tsx:63",
+      "selfMs": 47.05
+     },
+     {
+      "name": "toDataURL",
+      "selfMs": 42.68
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 42.18
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 39.63
+     },
+     {
+      "name": "fillRect",
+      "selfMs": 38.04
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 34.79
+     },
+     {
+      "name": "patSig src/views/playlistDraw.ts:81",
+      "selfMs": 31.14
+     }
+    ],
+    "files": [
+     {
+      "name": "src/lib/applyOps.ts",
+      "selfMs": 277.02
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 271.97
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 263.02
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 225.15
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 140.07
+     },
+     {
+      "name": "src/lib/projectEq.ts",
+      "selfMs": 138.37
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 94.91
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 94.8
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 93.81
+     },
+     {
+      "name": "src/lib/pattern.ts",
+      "selfMs": 63.03
+     }
+    ],
+    "owners": [
+     {
+      "name": "mock backend",
+      "selfMs": 678.4
+     },
+     {
+      "name": "app",
+      "selfMs": 494.11
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 368.35
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 225.15
+     },
+     {
+      "name": "gc",
+      "selfMs": 94.91
+     }
+    ]
+   }
+  },
+  "session_end": {
+   "units": {
+    "heapAfterGcMiB": "MiB",
+    "domNodes": "count",
+    "jsEventListeners": "count",
+    "documents": "count",
+    "detachedNodes": "count"
+   }
+  },
+  "console_errors": []
+ },
+ "metrics": {
+  "session_start.heapAfterGcMiB": {
+   "unit": "MiB",
+   "runs": [
+    24.55,
+    24.55,
+    24.55
+   ],
+   "median": 24.55,
+   "min": 24.55,
+   "max": 24.55,
+   "spread": 0
+  },
+  "session_start.domNodes": {
+   "unit": "count",
+   "runs": [
+    3715,
+    3715,
+    3715
+   ],
+   "median": 3715,
+   "min": 3715,
+   "max": 3715,
+   "spread": 0
+  },
+  "session_start.jsEventListeners": {
+   "unit": "count",
+   "runs": [
+    130,
+    130,
+    130
+   ],
+   "median": 130,
+   "min": 130,
+   "max": 130,
+   "spread": 0
+  },
+  "session_start.documents": {
+   "unit": "count",
+   "runs": [
+    3,
+    3,
+    3
+   ],
+   "median": 3,
+   "min": 3,
+   "max": 3,
+   "spread": 0
+  },
+  "session_start.detachedNodes": {
+   "unit": "count",
+   "runs": [
+    1,
+    1,
+    1
+   ],
+   "median": 1,
+   "min": 1,
+   "max": 1,
+   "spread": 0
+  },
+  "note_delete.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "note_delete.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    50.1,
+    66.7,
+    50
+   ],
+   "median": 50.1,
+   "min": 50,
+   "max": 66.7,
+   "spread": 0.33
+  },
+  "note_delete.frame.max": {
+   "unit": "ms",
+   "runs": [
+    83.4,
+    66.7,
+    83.3
+   ],
+   "median": 83.3,
+   "min": 66.7,
+   "max": 83.4,
+   "spread": 0.2
+  },
+  "note_delete.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    16,
+    18,
+    15
+   ],
+   "median": 16,
+   "min": 15,
+   "max": 18,
+   "spread": 0.19
+  },
+  "note_delete.longTasks": {
+   "unit": "count",
+   "runs": [
+    2,
+    2,
+    1
+   ],
+   "median": 2,
+   "min": 1,
+   "max": 2,
+   "spread": 0.5
+  },
+  "note_delete.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    117,
+    103,
+    57
+   ],
+   "median": 103,
+   "min": 57,
+   "max": 117,
+   "spread": 0.58
+  },
+  "note_delete.loaf": {
+   "unit": "count",
+   "runs": [
+    6,
+    6,
+    6
+   ],
+   "median": 6,
+   "min": 6,
+   "max": 6,
+   "spread": 0
+  },
+  "note_delete.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    444.83,
+    397.16,
+    426.79
+   ],
+   "median": 426.79,
+   "min": 397.16,
+   "max": 444.83,
+   "spread": 0.11
+  },
+  "note_delete.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    8.25,
+    9.17,
+    7.44
+   ],
+   "median": 8.25,
+   "min": 7.44,
+   "max": 9.17,
+   "spread": 0.21
+  },
+  "note_delete.styleMs": {
+   "unit": "ms",
+   "runs": [
+    2.91,
+    3.21,
+    2.65
+   ],
+   "median": 2.91,
+   "min": 2.65,
+   "max": 3.21,
+   "spread": 0.19
+  },
+  "note_delete.taskMs": {
+   "unit": "ms",
+   "runs": [
+    1136.13,
+    1065.97,
+    1086.08
+   ],
+   "median": 1086.08,
+   "min": 1065.97,
+   "max": 1136.13,
+   "spread": 0.06
+  },
+  "note_delete.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    74.14,
+    66.19,
+    71.13
+   ],
+   "median": 71.13,
+   "min": 66.19,
+   "max": 74.14,
+   "spread": 0.11
+  },
+  "note_delete.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    65.45,
+    68.28,
+    62.75
+   ],
+   "median": 65.45,
+   "min": 62.75,
+   "max": 68.28,
+   "spread": 0.08
+  },
+  "note_delete.deleteKey.task.median": {
+   "unit": "ms",
+   "runs": [
+    21.2,
+    21.1,
+    22.65
+   ],
+   "median": 21.2,
+   "min": 21.1,
+   "max": 22.65,
+   "spread": 0.07
+  },
+  "note_delete.deleteKey.task.p95": {
+   "unit": "ms",
+   "runs": [
+    27.9,
+    24.8,
+    31.3
+   ],
+   "median": 27.9,
+   "min": 24.8,
+   "max": 31.3,
+   "spread": 0.23
+  },
+  "note_delete.deleteKey.task.max": {
+   "unit": "ms",
+   "runs": [
+    27.9,
+    24.8,
+    31.3
+   ],
+   "median": 27.9,
+   "min": 24.8,
+   "max": 31.3,
+   "spread": 0.23
+  },
+  "note_delete.deleteKey.frame.median": {
+   "unit": "ms",
+   "runs": [
+    52.2,
+    51,
+    52.3
+   ],
+   "median": 52.2,
+   "min": 51,
+   "max": 52.3,
+   "spread": 0.02
+  },
+  "note_delete.deleteKey.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    64.3,
+    56.7,
+    60.8
+   ],
+   "median": 60.8,
+   "min": 56.7,
+   "max": 64.3,
+   "spread": 0.12
+  },
+  "note_delete.deleteKey.frame.max": {
+   "unit": "ms",
+   "runs": [
+    64.3,
+    56.7,
+    60.8
+   ],
+   "median": 60.8,
+   "min": 56.7,
+   "max": 64.3,
+   "spread": 0.12
+  },
+  "note_delete.deleteKey.settled.median": {
+   "unit": "ms",
+   "runs": [
+    52.85,
+    51.75,
+    53.05
+   ],
+   "median": 52.85,
+   "min": 51.75,
+   "max": 53.05,
+   "spread": 0.02
+  },
+  "note_delete.deleteKey.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    65.4,
+    57.4,
+    61.6
+   ],
+   "median": 61.6,
+   "min": 57.4,
+   "max": 65.4,
+   "spread": 0.13
+  },
+  "note_delete.deleteKey.settled.max": {
+   "unit": "ms",
+   "runs": [
+    65.4,
+    57.4,
+    61.6
+   ],
+   "median": 61.6,
+   "min": 57.4,
+   "max": 65.4,
+   "spread": 0.13
+  },
+  "note_delete.undoKey.task.median": {
+   "unit": "ms",
+   "runs": [
+    70.4,
+    80.7,
+    69.25
+   ],
+   "median": 70.4,
+   "min": 69.25,
+   "max": 80.7,
+   "spread": 0.16
+  },
+  "note_delete.undoKey.task.p95": {
+   "unit": "ms",
+   "runs": [
+    102.1,
+    100.9,
+    97.2
+   ],
+   "median": 100.9,
+   "min": 97.2,
+   "max": 102.1,
+   "spread": 0.05
+  },
+  "note_delete.undoKey.task.max": {
+   "unit": "ms",
+   "runs": [
+    102.1,
+    100.9,
+    97.2
+   ],
+   "median": 100.9,
+   "min": 97.2,
+   "max": 102.1,
+   "spread": 0.05
+  },
+  "note_delete.undoKey.frame.median": {
+   "unit": "ms",
+   "runs": [
+    70.55,
+    80.95,
+    69.35
+   ],
+   "median": 70.55,
+   "min": 69.35,
+   "max": 80.95,
+   "spread": 0.16
+  },
+  "note_delete.undoKey.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    102.2,
+    101.1,
+    97.4
+   ],
+   "median": 101.1,
+   "min": 97.4,
+   "max": 102.2,
+   "spread": 0.05
+  },
+  "note_delete.undoKey.frame.max": {
+   "unit": "ms",
+   "runs": [
+    102.2,
+    101.1,
+    97.4
+   ],
+   "median": 101.1,
+   "min": 97.4,
+   "max": 102.2,
+   "spread": 0.05
+  },
+  "note_delete.undoKey.settled.median": {
+   "unit": "ms",
+   "runs": [
+    79.7,
+    88.45,
+    80.15
+   ],
+   "median": 80.15,
+   "min": 79.7,
+   "max": 88.45,
+   "spread": 0.11
+  },
+  "note_delete.undoKey.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    166.7,
+    117.5,
+    174.7
+   ],
+   "median": 166.7,
+   "min": 117.5,
+   "max": 174.7,
+   "spread": 0.34
+  },
+  "note_delete.undoKey.settled.max": {
+   "unit": "ms",
+   "runs": [
+    166.7,
+    117.5,
+    174.7
+   ],
+   "median": 166.7,
+   "min": 117.5,
+   "max": 174.7,
+   "spread": 0.34
+  },
+  "note_delete.deleteKey.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "note_delete.undoKey.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "note_nudge.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "note_nudge.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    33.3,
+    33.3
+   ],
+   "median": 33.3,
+   "min": 16.8,
+   "max": 33.3,
+   "spread": 0.5
+  },
+  "note_nudge.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.4,
+    33.4,
+    33.4
+   ],
+   "median": 33.4,
+   "min": 33.4,
+   "max": 33.4,
+   "spread": 0
+  },
+  "note_nudge.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    3,
+    9,
+    7
+   ],
+   "median": 7,
+   "min": 3,
+   "max": 9,
+   "spread": 0.86
+  },
+  "note_nudge.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "note_nudge.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "note_nudge.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    2,
+    1
+   ],
+   "median": 1,
+   "min": 0,
+   "max": 2,
+   "spread": 2
+  },
+  "note_nudge.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    800.74,
+    1019.46,
+    955.61
+   ],
+   "median": 955.61,
+   "min": 800.74,
+   "max": 1019.46,
+   "spread": 0.23
+  },
+  "note_nudge.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    9.1,
+    10.57,
+    10.21
+   ],
+   "median": 10.21,
+   "min": 9.1,
+   "max": 10.57,
+   "spread": 0.14
+  },
+  "note_nudge.styleMs": {
+   "unit": "ms",
+   "runs": [
+    5.21,
+    5.64,
+    5.69
+   ],
+   "median": 5.64,
+   "min": 5.21,
+   "max": 5.69,
+   "spread": 0.09
+  },
+  "note_nudge.taskMs": {
+   "unit": "ms",
+   "runs": [
+    1623.52,
+    1987.43,
+    1919.02
+   ],
+   "median": 1919.02,
+   "min": 1623.52,
+   "max": 1987.43,
+   "spread": 0.19
+  },
+  "note_nudge.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    40.04,
+    50.97,
+    47.78
+   ],
+   "median": 47.78,
+   "min": 40.04,
+   "max": 50.97,
+   "spread": 0.23
+  },
+  "note_nudge.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    66,
+    61.04,
+    64.23
+   ],
+   "median": 64.23,
+   "min": 61.04,
+   "max": 66,
+   "spread": 0.08
+  },
+  "note_nudge.nudgeKey.task.median": {
+   "unit": "ms",
+   "runs": [
+    31.5,
+    34.6,
+    32.1
+   ],
+   "median": 32.1,
+   "min": 31.5,
+   "max": 34.6,
+   "spread": 0.1
+  },
+  "note_nudge.nudgeKey.task.p95": {
+   "unit": "ms",
+   "runs": [
+    39.8,
+    45.8,
+    45.4
+   ],
+   "median": 45.4,
+   "min": 39.8,
+   "max": 45.8,
+   "spread": 0.13
+  },
+  "note_nudge.nudgeKey.task.max": {
+   "unit": "ms",
+   "runs": [
+    51.8,
+    50.7,
+    46.1
+   ],
+   "median": 50.7,
+   "min": 46.1,
+   "max": 51.8,
+   "spread": 0.11
+  },
+  "note_nudge.nudgeKey.frame.median": {
+   "unit": "ms",
+   "runs": [
+    61.85,
+    69.4,
+    67.65
+   ],
+   "median": 67.65,
+   "min": 61.85,
+   "max": 69.4,
+   "spread": 0.11
+  },
+  "note_nudge.nudgeKey.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    74.9,
+    84.6,
+    83.7
+   ],
+   "median": 83.7,
+   "min": 74.9,
+   "max": 84.6,
+   "spread": 0.12
+  },
+  "note_nudge.nudgeKey.frame.max": {
+   "unit": "ms",
+   "runs": [
+    78.9,
+    85,
+    88.3
+   ],
+   "median": 85,
+   "min": 78.9,
+   "max": 88.3,
+   "spread": 0.11
+  },
+  "note_nudge.nudgeKey.settled.median": {
+   "unit": "ms",
+   "runs": [
+    75.15,
+    91.75,
+    92
+   ],
+   "median": 91.75,
+   "min": 75.15,
+   "max": 92,
+   "spread": 0.18
+  },
+  "note_nudge.nudgeKey.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    89.3,
+    104.3,
+    116.1
+   ],
+   "median": 104.3,
+   "min": 89.3,
+   "max": 116.1,
+   "spread": 0.26
+  },
+  "note_nudge.nudgeKey.settled.max": {
+   "unit": "ms",
+   "runs": [
+    103.2,
+    108,
+    124.9
+   ],
+   "median": 108,
+   "min": 103.2,
+   "max": 124.9,
+   "spread": 0.2
+  },
+  "note_nudge.nudgeKey.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "session_end.heapAfterGcMiB": {
+   "unit": "MiB",
+   "runs": [
+    48.73,
+    48.73,
+    48.72
+   ],
+   "median": 48.73,
+   "min": 48.72,
+   "max": 48.73,
+   "spread": 0
+  },
+  "session_end.domNodes": {
+   "unit": "count",
+   "runs": [
+    3827,
+    3827,
+    3827
+   ],
+   "median": 3827,
+   "min": 3827,
+   "max": 3827,
+   "spread": 0
+  },
+  "session_end.jsEventListeners": {
+   "unit": "count",
+   "runs": [
+    143,
+    143,
+    143
+   ],
+   "median": 143,
+   "min": 143,
+   "max": 143,
+   "spread": 0
+  },
+  "session_end.documents": {
+   "unit": "count",
+   "runs": [
+    3,
+    3,
+    3
+   ],
+   "median": 3,
+   "min": 3,
+   "max": 3,
+   "spread": 0
+  },
+  "session_end.detachedNodes": {
+   "unit": "count",
+   "runs": [
+    13,
+    13,
+    13
+   ],
+   "median": 13,
+   "min": 13,
+   "max": 13,
+   "spread": 0
+  },
+  "bundle.total.raw": {
+   "unit": "bytes",
+   "median": 1811648,
+   "spread": 0,
+   "runs": [
+    1811648
+   ]
+  },
+  "bundle.total.gzip": {
+   "unit": "bytes",
+   "median": 544371,
+   "spread": 0,
+   "runs": [
+    544371
+   ]
+  },
+  "bundle.js.gzip": {
+   "unit": "bytes",
+   "median": 517682,
+   "spread": 0,
+   "runs": [
+    517682
+   ]
+  }
+ },
+ "noise": {
+  "runs": 3,
+  "medianSpread": 0.13,
+  "p90Spread": 0.33,
+  "note": "relative (max-min)/median between whole-suite runs, over ms metrics >= 1 ms"
+ }
+}

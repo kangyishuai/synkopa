@@ -5,7 +5,7 @@
 // id) and for the engine → UI state push, which has no gesture at all. It never writes the UI
 // stores directly, so the harness runs unchanged when the store API changes (Solid 2 drops path
 // setters): only the names it reads (S, U, A, P, geom, be, replaceState) must survive.
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { VIEWPORT } from './browser.mjs';
@@ -24,8 +24,8 @@ function put(m, units, prefix, d, unit = 'ms') {
 }
 
 export class App {
-  constructor(browser, { throttle = 1, profile = false, maps = null, log = () => {} }) {
-    this.browser = browser; this.throttle = throttle; this.profiling = profile; this.maps = maps; this.log = log;
+  constructor(browser, { throttle = 1, profile = false, maps = null, log = () => {}, dumpProfiles = null }) {
+    this.browser = browser; this.throttle = throttle; this.profiling = profile; this.maps = maps; this.log = log; this.dumpProfiles = dumpProfiles;
     this.errors = [];
   }
 
@@ -130,7 +130,13 @@ export class App {
     await this.frames(2); // the last events' frame probes resolve
     const rec = await this.ev(() => window.__h.stop());
     const wall = Date.now() - t0;
-    const hot = this.profiling ? topSelf((await this.cdp.send('Profiler.stop')).profile, this.maps) : undefined;
+    let hot;
+    if (this.profiling) {
+      const { profile } = await this.cdp.send('Profiler.stop');
+      // the raw profile (for a call-tree look in DevTools or a script): --dump-profiles DIR
+      if (this.dumpProfiles) { mkdirSync(this.dumpProfiles, { recursive: true }); writeFileSync(join(this.dumpProfiles, `${name}.cpuprofile`), JSON.stringify(profile)); }
+      hot = topSelf(profile, this.maps);
+    }
     const m1 = await metrics(this.cdp);
     const d = k => (m1[k] - m0[k]) * 1000;
 
@@ -153,6 +159,9 @@ export class App {
     if (nInteractions) M['scriptMsPerInteraction'] = r2(d('ScriptDuration') / nInteractions);
     if (ret.perSecond) M['scriptMsPerSecond'] = r2(d('ScriptDuration') / (wall / 1000));
     M['heapMiB'] = r2(m1.JSHeapUsedSize * MiB); U['heapMiB'] = 'MiB';
+    // what of it the page retains (heapMiB minus this is garbage not yet collected when the scenario ended)
+    await this.gc();
+    M['heapAfterGcMiB'] = r2((await this.cdp.send('Runtime.getHeapUsage')).usedSize * MiB); U['heapAfterGcMiB'] = 'MiB';
     for (const [k, xs] of Object.entries(ret.samples ?? {})) put(M, U, k, dist(xs));
     for (const [k, v] of Object.entries(ret.values ?? {})) { M[k] = v.v; U[k] = v.unit; }
     const ln = primary && M[`${primary}.task.median`] != null ? `${primary}: task ${M[`${primary}.task.median`]} / frame ${M[`${primary}.frame.median`]} ms median (${M[`${primary}.count`]}), ` : '';
@@ -306,6 +315,84 @@ export class App {
     r.extra = { ...r.extra, notes: info.notes };
     if (!(r.extra?.changedByFirstDrag > info.notes / 2)) r.error = (r.error ?? '') + ` only ${r.extra?.changedByFirstDrag} of ${info.notes} notes moved: the selection did not take`;
     return r;
+  }
+
+  // ---------------------------------------------------------------- piano roll: keyboard edits of 2000 selected notes
+  /**
+   * Two scenarios on the 2000-note pattern, all notes selected with Ctrl+A in the focused roll:
+   * `note_delete` (Delete, then Ctrl+Z brings them back; `deleteKey.*` is the Delete, `undoKey.*`
+   * the undo) and `note_nudge` (Shift+→ / Shift+← alternating: every note one grid step, an edit
+   * each). Per key: the keydown's dispatch (`task`), its first frame (`frame`) and the time until
+   * the engine's reply has been applied and a frame produced (`settled`).
+   */
+  async noteEdits(warm, nDelete, nNudge) {
+    const info = await this.ev(async () => {
+      const { S, P } = window.__perf;
+      const pt = S.project.patterns.reduce((a, p) => (p.notes.length > a.notes.length ? p : a));
+      P.setCurPattern(pt.id, true); P.openRoll(pt.notes[0].ch);
+      for (let i = 0; i < 4; i++) await window.__h.afterFrame();
+      return { id: pt.id, notes: pt.notes.length };
+    });
+    const kb = this.page.keyboard;
+    const count = () => this.ev(id => window.__perf.S.project.patterns.find(p => p.id === id).notes.length, info.id);
+    const selectAll = async () => { await this.page.focus('.rollwin'); await kb.press('Control+a'); await this.frame(); };
+    // one key: its dispatch, its first frame, and the engine's reply applied + a frame
+    const key = async k => {
+      const rev = await this.ev(() => window.__perf.S.revision);
+      await kb.press(k);
+      return this.ev(async rev => {
+        const H = window.__h, S = window.__perf.S, e = H.last('keydown');
+        let t = await H.afterFrame(), n = 0;
+        while (S.revision <= rev && n++ < 90) t = await H.afterFrame();
+        return { task: e?.task ?? null, frame: e?.frame ?? null, settled: e ? t - e.t0 : null, timedOut: S.revision <= rev };
+      }, rev);
+    };
+    const series = () => ({ task: [], frame: [], settled: [], timeouts: 0 });
+    const push = (s, r) => { if (r.task != null) s.task.push(r.task); if (r.frame != null) s.frame.push(r.frame); if (r.settled != null && !r.timedOut) s.settled.push(r.settled); if (r.timedOut) s.timeouts++; };
+    const samples = (name, s) => ({ [`${name}.task`]: s.task, [`${name}.frame`]: s.frame, [`${name}.settled`]: s.settled });
+    const out = {};
+    const probe = () => this.ev(() => window.__h.start(['keydown']));
+
+    // Delete / undo
+    await probe();
+    for (let i = 0; i < warm; i++) { await selectAll(); await key('Delete'); await key('Control+z'); }
+    await this.ev(() => window.__h.stop());
+    let deleted = null, restored = null;
+    out.note_delete = await this.measure('note_delete', ['keydown'], null, async () => {
+      const del = series(), undo = series();
+      for (let i = 0; i < nDelete; i++) {
+        await selectAll();
+        push(del, await key('Delete'));
+        if (i === 0) deleted = info.notes - (await count());
+        push(undo, await key('Control+z'));
+        if (i === 0) restored = await count();
+      }
+      return { samples: { ...samples('deleteKey', del), ...samples('undoKey', undo) }, interactions: nDelete,
+        values: { 'deleteKey.timeouts': { v: del.timeouts, unit: 'count' }, 'undoKey.timeouts': { v: undo.timeouts, unit: 'count' } } };
+    });
+    out.note_delete.extra = { notes: info.notes, deletedByFirst: deleted, afterUndo: restored };
+    if (!(deleted > info.notes / 2) || restored !== info.notes) out.note_delete.error = (out.note_delete.error ?? '') + ` Delete removed ${deleted} of ${info.notes} notes, undo left ${restored}`;
+
+    // Shift+→ / Shift+← nudges
+    await selectAll();
+    await probe();
+    for (let i = 0; i < warm * 2; i++) await key(i % 2 ? 'Shift+ArrowLeft' : 'Shift+ArrowRight');
+    await this.ev(() => window.__h.stop());
+    const steps0 = await this.ev(id => window.__perf.S.project.patterns.find(p => p.id === id).notes.map(x => x.step), info.id);
+    let moved = null;
+    out.note_nudge = await this.measure('note_nudge', ['keydown'], null, async () => {
+      const s = series();
+      for (let i = 0; i < nNudge; i++) {
+        push(s, await key(i % 2 ? 'Shift+ArrowLeft' : 'Shift+ArrowRight'));
+        if (i === 0) moved = diffCount(steps0, await this.ev(id => window.__perf.S.project.patterns.find(p => p.id === id).notes.map(x => x.step), info.id));
+      }
+      return { samples: samples('nudgeKey', s), interactions: nNudge, values: { 'nudgeKey.timeouts': { v: s.timeouts, unit: 'count' } } };
+    });
+    out.note_nudge.extra = { notes: info.notes, movedByFirst: moved };
+    if (!(moved > info.notes / 2)) out.note_nudge.error = (out.note_nudge.error ?? '') + ` the first nudge moved ${moved} of ${info.notes} notes`;
+    await this.undoN(2 * warm + nNudge);
+    await this.ev(() => window.__perf.P.closeRoll()); await this.frames(2);
+    return out;
   }
 
   // ---------------------------------------------------------------- mixer fader

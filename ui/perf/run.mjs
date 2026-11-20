@@ -14,10 +14,11 @@
 //     --no-profile         skip the CPU-profile pass (hot spots, on an unminified build)
 //     --no-build           reuse perf/.cache builds
 //     --quick              fewer iterations (smoke test of the harness, not for comparisons)
-//     --only a,b           only these scenarios (boot, replace, clipDrag, noteDrag, fader, fxParam,
+//     --only a,b           only these scenarios (boot, replace, clipDrag, noteDrag, noteEdit, fader, fxParam,
 //                          playlistNav, windows, playback)
 //     --gpu off            software GL (SwiftShader) instead of the real GPU
 //     --headed             show the browser
+//     --dump-profiles DIR  also write each scenario's raw CPU profile (profile pass) to DIR
 //
 // It needs `window.__perf` (src/perfHook.ts, bundled only with VITE_PERF=1) and the mock's
 // `window.__waveFixture` hook. All app access goes through lib/app.mjs, the one place to adapt
@@ -43,6 +44,7 @@ const opt = {
   mode: arg('mode', 'prod'), runs: +arg('runs', 3), label: arg('label', 'run'), throttle: +arg('throttle', 1),
   profile: !arg('no-profile', false), gpu: arg('gpu', 'on') !== 'off', build: !arg('no-build', false), quick: !!arg('quick', false), headed: !!arg('headed', false),
   only: arg('only', '') ? String(arg('only', '')).split(',') : null,
+  dumpProfiles: arg('dump-profiles', null),
 };
 const out = resolve(uiDir, arg('out', `perf/results/${opt.label}.json`));
 const cache = join(here, '.cache');
@@ -85,7 +87,7 @@ const results = { meta, bundle: opt.mode === 'prod' ? bundleSizes(distShip) : nu
 async function suite(url, { profile = false, maps = null } = {}) {
   const { browser, executablePath } = await launch({ headed: opt.headed, gpu: opt.gpu });
   meta.browser.chromium = browser.version(); meta.browser.executable = executablePath.split(/[\\/]/).slice(-3).join('/');
-  const app = new App(browser, { throttle: opt.throttle, profile, maps, log });
+  const app = new App(browser, { throttle: opt.throttle, profile, maps, log, dumpProfiles: profile && opt.dumpProfiles ? resolve(opt.dumpProfiles) : null });
   const want = name => !opt.only || opt.only.includes(name);
   const res = {};
   try {
@@ -100,6 +102,7 @@ async function suite(url, { profile = false, maps = null } = {}) {
     // drags: (warm-up moves, measured drags, moves per drag)
     if (want('clipDrag')) res.clip_drag = await app.clipDrag(15, N(5, 2), N(30, 15));
     if (want('noteDrag')) res.note_drag = await app.noteDrag(8, N(4, 2), N(15, 8));
+    if (want('noteEdit')) Object.assign(res, await app.noteEdits(1, N(6, 2), N(20, 6)));
     if (want('fader')) res.fader_drag = await app.faderDrag(15, N(5, 2), N(30, 15));
     if (want('fxParam')) res.fx_param = await app.fxParamDrag(15, N(5, 2), N(30, 15));
     if (want('playlistNav')) Object.assign(res, await app.playlistNav(N(10, 4), N(60, 16)));
