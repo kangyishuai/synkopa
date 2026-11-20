@@ -59,6 +59,8 @@ export interface RollCtx {
   hit(step: number, key: number): number;
   /** True when `x` is on note `i`'s drag-right edge (resize). */
   edgeHit(i: number, x: number): boolean;
+  /** Over empty grid: the channel's note on row `key` whose end is just left of `x`, or −1. */
+  edgeAfter(key: number, x: number): number;
   /** Index of another channel's note (a ghost) under (step, key), or −1. */
   ghostAt(step: number, key: number): number;
   // the active pointer tool

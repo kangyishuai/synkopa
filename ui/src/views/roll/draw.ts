@@ -89,6 +89,8 @@ const dragIdx = (ctx: RollCtx, i: number, ownChannelToo: boolean) =>
     : [i];
 
 const noteToolDown = (ctx: RollCtx, e: RollPtr, i: number, paint: boolean) => {
+  // just past a note's end (empty grid): its length handle, not a new note
+  if (i < 0) i = ctx.edgeAfter(e.p.key, e.p.x);
   if (i >= 0) {
     const n = ctx.notes()[i];
     ctx.setLastLen(n.len, !!n.trig);
@@ -118,7 +120,7 @@ const noteToolDown = (ctx: RollCtx, e: RollPtr, i: number, paint: boolean) => {
 
 /** Over a note: grab, on its right edge resize; empty grid: the copy cursor (a click writes). */
 const noteToolCursor = (ctx: RollCtx, p: Pt, _m: Mods, i: number) =>
-  i >= 0 ? (ctx.edgeHit(i, p.x) ? 'ew-resize' : 'grab') : 'copy';
+  i >= 0 ? (ctx.edgeHit(i, p.x) ? 'ew-resize' : 'grab') : ctx.edgeAfter(p.key, p.x) >= 0 ? 'ew-resize' : 'copy';
 
 /** Draw (P): place and shape notes. */
 export const drawTool: RollTool = {
