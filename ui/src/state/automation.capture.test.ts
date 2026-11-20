@@ -170,6 +170,50 @@ describe('a control tweak routes by the record filter', () => {
     ui.setU('playing', false);
   });
 
+  it('capture lands as one undo step: undo restores envelope and clip together', async () => {
+    const ch = store.S.project.channels?.[0]?.id ?? 1;
+    const target = chanVol(ch);
+    await arm();
+    A.setBeatSourceForTests(() => 2);
+    const t = A.autoTweak(target, 'Test', () => null);
+    t.move(0.4);
+    t.end();
+    await edit.settled();
+    const autoId = (await mock.getState()).project.automations?.at(-1)?.id;
+    const hadClip = async () => (await mock.getState()).project.clips.some(c => c.kind === 'auto' && c.ref === autoId);
+    expect(await hadClip(), 'the clip exists after capture').toBe(true);
+
+    await mock.undo();
+    store.replaceState(await mock.getState());
+    expect(store.S.project.automations?.some(a => a.id === autoId), 'one undo removes the envelope').toBe(false);
+    expect(await hadClip(), 'one undo removes the clip with it (same history step)').toBe(false);
+
+    await mock.redo();
+    store.replaceState(await mock.getState());
+    const pts = store.S.project.automations?.find(a => a.id === autoId)?.points ?? [];
+    expect(pts.length, 'one redo brings the envelope back with its points').toBeGreaterThan(0);
+    expect(await hadClip(), 'the clip comes back with it').toBe(true);
+  });
+
+  it('override then stop: the mock clears overrides like the engine', async () => {
+    const ch = store.S.project.channels?.[0]?.id ?? 1;
+    const target = chanVol(ch);
+    const r = lib.createAutomationOps(store.S.project, null, target, 'Test', '#e0a44a', 0, 8, () => 800);
+    await mock.applyOps(r.ops);
+    store.replaceState(await mock.getState());
+    ui.setU('playing', true);
+    const t = A.autoTweak(target, 'Test', v => lib.writeTargetOps(unwrap(store.S.project), target, v));
+    t.move(0.2);
+    t.end();
+    await edit.settled();
+    expect((await mock.getState()).overriddenAutos, 'overridden while playing').toContain(800);
+    ui.setU('playing', false);
+    await mock.transportStop();
+    await flush();
+    expect((await mock.getState()).overriddenAutos, 'stop re-arms every automation').toEqual([]);
+    expect(store.S.overriddenAutos, 'the UI agrees').toEqual([]);
+  });
+
   it('capture picks the clip under the playhead when a target has several', async () => {
     const ch = store.S.project.channels?.[0]?.id ?? 1;
     const target = chanVol(ch);

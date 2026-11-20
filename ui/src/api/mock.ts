@@ -365,6 +365,7 @@ export class MockBackend implements Backend {
   async transportStop() {
     this.finishRec();
     this.tr = { ...this.tr, playing: false };
+    this.overriddenAutos.clear(); // like the engine: a stopped transport re-arms every automation
     this.changedTransport();
   }
   /** Like the engine's Silence: the preview stops (the mock renders no tails to cut). */
@@ -1614,6 +1615,7 @@ export class MockBackend implements Backend {
     this.patPlay = null;
     // ids start over in a new project: the audio of the previous one must not answer to them
     this.srcMeta.clear(); this.recPeaks.clear();
+    this.overriddenAutos.clear(); // overrides of the previous project are gone with it
     this.p = p; this.undoStack = []; this.redoStack = []; this.path = path;
     this.tr = { ...this.tr, playing: false }; this.revision++; this.savedRev = this.revision;
     this.emit('state', this.dto());
