@@ -203,3 +203,17 @@ fn the_cli_writes_and_lists_slide_notes_and_refuses_a_sliding_trigger() {
     assert!(f.parts.iter().flat_map(|p| &p.notes).all(|n| n.key != 48));
     std::fs::remove_dir_all(&d).ok();
 }
+
+#[test]
+fn a_channel_joins_and_leaves_a_filter_group_from_the_cli() {
+    let doc = Files.create("sketch").unwrap();
+    let chans = call(&*doc, "channels", json!({}));
+    let ch = chans.as_array().unwrap()[0]["id"].as_u64().unwrap();
+    let r = call(&*doc, "channels", json!({ "ch": ch, "group": " Drums " }));
+    let row = r["channels"].as_array().unwrap().iter().find(|c| c["id"] == ch).unwrap().clone();
+    assert_eq!(row["group"], "Drums");
+    let r = call(&*doc, "channels", json!({ "ch": ch, "group": "" }));
+    let row = r["channels"].as_array().unwrap().iter().find(|c| c["id"] == ch).unwrap().clone();
+    assert_eq!(row["group"], Value::Null);
+    assert!(doc.call("channels", &json!({ "ch": ch, "group": "x".repeat(41) }), None).unwrap_err().contains("40 characters"));
+}

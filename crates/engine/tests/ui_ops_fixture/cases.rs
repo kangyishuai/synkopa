@@ -326,6 +326,22 @@ pub fn cases() -> Vec<Case> {
     ));
     c.push((
         "main",
+        "putChannel puts a channel in a filter group",
+        vec![Op::PutChannel {
+            channel: Channel { group: Some("Drums".into()), ..chan(Channel::sampler(33, "Kick", "#d9678f", 10)) },
+            index: None,
+        }],
+    ));
+    c.push((
+        "main",
+        "putChannel refuses a blank or too long group",
+        vec![Op::PutChannel {
+            channel: Channel { group: Some("  ".into()), ..chan(Channel::sampler(33, "Kick", "#d9678f", 10)) },
+            index: None,
+        }],
+    ));
+    c.push((
+        "main",
         "putChannel refuses a pan out of range",
         vec![Op::PutChannel { channel: Channel { pan: 1.5, ..chan(Channel::sampler(33, "Kick", "#d9678f", 10)) }, index: None }],
     ));

@@ -2,6 +2,7 @@
 // windows, pattern and channel edits, auditions and the pattern loop preview.
 // Every edit is an op (putPattern / putChannel / removeChannel) and one undo step.
 import { createEffect, createRoot, createSignal, on } from 'solid-js';
+import { inFilter, liveFilter, type RackFilter } from '../lib/rackGroups';
 import { topFloating } from './winOrder';
 import { t, tName } from '../lib/i18n';
 import { newSynthChannel } from '../lib/synth';
@@ -388,8 +389,21 @@ export function removeBar(pt = curPat()) {
 
 // ---------------------------------------------------------------- channels
 
+/** The Channel Rack's group filter (FL's filter groups): every channel, the unsorted ones (''), or one group. */
+const [rackFilterRaw, setRackFilter] = createSignal<RackFilter>(null);
+/** The filter in force: one whose last channel left falls back to every channel. */
+export const rackFilter = () => liveFilter(channels(), rackFilterRaw());
+export { setRackFilter };
+/** The channels the rack shows. */
+export const rackChannels = () => { const f = rackFilter(); return f == null ? channels() : channels().filter(c => inFilter(c, f)); };
+
 export function chanOp(c: Channel, patch: Partial<Channel> = {}, index?: number): Op {
-  return { op: 'putChannel', channel: { ...plain(c), ...patch } as Channel, ...(index != null ? { index } : {}) };
+  const ch = { ...plain(c), ...patch } as Channel;
+  // a channel added while the rack shows one group joins it (FL)
+  const f = rackFilter();
+  if (f && ch.group === undefined && !channels().some(x => x.id === ch.id)) ch.group = f;
+  if (!ch.group) delete ch.group;
+  return { op: 'putChannel', channel: ch, ...(index != null ? { index } : {}) };
 }
 export function setChannel(c: Channel, patch: Partial<Channel>, label: string) { commit([chanOp(c, patch)], label); }
 export function toggleChanMute(c: Channel) { setChannel(c, c.mute ? { mute: false } : { mute: true, solo: false }, t('b.st.muteCh')); say(c.name + t(c.mute ? 'b.st.unmuted' : 'b.st.muted')); }
@@ -437,7 +451,7 @@ function makeChannel(id: Id, pick: InstrumentPick): Channel | null {
  */
 export function replaceChannel(c: Channel, pick: InstrumentPick) {
   const fresh = makeChannel(c.id, pick); if (!fresh) return;
-  const keep = { id: c.id, color: c.color, vol: c.vol, pan: c.pan, mute: c.mute, solo: c.solo, insert: c.insert };
+  const keep = { id: c.id, color: c.color, vol: c.vol, pan: c.pan, mute: c.mute, solo: c.solo, insert: c.insert, ...(c.group ? { group: c.group } : {}) };
   commit([{ op: 'putChannel', channel: { ...fresh, ...keep } }], t('b.st.replaceCh'));
   say(t('b.st.replacedCh', { from: c.name, to: fresh.name }));
 }

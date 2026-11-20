@@ -146,6 +146,8 @@ export type ChannelSrc =
 export type Channel = {
   id: Id; name: string; color: string;
   vol: number; pan: number; mute: boolean; solo: boolean; insert: Id | null; root: number;
+  /** The Channel Rack filter group (FL's filter groups); absent = unsorted. */
+  group?: string;
 } & ChannelSrc;
 /**
  * A pattern note: channel `ch`, `step`/`len` in 16ths, `p` MIDI key (absent = the channel's root),

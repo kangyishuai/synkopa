@@ -469,6 +469,9 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
             if c.root > 127 {
                 return Err(OpError::Invalid("channel root must be 0..127".into()));
             }
+            if c.group.as_deref().is_some_and(|g| g.trim().is_empty() || g.chars().count() > 40) {
+                return Err(OpError::Invalid("channel group: 1..40 characters (absent = unsorted)".into()));
+            }
             if let ChannelSrc::Sample { source, sampler, slices } = &c.src {
                 if !p.sources.iter().any(|s| s.id == *source) {
                     return Err(OpError::Missing { what: "source", id: *source });
