@@ -6,12 +6,10 @@ shown in the app after an update and is published as the release notes (see
 
 ## Unreleased
 
-### Changed
-- **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
-  from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
-  stops a preview wherever the keyboard is.
-
 ### Added
+- **Drag a track header to reorder Playlist tracks.** Grab a track's header and drag it up or down;
+  a line shows where it lands and the view scrolls at its edges. The track takes its clips, name,
+  colour, volume, routing and takes along, in one undo step; Esc puts it back.
 - **File → Open recent.** The last ten projects you opened or saved, newest first, one click away.
   Two projects with the same name show their folders. A project that was moved or deleted is
   shown as missing, and "Remove missing projects" and "Clear list" tidy the list. Opening one
@@ -29,6 +27,11 @@ shown in the app after an update and is published as the release notes (see
   jump an octave and back in one held note. A slide note is drawn darker, with a triangle at its start; double-click
   a note to switch Slide on or off. Works on samplers, Synkopa Keys and the Synth; plugin
   instruments ignore slide notes, so the button is greyed out for them.
+
+### Changed
+- **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
+  from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
+  stops a preview wherever the keyboard is.
 
 ## 0.9.30 — 2026-11-19
 

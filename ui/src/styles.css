@@ -1826,3 +1826,7 @@ button.chip { color: var(--fg); }
 .stems-box.err { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
 .stems-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; padding: 12px 18px; border-top: 1px solid var(--line); }
 .stems-foot .smallbtn { height: 28px; padding: 0 14px; border-radius: 5px; font-size: 12px; }
+
+/* dragging a Playlist lane header: the lane lifts, a line marks where it lands */
+.lane.lifted { opacity: .55; outline: 1px dashed var(--blue); outline-offset: -2px; }
+.laneDropLine { position: absolute; left: 0; height: 2px; background: var(--blue); box-shadow: 0 0 0 1px rgba(79, 142, 247, .35); z-index: 6; pointer-events: none; }

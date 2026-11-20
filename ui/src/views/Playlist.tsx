@@ -139,6 +139,39 @@ export function Playlist() {
     t.push(y); return t;
   });
   const [bndHover, setBndHover] = createSignal<{ clipId: Id; i: number } | null>(null);
+  // dragging a lane header: past a few px it lifts; the line shows the gap it lands in, the view
+  // scrolls at its top and bottom edge, Esc puts it back
+  laneDragStart = (e, from) => {
+    const col = (e.currentTarget as HTMLElement).closest<HTMLElement>('.lanesCol');
+    if (!col) return;
+    const y0 = e.clientY;
+    let lifted = false, cancelled = false, to = from;
+    const run = (ev: PointerEvent) => {
+      if (cancelled) return;
+      if (!lifted) { if (Math.abs(ev.clientY - y0) < 5) return; lifted = true; dragCursor('grabbing'); }
+      const y = ev.clientY - col.getBoundingClientRect().top, ts = tops(), n = S.project.tracks.length;
+      // the gap nearest the pointer: 0 = above the first lane, n = below the last
+      let gap = 0;
+      for (let k = 1; k <= n; k++) if (Math.abs(ts[k] - y) < Math.abs(ts[gap] - y)) gap = k;
+      to = gap > from ? gap - 1 : gap;
+      setLaneDrag({ from, to, y: ts[gap] });
+      say(to === from ? tl('a.pl.dragTrackSame') : tl('a.pl.dragTrackTo', { name: S.project.tracks[from].name, n: to + 1 }));
+    };
+    const es = edgeScroller(() => scrollEl.getBoundingClientRect(), (_dx, dy) => { const b = scrollEl.scrollTop; scrollEl.scrollTop += dy; return scrollEl.scrollTop !== b; }, run, { y: true });
+    const esc = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Escape' || !lifted) return;
+      ev.preventDefault(); ev.stopPropagation(); cancelled = true; setLaneDrag(null); es.stop(); dragCursor(null); say(tl('a.pl.dragTrackCancel'));
+    };
+    window.addEventListener('keydown', esc, true);
+    track(ev => { run(ev); if (lifted) es.move(ev); }, () => {
+      window.removeEventListener('keydown', esc, true);
+      es.stop();
+      if (lifted) dragCursor(null);
+      setLaneDrag(null);
+      if (lifted && !cancelled && to !== from) A.moveTrackTo(from, to);
+    });
+  };
+  onCleanup(() => { laneDragStart = null; });
   createEffect(() => { geom.tops = tops(); });
   // recording starts: make sure the armed track is on screen (a tall mixer can hide it)
   createEffect(on(() => S.transport.rec && U.playing, rec => {
@@ -1398,7 +1431,8 @@ export function Playlist() {
 
             </div>
           </div>
-          <div style={{ display: 'flex' }}>
+          <div style={{ display: 'flex', position: 'relative' }}>
+            <Show when={laneDrag()}>{d => <div class="laneDropLine" style={{ top: d().y - 1 + 'px', width: U.headW + gridW() + 'px' }} />}</Show>
             <div class="lanesCol" style={{ width: U.headW + 'px' }}>
               <For each={S.project.tracks}>{(t, i) => <><LaneHeader t={t} i={i()} auto={laneIcons()[i()] ?? null} /><TakeHeaders i={i()} /></>}</For>
               <button class="addTrack" onClick={A.addTrack}>{tl('a.pl.addTrack')}</button>
@@ -1465,6 +1499,10 @@ function openLaneMenu(x: number, y: number, i: number) {
   ], 400);
 }
 
+/** Set by the Playlist: a press on a lane header that may become a drag to reorder (FL / every DAW). */
+let laneDragStart: ((e: PointerEvent, from: number) => void) | null = null;
+const [laneDrag, setLaneDrag] = createSignal<{ from: number; to: number; y: number } | null>(null);
+
 function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
   const t = () => props.t;
   const icon = () => trackIcon(t()) ?? props.auto;
@@ -1472,7 +1510,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
   const routeIdx = () => S.project.inserts.findIndex(m => m.id === t().insert);
   const down = (e: PointerEvent) => {
     if (e.button === 2) { e.preventDefault(); return openLaneMenu(e.clientX, e.clientY, props.i); }
-    if (e.button === 0) A.selectInsert(t().insert);
+    if (e.button === 0) { A.selectInsert(t().insert); laneDragStart?.(e, props.i); }
   };
   const resize = (e: PointerEvent) => {
     if (e.button !== 0) return;
@@ -1519,7 +1557,8 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
             </Show>
   );
   return (
-    <div class="lane" classList={{ armrec: t().arm && S.transport.rec, dimmed: !audible() }} style={{ height: t().h + 'px' }} onPointerDown={down}>
+    <div class="lane" classList={{ armrec: t().arm && S.transport.rec, dimmed: !audible(), lifted: laneDrag()?.from === props.i }} style={{ height: t().h + 'px' }} onPointerDown={down}
+      title={tl('a.pl.dragTrackTip')}>
       <div class="stripe" style={{ background: t().color }} />
       <div class="body">
         <div class="row" style={{ gap: '6px', 'min-width': 0 }}>
