@@ -384,4 +384,31 @@ mod tests {
             assert!((y.abs() - 1.0).abs() < 0.1, "mode {} steady-state gain {}", mode_freq, y.abs());
         }
     }
+
+    #[test]
+    fn body_zero_matches_an_independent_dry_signal() {
+        // Body 0 must be exactly the dry tine: the sample equals the partial-plus-tick
+        // definition, computed here without the resonator code ever being invoked
+        let sr = 48_000.0;
+        let mut t = Tine::new(64, 0.8, &Params { body: 0.0, ..Params::default() }, sr);
+        let mut reference = t;
+        for i in 0..4000 {
+            let mut want = 0.0;
+            for k in 0..PARTIALS {
+                reference.phase[k] += reference.freq[k] / sr;
+                if reference.phase[k] >= 1.0 {
+                    reference.phase[k] -= 1.0;
+                }
+                reference.amp[k] *= reference.decay[k];
+                want += reference.amp[k] * (std::f32::consts::TAU * reference.phase[k]).sin();
+            }
+            reference.lcg = reference.lcg.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+            let n = ((reference.lcg >> 8) as f32 / 8_388_608.0 - 1.0).clamp(-1.0, 1.0);
+            reference.tick_lp += TICK_LP * (n - reference.tick_lp);
+            reference.tick *= reference.tick_coef;
+            want += reference.tick * reference.tick_lp;
+            let got = t.sample(1.0, sr);
+            assert!((got - want).abs() < 1e-9, "Body 0 diverges from the dry signal at sample {i}: {got} vs {want}");
+        }
+    }
 }
