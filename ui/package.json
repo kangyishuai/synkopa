@@ -16,16 +16,17 @@
     "@fontsource-variable/geist": "^5.2.5",
     "@fontsource-variable/geist-mono": "^5.2.5",
     "@fortawesome/free-solid-svg-icons": "6.7.2",
+    "@solidjs/web": "2.0.3",
     "@tauri-apps/api": "^2.9.0",
-    "solid-js": "^1.9.9"
+    "solid-js": "2.0.3"
   },
   "devDependencies": {
     "@playwright/test": "1.64.1",
-    "@solidjs/testing-library": "0.8.10",
+    "@solidjs/testing-library": "1.0.0-rc.2",
+    "@solidjs/vite-plugin": "3.0.1",
     "jsdom": "27.4.0",
     "typescript": "^5.9.3",
     "vite": "^8.3.8",
-    "vite-plugin-solid": "^2.11.17",
     "vitest": "^5.1.1"
   },
   "pnpm": {

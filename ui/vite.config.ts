@@ -1,5 +1,5 @@
 import { defineConfig } from 'vite';
-import solid from 'vite-plugin-solid';
+import solid from '@solidjs/vite-plugin';
 
 export default defineConfig({
   plugins: [solid()],
@@ -11,7 +11,9 @@ export default defineConfig({
     // Pure logic and state run in node (fast, no DOM); component tests (`*.test.tsx`) get a DOM.
     // Playwright journeys live in e2e/ and run with `pnpm test:e2e`, not here.
     projects: [
-      { extends: true, test: { name: 'unit', environment: 'node', include: ['src/**/*.test.ts'] } },
+      // No `environment: 'node'` here although that is what runs (vitest's default): seeing it,
+      // @solidjs/vite-plugin resolves Solid's server build, whose effects never run.
+      { extends: true, test: { name: 'unit', include: ['src/**/*.test.ts'] } },
       { extends: true, test: { name: 'dom', environment: 'jsdom', include: ['src/**/*.test.tsx'], setupFiles: ['src/test/dom-setup.ts'] } },
     ],
   },
