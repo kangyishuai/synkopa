@@ -135,6 +135,14 @@ export function createDetachedRoot<T>(fn: (dispose: () => void) => T): T {
 }
 
 /**
+ * Solid 1's `on:type={{ capture: true, handleEvent }}` (Solid 2 removed `on:`), as a ref:
+ * `ref={captureOn('pointerdown', fn)}`; beside an element ref, `ref={[e => (el = e), captureOn(...)]}`.
+ */
+export function captureOn<K extends keyof HTMLElementEventMap>(type: K, handler: (e: HTMLElementEventMap[K]) => void): (el: HTMLElement) => void {
+  return el => el.addEventListener(type, handler as EventListener, { capture: true });
+}
+
+/**
  * `createSignal` whose setter applies the write at once (see the header). Same signature as
  * Solid 2's; the getter is Solid's own. Unlike Solid 1, a function as the initial value makes a
  * derived signal (Solid 2), not a signal holding that function: wrap it (`() => fn`) to store one.
