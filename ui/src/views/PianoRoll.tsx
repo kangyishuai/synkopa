@@ -43,6 +43,7 @@ import { noteClip, setNoteClip } from '../state/noteClipboard';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
 import { drawRollLane, drawRoll, rollX, rollY, type RollGeo } from './patternDraw';
+import { noteEndNear, onNoteEdge } from './roll/edge';
 import { patGeom, PatternChip, useDataVersion, useSize } from './patternShared';
 import { PanelFrame, WinControls } from './PanelFrame';
 import { paneDock } from '../state/docking';
@@ -399,7 +400,8 @@ function Roll(props: { z: number; docked?: boolean }) {
     }
     return -1;
   };
-  const edgeHit = (i: number, x: number) => { const n = notesRaw()[i], G = geo(); const width = noteWidth(n, G.pps); return x >= rollX(G, n.step) + width - Math.min(6, width * 0.4); };
+  const edgeHit = (i: number, x: number) => { const n = notesRaw()[i], G = geo(); return onNoteEdge(x, rollX(G, n.step), noteWidth(n, G.pps)); };
+  const edgeAfter = (key: number, x: number) => { const G = geo(); return noteEndNear(notesRaw(), ch().id, unwrap(ch()), key, x, s => rollX(G, s), G.pps); };
   const commitNotes = (notes: Note[], label: string) => commit([putNotes(pt(), notes)], label);
 
   /** Views to go back to (Ctrl+right-click), newest last. */
@@ -435,7 +437,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   const ctx: RollCtx = {
     pt: () => pt(), ch: () => unwrap(ch()), notes: notesRaw, chanNotes: () => chanNotes(), chans: chansMap,
     geo, snap: () => snapNow(),
-    hit: hitNote, edgeHit, ghostAt,
+    hit: hitNote, edgeHit, edgeAfter, ghostAt,
     tool: () => rollTool(),
     sel: () => sel(), setSel,
     lastLen: () => lastLen(), lastTrig: () => lastTrig(), setLastLen,
