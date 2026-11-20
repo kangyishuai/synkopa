@@ -276,9 +276,11 @@ export function App() {
     const offPin = be().on('plugin-pin', ({ id, pinned }) => reportPin(id, pinned));
     onCleanup(() => void offPin.then(off => off()));
     // the window's X / Alt+F4 asks the save prompts first; only the guard's OK destroys it
-    void be().win?.onCloseRequested(async destroy => {
+    const offClose = be().win?.onCloseRequested(async destroy => {
       if (await A.closeWindowGuarded()) await destroy();
-    }).catch(() => {});
+    }).catch(() => null);
+    // a rebuilt App (the root boundary's Try again) must not leave a second guard asking twice
+    onCleanup(() => void offClose?.then(off => off?.()));
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', reclaimFocus, true);
     window.addEventListener('keyup', onKeyUp);

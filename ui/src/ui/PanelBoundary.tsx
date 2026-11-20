@@ -10,7 +10,8 @@
 // run), as an effect's error is.
 //
 // One variant per kind of surface, all with the same message:
-// - `PanelBoundary`: a panel's content (the panel's own frame stays outside).
+// - `PanelBoundary`: a panel's content (the panel's own frame stays outside). In a window, "Try
+//   again" rebuilds the window's content with the component that owns it (`WindowRebuild`).
 // - `WindowBoundary`: a whole window, frame included; the failure keeps a minimal frame (its name,
 //   move, close) where the window was, so it can still be moved and closed.
 // - `DialogBoundary`: a dialog; the failure is a small dialog that takes no focus hostage and
@@ -23,7 +24,7 @@
 // disposed and made again too (a part may hold a bad value in its own state, set by an effect that
 // is held back while the failure shows). Closing a failed window or dialog disposes it with its
 // failure.
-import { Errored, Show, untrack } from 'solid-js';
+import { createContext, Errored, Show, untrack, useContext } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { captureOn, createSignal, watch } from '../lib/reactive';
 import { t } from '../lib/i18n';
@@ -40,18 +41,31 @@ function message(e: unknown): string {
 }
 
 /**
+ * The rebuild of the window a panel is in (a `WindowBoundary`'s content), null outside a window.
+ * A window's component keeps what it attaches to its content (size observers, listeners on its
+ * refs) outside the panel's boundary, with the title bar: rebuilding the content alone would
+ * leave those on the removed elements, so a panel in a window retries by rebuilding the window's
+ * content, its component included.
+ */
+const WindowRebuild = createContext<(() => void) | null>(null);
+
+/**
  * `children` behind Solid's `<Errored>`: the error is reported, `fallback` shows it, and its
  * `retry` builds `children` again from scratch (then clears the failure, if the new build holds).
+ * `window`: nested panels retry through this guard. `inWindow`: retry through the window's, if any.
  */
-function Guard(props: { fallback: (err: () => unknown, retry: () => void) => JSX.Element; children: JSX.Element }) {
+function Guard(props: { fallback: (err: () => unknown, retry: () => void) => JSX.Element; children: JSX.Element; window?: boolean; inWindow?: boolean }) {
   const [build, setBuild] = createSignal(0);
+  const rebuild = () => setBuild(build() + 1);
+  const isWindow = untrack(() => props.window);
+  const outer = untrack(() => props.inWindow) ? useContext(WindowRebuild) : null;
   return (
     <Errored fallback={(err, reset) => {
       // each error reported once; the fallback built once (a second error only updates its text, the focus stays)
       watch(err, e => report(e));
-      return untrack(() => props.fallback(err, () => { setBuild(build() + 1); reset(); }));
+      return untrack(() => props.fallback(err, () => { if (outer) outer(); else { rebuild(); reset(); } }));
     }}>
-      <Show when={build() + 1} keyed>{_build => props.children}</Show>
+      <Show when={build() + 1} keyed>{_build => (isWindow ? <WindowRebuild value={rebuild}>{props.children}</WindowRebuild> : props.children)}</Show>
     </Errored>
   );
 }
@@ -77,7 +91,7 @@ function Failure(props: { name: string; err: () => unknown; reset: () => void; c
  */
 export function PanelBoundary(props: { name: string; children: JSX.Element }) {
   return (
-    <Guard fallback={(err, reset) => {
+    <Guard inWindow fallback={(err, reset) => {
       return <Failure name={props.name} err={err} reset={reset} />;
     }}>
       {props.children}
@@ -101,7 +115,7 @@ export function WindowBoundary(props: {
   children: JSX.Element;
 }) {
   return (
-    <Guard fallback={(err, reset) => {
+    <Guard window fallback={(err, reset) => {
       const g = () => (props.docked ? undefined : props.geom?.());
       return (
         <div ref={captureOn('pointerdown', () => { if (!props.docked) props.front?.(); })} tabindex={0}
@@ -122,9 +136,22 @@ export function WindowBoundary(props: {
 }
 
 /**
+ * Keys in a failed dialog. Like the dialog it stands for, it keeps them from the app behind it
+ * (Delete would remove the selected clips, Space would start playback instead of pressing the
+ * focused button). Esc closes it; save, undo and redo still reach the app: the message says saving
+ * works, and undoing the edit that broke the dialog brings it back.
+ */
+function dialogKey(e: KeyboardEvent, close: () => void): void {
+  if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); close(); return; }
+  const k = e.key.toLowerCase();
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && (k === 's' || k === 'z' || k === 'y')) return;
+  e.stopPropagation();
+}
+
+/**
  * A dialog behind an error boundary. Put it inside the dialog's open condition: closing disposes
  * the failure with the dialog. The failure is a small dialog that takes the keyboard while it is
- * shown (Esc closes it) and lets go of it like any other: Tab, a press outside (closes it).
+ * shown (`dialogKey`) and lets go of it like any other: Tab, a press outside (closes it).
  */
 export function DialogBoundary(props: { name: string; close: () => void; z?: number; children: JSX.Element }) {
   return (
@@ -133,7 +160,7 @@ export function DialogBoundary(props: { name: string; close: () => void; z?: num
         <div class="overlay" style={props.z != null ? { 'z-index': props.z } : undefined} onPointerDown={() => props.close()}>
           <div ref={el => setTimeout(() => { if (el.isConnected && !el.contains(document.activeElement)) el.focus(); })} tabindex={-1}
             class="dialog faildlg" role="alertdialog" aria-label={props.name}
-            onPointerDown={e => e.stopPropagation()} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); e.preventDefault(); props.close(); } }}>
+            onPointerDown={e => e.stopPropagation()} onKeyDown={e => dialogKey(e, props.close)}>
             <div class="hd"><span>{props.name}</span><button title={t('d.ui.panelFailed.close')} aria-label={t('d.ui.panelFailed.close')} onClick={() => props.close()}>×</button></div>
             <Failure name={props.name} err={err} reset={reset} close={() => props.close()} dialog />
           </div>

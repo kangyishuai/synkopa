@@ -35,6 +35,14 @@ const ctx: unknown = new Proxy({}, {
   },
   set: () => true,
 });
+/** The elements size observers watch (a view's canvases follow them): a rebuilt surface must be watched, not the one it replaced. */
+const observed = { live: new Set<{ els: Set<Element> }>(), els: () => [...observed.live].flatMap(o => [...o.els]) };
+vi.stubGlobal('ResizeObserver', class {
+  els = new Set<Element>();
+  observe(el: Element) { this.els.add(el); observed.live.add(this); }
+  unobserve(el: Element) { this.els.delete(el); }
+  disconnect() { this.els.clear(); observed.live.delete(this); }
+});
 /** Window listeners alive, by type: a rebuilt surface must not leave one behind or add one twice. */
 const listening = new Map<string, number>();
 beforeAll(() => {
@@ -174,6 +182,7 @@ async function journey(c: Case) {
   expect(alertIn(c.where), 'recovered ' + c.where).toBeNull();
   c.ok();
   // nothing leaked or doubled, the window where it was
+  expect(observed.els().filter(e => !e.isConnected), 'size observers left on removed elements').toEqual([]);
   expect(new Map(listening)).toEqual(listeners);
   expect(frames.live.size).toBe(tasks);
   const after = document.querySelector(c.where) as HTMLElement | null;
@@ -237,6 +246,24 @@ describe('windows', () => {
     expect(document.querySelector('.rollwin')).toBeNull();
     expect(ui.U.rollWin).toBeNull();
     engineFixed();
+  });
+
+  it('Piano roll: Try again while it still fails, then its cause undone: the new note area is the one measured', async () => {
+    pat.openRoll(); settle(); await ticks();
+    const area0 = document.querySelector('.rollwin .parea')!;
+    expect(observed.els()).toContain(area0);
+    engineSends(p => { Object.assign(p, { key: 0, scale: 99 }); }); await ticks();
+    tryAgain(document.querySelector('.rollwin')!); await ticks();
+    expect(alertIn('.rollwin'), 'still failing').not.toBeNull();
+    engineFixed(); await ticks();
+    expect(alertIn('.rollwin')).toBeNull();
+    const area = document.querySelector('.rollwin .parea')!;
+    expect(area).not.toBe(area0); // built again
+    // the canvases follow the size of the area on screen, and nothing watches the removed one
+    expect(observed.els()).toContain(area);
+    expect(observed.els()).toContain(document.querySelector('.rollwin .lanecv'));
+    expect(observed.els().filter(e => !e.isConnected)).toEqual([]);
+    pat.closeRoll(); settle();
   });
 
   it('Piano roll: a failure of its title bar keeps a minimal frame in its place that moves and closes', async () => {
@@ -457,5 +484,31 @@ describe('the whole app', () => {
     tryAgain(alert); await ticks();
     expect(document.querySelector('.apperr')).toBeNull();
     expect(document.querySelector('.plwrap')).not.toBeNull();
+  });
+
+  it('the app built again asks once before the window closes: the one it replaced let go of the close request', async () => {
+    // a desktop window (the mock has none outside `?chrome`), counting the close guards it holds
+    let guards = 0;
+    const win = {
+      minimize: async () => {}, toggleMaximize: async () => {}, close: async () => {}, isMaximized: async () => false, startDragging: async () => {},
+      isFullscreen: async () => false, setFullscreen: async () => {}, onResized: async () => () => {}, setZoom: async () => false,
+      onCloseRequested: async () => { guards++; return () => { guards--; }; },
+    };
+    const had = Object.getOwnPropertyDescriptor(mock, 'win')!;
+    Object.defineProperty(mock, 'win', { value: win, configurable: true, writable: true });
+    try {
+      for (let i = 0; i < 2; i++) {
+        bomb.keys.add('d.act.opening');
+        ui.setU('openingProject', true); settle(); await ticks();
+        // the cause gone without anything reactive changing: only Try again builds the app again
+        bomb.keys.clear();
+        const app = document.querySelector('.plwrap');
+        tryAgain(document.querySelector('.apperr')!); await ticks(); await nextTask();
+        ui.setU('openingProject', false); settle();
+        expect(document.querySelector('.apperr')).toBeNull();
+        expect(document.querySelector('.plwrap'), 'built again').not.toBe(app);
+        expect(guards, 'close guards after rebuild ' + (i + 1)).toBe(1);
+      }
+    } finally { Object.defineProperty(mock, 'win', had); }
   });
 });

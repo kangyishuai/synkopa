@@ -150,6 +150,15 @@ describe('DialogBoundary', () => {
     expect(document.activeElement).toBe(dlg);
     expect(dlg.textContent).toContain('Settings stopped because of an error');
     expect(dlg.textContent).toContain('rebuild this dialog, or close it');
+    // its keys stay in it: Delete must not remove the clips selected behind it, Space must press the
+    // focused button, not start playback; save, undo and redo still reach the app
+    for (const key of ['Delete', 'Backspace', ' ', 'ArrowLeft', 'a', 'p']) fireEvent.keyDown(dlg, { key });
+    fireEvent.keyDown(screen.getByText('Try again'), { key: ' ', code: 'Space' });
+    fireEvent.keyDown(dlg, { key: 'a', ctrlKey: true });
+    expect(app).not.toHaveBeenCalled();
+    for (const key of ['s', 'z', 'y', 'Z']) fireEvent.keyDown(dlg, { key, ctrlKey: true, shiftKey: key === 'Z' });
+    expect(app.mock.calls.map(c => c[0])).toEqual(['s', 'z', 'y', 'Z']);
+    app.mockClear();
     fireEvent.keyDown(dlg, { key: 'Escape' });
     settle();
     expect(screen.queryByRole('alertdialog')).toBeNull();
