@@ -153,7 +153,9 @@ export type Channel = {
  */
 /** `trig` is true for a step trigger, false for a held note, absent on legacy notes. */
 /** `pan`: the note's own pan, -1..1, added to its channel's (absent = 0). Sampler and Synkopa Keys channels play it. */
-export interface Note { ch: Id; step: number; len: number; p?: number; v?: number; pan?: number; trig?: boolean }
+/** `slide`: an FL slide note. It starts no sound; the channel's sounding notes glide by the distance
+ * from the highest of them to its key, over its length (sampler, Keys and Synth channels; plugins ignore it). */
+export interface Note { ch: Id; step: number; len: number; p?: number; v?: number; pan?: number; trig?: boolean; slide?: boolean }
 /** `len` in beats; `swing` 0..1 (absent = 0). Notes at or past `len` are kept but hidden and silent. */
 /**
  * `len` (beats) is derived by the engine: the end of the last note rounded up to a bar, at least
@@ -395,7 +397,13 @@ export type TransformVerb =
   | { kind: 'euclidDrums'; voices: { ch: Id; k: number; n: number; rotate?: number; vel?: number }[]; bars?: number }
   | { kind: 'melody'; ch: Id; bars?: number; density?: number; repeat?: number }
   | { kind: 'chord'; harmony?: string }
-  | { kind: 'progression'; ch: Id; bars?: number; template?: string; voiceLead?: boolean; degrees?: number[] };
+  | { kind: 'progression'; ch: Id; bars?: number; template?: string; voiceLead?: boolean; degrees?: number[] }
+  /** FL's chop: held notes cut into pieces `len` steps long (≥ 0.25). */
+  | { kind: 'chop'; len?: number }
+  /** FL's glue: touching / overlapping held notes of one channel and key become one. */
+  | { kind: 'glue' }
+  /** FL's arpeggiator: each chord (notes starting together, per channel) becomes a run of its keys. */
+  | { kind: 'arpeggiate'; mode?: 'up' | 'down' | 'upDown' | 'random'; rate?: number; gate?: number; octaves?: number };
 /** Which notes a `transformNotes` verb touches. */
 export type TransformSelect =
   | { kind: 'indices'; indices: number[] }

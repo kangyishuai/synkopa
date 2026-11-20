@@ -231,6 +231,15 @@ whole pass of it follow; clips sized on purpose keep their length.
 or the end of the sample, whichever comes first. Include `"trig":true` on any trigger in a mixed row. When a row contains held notes or cannot be represented as a step string, the reply's
 `notes` array carries `trig` for each event.
 
+`"slide":true` makes an FL slide note: it starts no sound; the channel's notes sounding when it
+starts glide by the distance from the highest of them to its key `p`, over its `len`, and keep
+that pitch until they end (sampler, Synkopa Keys and Synth channels; plugin instruments ignore
+it; MIDI export leaves it out). An 808 jumping an octave up for an eighth note:
+
+```sh
+synkopa pattern --id 3 --ch 808 --notes '[{"step":0,"len":8,"p":36},{"step":4,"len":2,"p":48,"slide":true}]'
+```
+
 ## Takes and comping
 
 A track you recorded with a loop set (one take per pass), or recorded over
@@ -613,6 +622,9 @@ synkopa notes humanize --pattern 1 --timing 0.3 --velocity 0.2
 synkopa notes quantize --pattern 1 --grid 1 --amount 1 --scale      # --scale: into the project key
 synkopa notes euclid --pattern 1 --ch 1001 --k 5 --n 16 --rotate 2  # E(k,n) fill for one channel
 synkopa notes strum --pattern 1 --width 0.5 --ramp 0.05
+synkopa notes chop --pattern 1 --len 1 --select "0:64@1001"         # FL's chop: pieces a 16th long
+synkopa notes glue --pattern 1                                       # FL's glue: touching notes of one key join
+synkopa notes arp --pattern 3 --mode upDown --rate 1 --gate 0.9 --octaves 2   # chords become arpeggios
 synkopa notes drums --pattern 2 --bars 2 --seed 42 --voice "1001:4:16:0" --voice "1002:2:16:8"
 synkopa notes melody --pattern 3 --ch 1003 --bars 2 --seed 7 --density 0.5
 synkopa notes chord --pattern 3 --type diatonic                      # harmonize single notes (A3 → Am)
@@ -631,6 +643,13 @@ notes — `--type diatonic` spells the triad from the project key and leaves out
 notes alone, named types spell by interval; `progression` generates one diatonic 7th chord
 per bar (`--degrees "d:d:d"` replaces the template with an arbitrary degree list, at most
 32; inversions are voice-led to move the least unless `--no-voice-lead`).
+
+FL's note tools: `chop` cuts held notes into pieces `--len` steps long (at least 0.25, the
+last piece keeps the remainder); `glue` joins touching or overlapping notes of one channel and
+key (it undoes `chop`); `arp` turns each chord (notes starting together on a channel) into a run
+of its keys every `--rate` steps for as long as it lasts, `--gate` of a step long, over
+`--octaves` 1–4, in `--mode` up, down, upDown or random (seeded). Step triggers stay as they are.
+One run makes at most 20 000 notes.
 
 `--select "0:16@1001"` also filters one channel; `--indices "1,2,5"` selects exact notes.
 

@@ -11,6 +11,19 @@ shown in the app after an update and is published as the release notes (see
   Two projects with the same name show their folders. A project that was moved or deleted is
   shown as missing, and "Remove missing projects" and "Clear list" tidy the list. Opening one
   asks about unsaved changes first, like Open.
+- **Chop, glue and arpeggiate in the Piano roll, as in FL Studio.** Ctrl+U chops the selected
+  notes (or every note of the channel) into pieces one snap step long, for rolls, stutters and
+  hi-hat or 808 rhythms; Ctrl+G glues touching notes of the same key back into one. The
+  arpeggiator (Alt+A, or Tools → Arpeggiate) turns chords into a run of their notes up, down,
+  up and down or at random, with the step, note length and octave range you choose; Alt+U opens
+  the chop tool with a piece length of your choice. Each is one undo step, and the same tools
+  work from the command line (`synkopa notes chop|glue|arp`).
+- **Slide notes, as in FL Studio.** Turn on Slide in the Piano roll (the glide button next to the
+  tools, or S) and the notes you draw become slide notes: they make no sound of their own, they
+  bend the notes already playing to their key, and their length is the glide time. An 808 can now
+  jump an octave and back in one held note. A slide note is drawn darker, with a triangle at its start; double-click
+  a note to switch Slide on or off. Works on samplers, Synkopa Keys and the Synth; plugin
+  instruments ignore slide notes, so the button is greyed out for them.
 
 ## 0.9.30 — 2026-11-19
 

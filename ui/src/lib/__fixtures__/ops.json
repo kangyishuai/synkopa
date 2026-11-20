@@ -11203,6 +11203,2578 @@
     {
       "base": "main",
       "error": null,
+      "name": "chop cuts the selected held notes into pieces",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "kind": "chop",
+            "len": 1.5
+          }
+        }
+      ],
+      "result": {
+        "automations": [
+          {
+            "color": "#4f8ef7",
+            "id": 50,
+            "name": "Drums vol",
+            "points": [
+              {
+                "t": 0.0,
+                "v": 1.0
+              },
+              {
+                "t": 4.0,
+                "v": 0.5
+              }
+            ],
+            "target": {
+              "id": 1,
+              "kind": "insertVol"
+            }
+          }
+        ],
+        "bpm": 120.0,
+        "channels": [
+          {
+            "color": "#d9678f",
+            "id": 30,
+            "insert": null,
+            "kind": "sample",
+            "mute": false,
+            "name": "Kick",
+            "pan": 0.0,
+            "root": 60,
+            "sampler": {
+              "attack": 0.0,
+              "attackTension": 0.0,
+              "cut": 0,
+              "decay": 0.0,
+              "decayTension": 0.0,
+              "delay": 0.0,
+              "end": 1.0,
+              "env": false,
+              "fadeInMs": 0.0,
+              "fadeOutMs": 0.0,
+              "fine": 0.0,
+              "hold": 0.0,
+              "norm": false,
+              "release": 20.0,
+              "releaseTension": 0.0,
+              "reverse": false,
+              "semi": 0,
+              "start": 0.0,
+              "sustain": 1.0
+            },
+            "solo": false,
+            "source": 10,
+            "vol": 0.7936999797821045
+          },
+          {
+            "color": "#7c8cf8",
+            "id": 31,
+            "insert": null,
+            "keys": {
+              "dynamics": 100.0,
+              "release": 350.0
+            },
+            "kind": "keys",
+            "mute": false,
+            "name": "Keys",
+            "pan": 0.0,
+            "root": 60,
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "clips": [
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 40,
+            "kind": "pat",
+            "len": 8.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 20,
+            "rev": false,
+            "start": 0.0,
+            "track": 0
+          },
+          {
+            "fadeIn": 0.10000000149011612,
+            "fadeOut": 0.0,
+            "gain": -3.0,
+            "id": 41,
+            "insert": 2,
+            "kind": "audio",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 10,
+            "rev": false,
+            "start": 2.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 42,
+            "kind": "comp",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 60,
+            "rev": false,
+            "start": 8.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 43,
+            "kind": "auto",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 50,
+            "rev": false,
+            "start": 16.0,
+            "track": 0
+          }
+        ],
+        "comps": [
+          {
+            "id": 60,
+            "name": "Vocal Comp",
+            "regions": [
+              {
+                "from": 0.0,
+                "take": 61,
+                "to": 2.0
+              },
+              {
+                "from": 2.0,
+                "take": 62,
+                "to": 4.0,
+                "xfade": 0.05000000074505806
+              }
+            ],
+            "takes": [
+              {
+                "id": 61,
+                "len": 2.0,
+                "name": "take-a",
+                "offset": 0.0,
+                "ref": 10,
+                "start": 0.0
+              },
+              {
+                "id": 62,
+                "len": 2.0,
+                "name": "take-b",
+                "offset": 0.0,
+                "ref": 11,
+                "start": 2.0
+              }
+            ],
+            "xfade": 0.009999999776482582
+          }
+        ],
+        "inserts": [
+          {
+            "color": "#d5dae2",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 900,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "limit"
+              }
+            ],
+            "id": 0,
+            "muted": false,
+            "name": "Master",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#4f8ef7",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 902,
+                "mix": 1.0,
+                "params": {
+                  "fb": 0.3
+                },
+                "preset": null,
+                "type": "delay"
+              },
+              {
+                "bands": [
+                  {
+                    "f": 100.0,
+                    "g": 3.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  },
+                  {
+                    "f": 8000.0,
+                    "g": -2.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  }
+                ],
+                "bypass": false,
+                "id": 901,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "eq"
+              }
+            ],
+            "id": 1,
+            "muted": false,
+            "name": "Drums",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#d9678f",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 903,
+                "mix": 1.0,
+                "params": {},
+                "plugin": {
+                  "cid": "2ebf41a7aae34b6f9f39e2ff2d6b0c41",
+                  "format": "vst3",
+                  "name": "Serum",
+                  "path": "C:\\Program Files\\Common Files\\VST3\\Serum.vst3",
+                  "vendor": "Xfer Records"
+                },
+                "preset": null,
+                "type": "plugin"
+              }
+            ],
+            "id": 2,
+            "muted": false,
+            "name": "Vocal",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          }
+        ],
+        "key": 9,
+        "loop": {
+          "a": 0.0,
+          "b": 8.0
+        },
+        "nextId": 100,
+        "notebook": {
+          "pages": [
+            {
+              "id": 70,
+              "name": "Verse",
+              "startBar": 1,
+              "text": "[Verse]\nfirst line\n\nsecond line"
+            }
+          ]
+        },
+        "patterns": [
+          {
+            "color": "#4f8ef7",
+            "id": 20,
+            "len": 8.0,
+            "minLen": 4.0,
+            "name": "Verse",
+            "notes": [
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 0.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 4.0,
+                "trig": true,
+                "v": 0.800000011920929
+              },
+              {
+                "ch": 30,
+                "len": 4.0,
+                "step": 28.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.5,
+                "p": 57,
+                "step": 4.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.5,
+                "p": 57,
+                "step": 5.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 57,
+                "step": 7.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.5,
+                "p": 60,
+                "step": 8.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.5,
+                "p": 60,
+                "step": 9.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 60,
+                "step": 11.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.5,
+                "p": 62,
+                "step": 12.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.5,
+                "p": 62,
+                "step": 13.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 62,
+                "step": 15.0,
+                "trig": false
+              }
+            ]
+          },
+          {
+            "color": "#4f8ef7",
+            "id": 21,
+            "len": 8.0,
+            "minLen": 8.0,
+            "name": "Hook",
+            "notes": []
+          }
+        ],
+        "scale": 2,
+        "sources": [
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 10,
+            "name": "kick",
+            "path": "C:\\Music\\kick.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          },
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 11,
+            "name": "take-a",
+            "path": "C:\\Music\\take-a.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          }
+        ],
+        "tracks": [
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 1,
+            "insert": 1,
+            "muted": false,
+            "name": "Drums",
+            "solo": false,
+            "vol": 0.7936999797821045
+          },
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 2,
+            "insert": 2,
+            "muted": false,
+            "name": "Vocal",
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "version": 2
+      }
+    },
+    {
+      "base": "main",
+      "error": null,
+      "name": "chop then glue gives the notes back",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "kind": "chop",
+            "len": 1.5
+          }
+        },
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "kind": "glue"
+          }
+        }
+      ],
+      "result": {
+        "automations": [
+          {
+            "color": "#4f8ef7",
+            "id": 50,
+            "name": "Drums vol",
+            "points": [
+              {
+                "t": 0.0,
+                "v": 1.0
+              },
+              {
+                "t": 4.0,
+                "v": 0.5
+              }
+            ],
+            "target": {
+              "id": 1,
+              "kind": "insertVol"
+            }
+          }
+        ],
+        "bpm": 120.0,
+        "channels": [
+          {
+            "color": "#d9678f",
+            "id": 30,
+            "insert": null,
+            "kind": "sample",
+            "mute": false,
+            "name": "Kick",
+            "pan": 0.0,
+            "root": 60,
+            "sampler": {
+              "attack": 0.0,
+              "attackTension": 0.0,
+              "cut": 0,
+              "decay": 0.0,
+              "decayTension": 0.0,
+              "delay": 0.0,
+              "end": 1.0,
+              "env": false,
+              "fadeInMs": 0.0,
+              "fadeOutMs": 0.0,
+              "fine": 0.0,
+              "hold": 0.0,
+              "norm": false,
+              "release": 20.0,
+              "releaseTension": 0.0,
+              "reverse": false,
+              "semi": 0,
+              "start": 0.0,
+              "sustain": 1.0
+            },
+            "solo": false,
+            "source": 10,
+            "vol": 0.7936999797821045
+          },
+          {
+            "color": "#7c8cf8",
+            "id": 31,
+            "insert": null,
+            "keys": {
+              "dynamics": 100.0,
+              "release": 350.0
+            },
+            "kind": "keys",
+            "mute": false,
+            "name": "Keys",
+            "pan": 0.0,
+            "root": 60,
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "clips": [
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 40,
+            "kind": "pat",
+            "len": 8.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 20,
+            "rev": false,
+            "start": 0.0,
+            "track": 0
+          },
+          {
+            "fadeIn": 0.10000000149011612,
+            "fadeOut": 0.0,
+            "gain": -3.0,
+            "id": 41,
+            "insert": 2,
+            "kind": "audio",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 10,
+            "rev": false,
+            "start": 2.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 42,
+            "kind": "comp",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 60,
+            "rev": false,
+            "start": 8.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 43,
+            "kind": "auto",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 50,
+            "rev": false,
+            "start": 16.0,
+            "track": 0
+          }
+        ],
+        "comps": [
+          {
+            "id": 60,
+            "name": "Vocal Comp",
+            "regions": [
+              {
+                "from": 0.0,
+                "take": 61,
+                "to": 2.0
+              },
+              {
+                "from": 2.0,
+                "take": 62,
+                "to": 4.0,
+                "xfade": 0.05000000074505806
+              }
+            ],
+            "takes": [
+              {
+                "id": 61,
+                "len": 2.0,
+                "name": "take-a",
+                "offset": 0.0,
+                "ref": 10,
+                "start": 0.0
+              },
+              {
+                "id": 62,
+                "len": 2.0,
+                "name": "take-b",
+                "offset": 0.0,
+                "ref": 11,
+                "start": 2.0
+              }
+            ],
+            "xfade": 0.009999999776482582
+          }
+        ],
+        "inserts": [
+          {
+            "color": "#d5dae2",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 900,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "limit"
+              }
+            ],
+            "id": 0,
+            "muted": false,
+            "name": "Master",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#4f8ef7",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 902,
+                "mix": 1.0,
+                "params": {
+                  "fb": 0.3
+                },
+                "preset": null,
+                "type": "delay"
+              },
+              {
+                "bands": [
+                  {
+                    "f": 100.0,
+                    "g": 3.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  },
+                  {
+                    "f": 8000.0,
+                    "g": -2.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  }
+                ],
+                "bypass": false,
+                "id": 901,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "eq"
+              }
+            ],
+            "id": 1,
+            "muted": false,
+            "name": "Drums",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#d9678f",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 903,
+                "mix": 1.0,
+                "params": {},
+                "plugin": {
+                  "cid": "2ebf41a7aae34b6f9f39e2ff2d6b0c41",
+                  "format": "vst3",
+                  "name": "Serum",
+                  "path": "C:\\Program Files\\Common Files\\VST3\\Serum.vst3",
+                  "vendor": "Xfer Records"
+                },
+                "preset": null,
+                "type": "plugin"
+              }
+            ],
+            "id": 2,
+            "muted": false,
+            "name": "Vocal",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          }
+        ],
+        "key": 9,
+        "loop": {
+          "a": 0.0,
+          "b": 8.0
+        },
+        "nextId": 100,
+        "notebook": {
+          "pages": [
+            {
+              "id": 70,
+              "name": "Verse",
+              "startBar": 1,
+              "text": "[Verse]\nfirst line\n\nsecond line"
+            }
+          ]
+        },
+        "patterns": [
+          {
+            "color": "#4f8ef7",
+            "id": 20,
+            "len": 8.0,
+            "minLen": 4.0,
+            "name": "Verse",
+            "notes": [
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 0.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 4.0,
+                "trig": true,
+                "v": 0.800000011920929
+              },
+              {
+                "ch": 30,
+                "len": 4.0,
+                "step": 28.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 4.0,
+                "p": 57,
+                "step": 4.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 4.0,
+                "p": 60,
+                "step": 8.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 4.0,
+                "p": 62,
+                "step": 12.0,
+                "trig": false
+              }
+            ]
+          },
+          {
+            "color": "#4f8ef7",
+            "id": 21,
+            "len": 8.0,
+            "minLen": 8.0,
+            "name": "Hook",
+            "notes": []
+          }
+        ],
+        "scale": 2,
+        "sources": [
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 10,
+            "name": "kick",
+            "path": "C:\\Music\\kick.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          },
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 11,
+            "name": "take-a",
+            "path": "C:\\Music\\take-a.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          }
+        ],
+        "tracks": [
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 1,
+            "insert": 1,
+            "muted": false,
+            "name": "Drums",
+            "solo": false,
+            "vol": 0.7936999797821045
+          },
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 2,
+            "insert": 2,
+            "muted": false,
+            "name": "Vocal",
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "version": 2
+      }
+    },
+    {
+      "base": "main",
+      "error": null,
+      "name": "chop without a selection cuts every channel and leaves steps",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": null,
+          "verb": {
+            "kind": "chop",
+            "len": 1.0
+          }
+        }
+      ],
+      "result": {
+        "automations": [
+          {
+            "color": "#4f8ef7",
+            "id": 50,
+            "name": "Drums vol",
+            "points": [
+              {
+                "t": 0.0,
+                "v": 1.0
+              },
+              {
+                "t": 4.0,
+                "v": 0.5
+              }
+            ],
+            "target": {
+              "id": 1,
+              "kind": "insertVol"
+            }
+          }
+        ],
+        "bpm": 120.0,
+        "channels": [
+          {
+            "color": "#d9678f",
+            "id": 30,
+            "insert": null,
+            "kind": "sample",
+            "mute": false,
+            "name": "Kick",
+            "pan": 0.0,
+            "root": 60,
+            "sampler": {
+              "attack": 0.0,
+              "attackTension": 0.0,
+              "cut": 0,
+              "decay": 0.0,
+              "decayTension": 0.0,
+              "delay": 0.0,
+              "end": 1.0,
+              "env": false,
+              "fadeInMs": 0.0,
+              "fadeOutMs": 0.0,
+              "fine": 0.0,
+              "hold": 0.0,
+              "norm": false,
+              "release": 20.0,
+              "releaseTension": 0.0,
+              "reverse": false,
+              "semi": 0,
+              "start": 0.0,
+              "sustain": 1.0
+            },
+            "solo": false,
+            "source": 10,
+            "vol": 0.7936999797821045
+          },
+          {
+            "color": "#7c8cf8",
+            "id": 31,
+            "insert": null,
+            "keys": {
+              "dynamics": 100.0,
+              "release": 350.0
+            },
+            "kind": "keys",
+            "mute": false,
+            "name": "Keys",
+            "pan": 0.0,
+            "root": 60,
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "clips": [
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 40,
+            "kind": "pat",
+            "len": 8.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 20,
+            "rev": false,
+            "start": 0.0,
+            "track": 0
+          },
+          {
+            "fadeIn": 0.10000000149011612,
+            "fadeOut": 0.0,
+            "gain": -3.0,
+            "id": 41,
+            "insert": 2,
+            "kind": "audio",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 10,
+            "rev": false,
+            "start": 2.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 42,
+            "kind": "comp",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 60,
+            "rev": false,
+            "start": 8.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 43,
+            "kind": "auto",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 50,
+            "rev": false,
+            "start": 16.0,
+            "track": 0
+          }
+        ],
+        "comps": [
+          {
+            "id": 60,
+            "name": "Vocal Comp",
+            "regions": [
+              {
+                "from": 0.0,
+                "take": 61,
+                "to": 2.0
+              },
+              {
+                "from": 2.0,
+                "take": 62,
+                "to": 4.0,
+                "xfade": 0.05000000074505806
+              }
+            ],
+            "takes": [
+              {
+                "id": 61,
+                "len": 2.0,
+                "name": "take-a",
+                "offset": 0.0,
+                "ref": 10,
+                "start": 0.0
+              },
+              {
+                "id": 62,
+                "len": 2.0,
+                "name": "take-b",
+                "offset": 0.0,
+                "ref": 11,
+                "start": 2.0
+              }
+            ],
+            "xfade": 0.009999999776482582
+          }
+        ],
+        "inserts": [
+          {
+            "color": "#d5dae2",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 900,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "limit"
+              }
+            ],
+            "id": 0,
+            "muted": false,
+            "name": "Master",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#4f8ef7",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 902,
+                "mix": 1.0,
+                "params": {
+                  "fb": 0.3
+                },
+                "preset": null,
+                "type": "delay"
+              },
+              {
+                "bands": [
+                  {
+                    "f": 100.0,
+                    "g": 3.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  },
+                  {
+                    "f": 8000.0,
+                    "g": -2.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  }
+                ],
+                "bypass": false,
+                "id": 901,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "eq"
+              }
+            ],
+            "id": 1,
+            "muted": false,
+            "name": "Drums",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#d9678f",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 903,
+                "mix": 1.0,
+                "params": {},
+                "plugin": {
+                  "cid": "2ebf41a7aae34b6f9f39e2ff2d6b0c41",
+                  "format": "vst3",
+                  "name": "Serum",
+                  "path": "C:\\Program Files\\Common Files\\VST3\\Serum.vst3",
+                  "vendor": "Xfer Records"
+                },
+                "preset": null,
+                "type": "plugin"
+              }
+            ],
+            "id": 2,
+            "muted": false,
+            "name": "Vocal",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          }
+        ],
+        "key": 9,
+        "loop": {
+          "a": 0.0,
+          "b": 8.0
+        },
+        "nextId": 100,
+        "notebook": {
+          "pages": [
+            {
+              "id": 70,
+              "name": "Verse",
+              "startBar": 1,
+              "text": "[Verse]\nfirst line\n\nsecond line"
+            }
+          ]
+        },
+        "patterns": [
+          {
+            "color": "#4f8ef7",
+            "id": 20,
+            "len": 8.0,
+            "minLen": 4.0,
+            "name": "Verse",
+            "notes": [
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 0.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 4.0,
+                "trig": true,
+                "v": 0.800000011920929
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 57,
+                "step": 4.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 57,
+                "step": 5.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 57,
+                "step": 6.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 57,
+                "step": 7.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 60,
+                "step": 8.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 60,
+                "step": 9.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 60,
+                "step": 10.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 60,
+                "step": 11.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 62,
+                "step": 12.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 62,
+                "step": 13.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 62,
+                "step": 14.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 1.0,
+                "p": 62,
+                "step": 15.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 28.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 29.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 30.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 31.0,
+                "trig": false
+              }
+            ]
+          },
+          {
+            "color": "#4f8ef7",
+            "id": 21,
+            "len": 8.0,
+            "minLen": 8.0,
+            "name": "Hook",
+            "notes": []
+          }
+        ],
+        "scale": 2,
+        "sources": [
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 10,
+            "name": "kick",
+            "path": "C:\\Music\\kick.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          },
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 11,
+            "name": "take-a",
+            "path": "C:\\Music\\take-a.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          }
+        ],
+        "tracks": [
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 1,
+            "insert": 1,
+            "muted": false,
+            "name": "Drums",
+            "solo": false,
+            "vol": 0.7936999797821045
+          },
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 2,
+            "insert": 2,
+            "muted": false,
+            "name": "Vocal",
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "version": 2
+      }
+    },
+    {
+      "base": "main",
+      "error": "chop len must be at least 0.25 steps (a 64th)",
+      "name": "chop refuses a piece shorter than a 64th",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "kind": "chop",
+            "len": 0.10000000149011612
+          }
+        }
+      ],
+      "result": null
+    },
+    {
+      "base": "main",
+      "error": null,
+      "name": "arpeggiate runs chords up and down over two octaves",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "harmony": "maj",
+            "kind": "chord"
+          }
+        },
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "gate": 0.5,
+            "kind": "arpeggiate",
+            "mode": "upDown",
+            "octaves": 2,
+            "rate": 0.5
+          }
+        }
+      ],
+      "result": {
+        "automations": [
+          {
+            "color": "#4f8ef7",
+            "id": 50,
+            "name": "Drums vol",
+            "points": [
+              {
+                "t": 0.0,
+                "v": 1.0
+              },
+              {
+                "t": 4.0,
+                "v": 0.5
+              }
+            ],
+            "target": {
+              "id": 1,
+              "kind": "insertVol"
+            }
+          }
+        ],
+        "bpm": 120.0,
+        "channels": [
+          {
+            "color": "#d9678f",
+            "id": 30,
+            "insert": null,
+            "kind": "sample",
+            "mute": false,
+            "name": "Kick",
+            "pan": 0.0,
+            "root": 60,
+            "sampler": {
+              "attack": 0.0,
+              "attackTension": 0.0,
+              "cut": 0,
+              "decay": 0.0,
+              "decayTension": 0.0,
+              "delay": 0.0,
+              "end": 1.0,
+              "env": false,
+              "fadeInMs": 0.0,
+              "fadeOutMs": 0.0,
+              "fine": 0.0,
+              "hold": 0.0,
+              "norm": false,
+              "release": 20.0,
+              "releaseTension": 0.0,
+              "reverse": false,
+              "semi": 0,
+              "start": 0.0,
+              "sustain": 1.0
+            },
+            "solo": false,
+            "source": 10,
+            "vol": 0.7936999797821045
+          },
+          {
+            "color": "#7c8cf8",
+            "id": 31,
+            "insert": null,
+            "keys": {
+              "dynamics": 100.0,
+              "release": 350.0
+            },
+            "kind": "keys",
+            "mute": false,
+            "name": "Keys",
+            "pan": 0.0,
+            "root": 60,
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "clips": [
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 40,
+            "kind": "pat",
+            "len": 8.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 20,
+            "rev": false,
+            "start": 0.0,
+            "track": 0
+          },
+          {
+            "fadeIn": 0.10000000149011612,
+            "fadeOut": 0.0,
+            "gain": -3.0,
+            "id": 41,
+            "insert": 2,
+            "kind": "audio",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 10,
+            "rev": false,
+            "start": 2.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 42,
+            "kind": "comp",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 60,
+            "rev": false,
+            "start": 8.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 43,
+            "kind": "auto",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 50,
+            "rev": false,
+            "start": 16.0,
+            "track": 0
+          }
+        ],
+        "comps": [
+          {
+            "id": 60,
+            "name": "Vocal Comp",
+            "regions": [
+              {
+                "from": 0.0,
+                "take": 61,
+                "to": 2.0
+              },
+              {
+                "from": 2.0,
+                "take": 62,
+                "to": 4.0,
+                "xfade": 0.05000000074505806
+              }
+            ],
+            "takes": [
+              {
+                "id": 61,
+                "len": 2.0,
+                "name": "take-a",
+                "offset": 0.0,
+                "ref": 10,
+                "start": 0.0
+              },
+              {
+                "id": 62,
+                "len": 2.0,
+                "name": "take-b",
+                "offset": 0.0,
+                "ref": 11,
+                "start": 2.0
+              }
+            ],
+            "xfade": 0.009999999776482582
+          }
+        ],
+        "inserts": [
+          {
+            "color": "#d5dae2",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 900,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "limit"
+              }
+            ],
+            "id": 0,
+            "muted": false,
+            "name": "Master",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#4f8ef7",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 902,
+                "mix": 1.0,
+                "params": {
+                  "fb": 0.3
+                },
+                "preset": null,
+                "type": "delay"
+              },
+              {
+                "bands": [
+                  {
+                    "f": 100.0,
+                    "g": 3.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  },
+                  {
+                    "f": 8000.0,
+                    "g": -2.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  }
+                ],
+                "bypass": false,
+                "id": 901,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "eq"
+              }
+            ],
+            "id": 1,
+            "muted": false,
+            "name": "Drums",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#d9678f",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 903,
+                "mix": 1.0,
+                "params": {},
+                "plugin": {
+                  "cid": "2ebf41a7aae34b6f9f39e2ff2d6b0c41",
+                  "format": "vst3",
+                  "name": "Serum",
+                  "path": "C:\\Program Files\\Common Files\\VST3\\Serum.vst3",
+                  "vendor": "Xfer Records"
+                },
+                "preset": null,
+                "type": "plugin"
+              }
+            ],
+            "id": 2,
+            "muted": false,
+            "name": "Vocal",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          }
+        ],
+        "key": 9,
+        "loop": {
+          "a": 0.0,
+          "b": 8.0
+        },
+        "nextId": 100,
+        "notebook": {
+          "pages": [
+            {
+              "id": 70,
+              "name": "Verse",
+              "startBar": 1,
+              "text": "[Verse]\nfirst line\n\nsecond line"
+            }
+          ]
+        },
+        "patterns": [
+          {
+            "color": "#4f8ef7",
+            "id": 20,
+            "len": 8.0,
+            "minLen": 4.0,
+            "name": "Verse",
+            "notes": [
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 0.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 4.0,
+                "trig": true,
+                "v": 0.800000011920929
+              },
+              {
+                "ch": 30,
+                "len": 4.0,
+                "step": 28.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 57,
+                "step": 4.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 61,
+                "step": 4.5,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 64,
+                "step": 5.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 69,
+                "step": 5.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 73,
+                "step": 6.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 76,
+                "step": 6.5,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 73,
+                "step": 7.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 69,
+                "step": 7.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 60,
+                "step": 8.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 64,
+                "step": 8.5,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 67,
+                "step": 9.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 72,
+                "step": 9.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 76,
+                "step": 10.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 79,
+                "step": 10.5,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 76,
+                "step": 11.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 72,
+                "step": 11.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 62,
+                "step": 12.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 66,
+                "step": 12.5,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 69,
+                "step": 13.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 74,
+                "step": 13.5,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 78,
+                "step": 14.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 81,
+                "step": 14.5,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 78,
+                "step": 15.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.25,
+                "p": 74,
+                "step": 15.5,
+                "trig": false
+              }
+            ]
+          },
+          {
+            "color": "#4f8ef7",
+            "id": 21,
+            "len": 8.0,
+            "minLen": 8.0,
+            "name": "Hook",
+            "notes": []
+          }
+        ],
+        "scale": 2,
+        "sources": [
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 10,
+            "name": "kick",
+            "path": "C:\\Music\\kick.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          },
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 11,
+            "name": "take-a",
+            "path": "C:\\Music\\take-a.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          }
+        ],
+        "tracks": [
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 1,
+            "insert": 1,
+            "muted": false,
+            "name": "Drums",
+            "solo": false,
+            "vol": 0.7936999797821045
+          },
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 2,
+            "insert": 2,
+            "muted": false,
+            "name": "Vocal",
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "version": 2
+      }
+    },
+    {
+      "base": "main",
+      "error": null,
+      "name": "arpeggiate random is seeded",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "harmony": "maj",
+            "kind": "chord"
+          }
+        },
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": 3,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "gate": 0.75,
+            "kind": "arpeggiate",
+            "mode": "random",
+            "octaves": 1,
+            "rate": 1.0
+          }
+        }
+      ],
+      "result": {
+        "automations": [
+          {
+            "color": "#4f8ef7",
+            "id": 50,
+            "name": "Drums vol",
+            "points": [
+              {
+                "t": 0.0,
+                "v": 1.0
+              },
+              {
+                "t": 4.0,
+                "v": 0.5
+              }
+            ],
+            "target": {
+              "id": 1,
+              "kind": "insertVol"
+            }
+          }
+        ],
+        "bpm": 120.0,
+        "channels": [
+          {
+            "color": "#d9678f",
+            "id": 30,
+            "insert": null,
+            "kind": "sample",
+            "mute": false,
+            "name": "Kick",
+            "pan": 0.0,
+            "root": 60,
+            "sampler": {
+              "attack": 0.0,
+              "attackTension": 0.0,
+              "cut": 0,
+              "decay": 0.0,
+              "decayTension": 0.0,
+              "delay": 0.0,
+              "end": 1.0,
+              "env": false,
+              "fadeInMs": 0.0,
+              "fadeOutMs": 0.0,
+              "fine": 0.0,
+              "hold": 0.0,
+              "norm": false,
+              "release": 20.0,
+              "releaseTension": 0.0,
+              "reverse": false,
+              "semi": 0,
+              "start": 0.0,
+              "sustain": 1.0
+            },
+            "solo": false,
+            "source": 10,
+            "vol": 0.7936999797821045
+          },
+          {
+            "color": "#7c8cf8",
+            "id": 31,
+            "insert": null,
+            "keys": {
+              "dynamics": 100.0,
+              "release": 350.0
+            },
+            "kind": "keys",
+            "mute": false,
+            "name": "Keys",
+            "pan": 0.0,
+            "root": 60,
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "clips": [
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 40,
+            "kind": "pat",
+            "len": 8.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 20,
+            "rev": false,
+            "start": 0.0,
+            "track": 0
+          },
+          {
+            "fadeIn": 0.10000000149011612,
+            "fadeOut": 0.0,
+            "gain": -3.0,
+            "id": 41,
+            "insert": 2,
+            "kind": "audio",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 10,
+            "rev": false,
+            "start": 2.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 42,
+            "kind": "comp",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 60,
+            "rev": false,
+            "start": 8.0,
+            "track": 1
+          },
+          {
+            "fadeIn": 0.0,
+            "fadeOut": 0.0,
+            "gain": 0.0,
+            "id": 43,
+            "kind": "auto",
+            "len": 4.0,
+            "muted": false,
+            "norm": false,
+            "offset": 0.0,
+            "pan": 0.0,
+            "ref": 50,
+            "rev": false,
+            "start": 16.0,
+            "track": 0
+          }
+        ],
+        "comps": [
+          {
+            "id": 60,
+            "name": "Vocal Comp",
+            "regions": [
+              {
+                "from": 0.0,
+                "take": 61,
+                "to": 2.0
+              },
+              {
+                "from": 2.0,
+                "take": 62,
+                "to": 4.0,
+                "xfade": 0.05000000074505806
+              }
+            ],
+            "takes": [
+              {
+                "id": 61,
+                "len": 2.0,
+                "name": "take-a",
+                "offset": 0.0,
+                "ref": 10,
+                "start": 0.0
+              },
+              {
+                "id": 62,
+                "len": 2.0,
+                "name": "take-b",
+                "offset": 0.0,
+                "ref": 11,
+                "start": 2.0
+              }
+            ],
+            "xfade": 0.009999999776482582
+          }
+        ],
+        "inserts": [
+          {
+            "color": "#d5dae2",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 900,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "limit"
+              }
+            ],
+            "id": 0,
+            "muted": false,
+            "name": "Master",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#4f8ef7",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 902,
+                "mix": 1.0,
+                "params": {
+                  "fb": 0.3
+                },
+                "preset": null,
+                "type": "delay"
+              },
+              {
+                "bands": [
+                  {
+                    "f": 100.0,
+                    "g": 3.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  },
+                  {
+                    "f": 8000.0,
+                    "g": -2.0,
+                    "on": true,
+                    "place": "stereo",
+                    "q": 1.0,
+                    "slope": 12,
+                    "type": "peak"
+                  }
+                ],
+                "bypass": false,
+                "id": 901,
+                "mix": 1.0,
+                "params": {},
+                "preset": null,
+                "type": "eq"
+              }
+            ],
+            "id": 1,
+            "muted": false,
+            "name": "Drums",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          },
+          {
+            "color": "#d9678f",
+            "fx": [
+              {
+                "bypass": false,
+                "id": 903,
+                "mix": 1.0,
+                "params": {},
+                "plugin": {
+                  "cid": "2ebf41a7aae34b6f9f39e2ff2d6b0c41",
+                  "format": "vst3",
+                  "name": "Serum",
+                  "path": "C:\\Program Files\\Common Files\\VST3\\Serum.vst3",
+                  "vendor": "Xfer Records"
+                },
+                "preset": null,
+                "type": "plugin"
+              }
+            ],
+            "id": 2,
+            "muted": false,
+            "name": "Vocal",
+            "pan": 0.0,
+            "solo": false,
+            "vol": 0.7936999797821045,
+            "width": 1.0
+          }
+        ],
+        "key": 9,
+        "loop": {
+          "a": 0.0,
+          "b": 8.0
+        },
+        "nextId": 100,
+        "notebook": {
+          "pages": [
+            {
+              "id": 70,
+              "name": "Verse",
+              "startBar": 1,
+              "text": "[Verse]\nfirst line\n\nsecond line"
+            }
+          ]
+        },
+        "patterns": [
+          {
+            "color": "#4f8ef7",
+            "id": 20,
+            "len": 8.0,
+            "minLen": 4.0,
+            "name": "Verse",
+            "notes": [
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 0.0,
+                "trig": false
+              },
+              {
+                "ch": 30,
+                "len": 1.0,
+                "step": 4.0,
+                "trig": true,
+                "v": 0.800000011920929
+              },
+              {
+                "ch": 30,
+                "len": 4.0,
+                "step": 28.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 57,
+                "step": 4.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 57,
+                "step": 5.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 64,
+                "step": 6.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 57,
+                "step": 7.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 64,
+                "step": 8.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 60,
+                "step": 9.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 64,
+                "step": 10.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 67,
+                "step": 11.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 62,
+                "step": 12.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 62,
+                "step": 13.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 62,
+                "step": 14.0,
+                "trig": false
+              },
+              {
+                "ch": 31,
+                "len": 0.75,
+                "p": 66,
+                "step": 15.0,
+                "trig": false,
+                "v": 0.8999999761581421
+              }
+            ]
+          },
+          {
+            "color": "#4f8ef7",
+            "id": 21,
+            "len": 8.0,
+            "minLen": 8.0,
+            "name": "Hook",
+            "notes": []
+          }
+        ],
+        "scale": 2,
+        "sources": [
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 10,
+            "name": "kick",
+            "path": "C:\\Music\\kick.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          },
+          {
+            "ch": 1,
+            "color": "#d9678f",
+            "dur": 2.5,
+            "id": 11,
+            "name": "take-a",
+            "path": "C:\\Music\\take-a.wav",
+            "peakDb": -3.0,
+            "sr": 44100
+          }
+        ],
+        "tracks": [
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 1,
+            "insert": 1,
+            "muted": false,
+            "name": "Drums",
+            "solo": false,
+            "vol": 0.7936999797821045
+          },
+          {
+            "arm": false,
+            "color": "#4f8ef7",
+            "h": 56.0,
+            "id": 2,
+            "insert": 2,
+            "muted": false,
+            "name": "Vocal",
+            "solo": false,
+            "vol": 0.7936999797821045
+          }
+        ],
+        "version": 2
+      }
+    },
+    {
+      "base": "main",
+      "error": "arpeggiate mode must be one of up, down, upDown, random",
+      "name": "arpeggiate refuses an unknown mode",
+      "ops": [
+        {
+          "op": "transformNotes",
+          "pattern": 20,
+          "seed": null,
+          "select": {
+            "ch": 31,
+            "from": 0.0,
+            "kind": "range",
+            "to": 32.0
+          },
+          "verb": {
+            "gate": 0.8999999761581421,
+            "kind": "arpeggiate",
+            "mode": "sideways",
+            "octaves": 1,
+            "rate": 1.0
+          }
+        }
+      ],
+      "result": null
+    },
+    {
+      "base": "main",
+      "error": null,
       "name": "strum spreads the selected same-start notes",
       "ops": [
         {

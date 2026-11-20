@@ -622,6 +622,17 @@ impl Voice {
         self.set_glide(glide_samples);
     }
 
+    /// Where the pitch is headed (semitones).
+    pub fn goal(&self) -> f32 {
+        self.st_target
+    }
+
+    /// A slide note: the pitch glides `by` semitones from where it is headed, over `samples`.
+    pub fn slide_by(&mut self, by: f32, samples: f32) {
+        self.st_target += by;
+        self.set_glide(samples);
+    }
+
     fn set_glide(&mut self, samples: f32) {
         if samples >= 1.0 && (self.st_target - self.st).abs() > 1e-4 {
             self.glide_left = samples as u32;

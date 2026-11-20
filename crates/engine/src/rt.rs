@@ -685,6 +685,9 @@ pub struct NoteRt {
     pub vel: f32,
     /// The note's own pan (-1..=1), on top of the channel's. Sampler and Keys voices only.
     pub pan: f32,
+    /// A slide note: it glides the channel's sounding notes to `key` over `len` (see
+    /// [`crate::model::Note::slide`]) instead of starting a sound.
+    pub slide: bool,
 }
 
 impl NoteRt {
@@ -1582,39 +1585,46 @@ impl Rt {
         let b0 = self.pat_beat - la;
         let b1 = b0 + n as f64 * bps;
         let (r0, r1) = ((b0 / span).floor() as i64, (b1 / span).floor() as i64);
-        for r in r0..=r1 {
-            for nt in &pat.notes {
-                if nt.beat < la || nt.beat >= lb {
-                    continue;
+        // slide notes after the notes they bend (a slide moves what has started by then)
+        for slides in [false, true] {
+            for r in r0..=r1 {
+                for nt in pat.notes.iter().filter(|nt| nt.slide == slides) {
+                    if nt.beat < la || nt.beat >= lb {
+                        continue;
+                    }
+                    let nb = r as f64 * span + nt.beat - la;
+                    if nb < b0 || nb >= b1 {
+                        continue;
+                    }
+                    let Some(ch) = tl.chans.get(nt.chan) else { continue };
+                    if !ch.on {
+                        continue;
+                    }
+                    // PAT mode plays the pattern itself, not its place in the song: a channel without
+                    // an insert of its own goes to the master, not through the insert (and effects) of
+                    // the playlist track its clip is on
+                    let ins = ch.insert.unwrap_or(0);
+                    let delay = ((nb - b0) / bps) as u32;
+                    if slides {
+                        slide(&mut self.voices, &mut self.synths, ch, delay, nt.key, (nt.len * spb) as f32 * self.sr);
+                        continue;
+                    }
+                    play(
+                        &mut self.voices,
+                        &mut self.synths,
+                        &mut self.plugs,
+                        ch,
+                        nt.chan,
+                        Dest::Insert(ins),
+                        delay,
+                        nt.end(spb, f64::INFINITY),
+                        nt.key,
+                        nt.vel,
+                        1.0,
+                        nt.pan,
+                        self.sr,
+                    );
                 }
-                let nb = r as f64 * span + nt.beat - la;
-                if nb < b0 || nb >= b1 {
-                    continue;
-                }
-                let Some(ch) = tl.chans.get(nt.chan) else { continue };
-                if !ch.on {
-                    continue;
-                }
-                // PAT mode plays the pattern itself, not its place in the song: a channel without
-                // an insert of its own goes to the master, not through the insert (and effects) of
-                // the playlist track its clip is on
-                let ins = ch.insert.unwrap_or(0);
-                let delay = ((nb - b0) / bps) as u32;
-                play(
-                    &mut self.voices,
-                    &mut self.synths,
-                    &mut self.plugs,
-                    ch,
-                    nt.chan,
-                    Dest::Insert(ins),
-                    delay,
-                    nt.end(spb, f64::INFINITY),
-                    nt.key,
-                    nt.vel,
-                    1.0,
-                    nt.pan,
-                    self.sr,
-                );
             }
         }
         // the metronome counts the pattern's beats (accent on each of its bars), as in the song
@@ -2165,39 +2175,47 @@ impl Rt {
                     let hi = b1.min(c.end);
                     let r0 = ((lo - base) / pat.len).floor() as i64 - 1;
                     let r1 = ((hi - base) / pat.len).floor() as i64;
-                    for r in r0..=r1 {
-                        for nt in &pat.notes {
-                            let nb = base + r as f64 * pat.len + nt.beat;
-                            if nb >= lo && nb < hi {
-                                let Some(ch) = tl.chans.get(nt.chan) else { continue };
-                                if !ch.on {
-                                    continue;
+                    // slide notes after the notes they bend (a slide moves what has started by then)
+                    for slides in [false, true] {
+                        for r in r0..=r1 {
+                            for nt in pat.notes.iter().filter(|nt| nt.slide == slides) {
+                                let nb = base + r as f64 * pat.len + nt.beat;
+                                if nb >= lo && nb < hi {
+                                    let Some(ch) = tl.chans.get(nt.chan) else { continue };
+                                    if !ch.on {
+                                        continue;
+                                    }
+                                    let delay = ((nb - b0) / bps) as u32 + at as u32;
+                                    if slides {
+                                        let len = (nt.len.min(c.end - nb) * spb) as f32 * self.sr;
+                                        slide(&mut self.voices, &mut self.synths, ch, delay, nt.key, len);
+                                        continue;
+                                    }
+                                    let end = nt.end(spb, c.end - nb);
+                                    let (dest, gain) = match ch.insert {
+                                        None => (Dest::Track(c.track), 1.0),
+                                        // routed past the track: the track still mutes and scales it
+                                        Some(k) => match self.graph.tracks.get(c.track) {
+                                            Some(t) if t.on => (Dest::Insert(k), t.gain),
+                                            _ => continue,
+                                        },
+                                    };
+                                    play(
+                                        &mut self.voices,
+                                        &mut self.synths,
+                                        &mut self.plugs,
+                                        ch,
+                                        nt.chan,
+                                        dest,
+                                        delay,
+                                        end,
+                                        nt.key,
+                                        nt.vel,
+                                        gain,
+                                        nt.pan,
+                                        self.sr,
+                                    );
                                 }
-                                let delay = ((nb - b0) / bps) as u32 + at as u32;
-                                let end = nt.end(spb, c.end - nb);
-                                let (dest, gain) = match ch.insert {
-                                    None => (Dest::Track(c.track), 1.0),
-                                    // routed past the track: the track still mutes and scales it
-                                    Some(k) => match self.graph.tracks.get(c.track) {
-                                        Some(t) if t.on => (Dest::Insert(k), t.gain),
-                                        _ => continue,
-                                    },
-                                };
-                                play(
-                                    &mut self.voices,
-                                    &mut self.synths,
-                                    &mut self.plugs,
-                                    ch,
-                                    nt.chan,
-                                    dest,
-                                    delay,
-                                    end,
-                                    nt.key,
-                                    nt.vel,
-                                    gain,
-                                    nt.pan,
-                                    self.sr,
-                                );
                             }
                         }
                     }
@@ -2302,6 +2320,20 @@ fn play(
         }
     } else {
         voices.note(ch, idx, dest, delay, end, key, vel, gain, pan);
+    }
+}
+
+/// A slide note of channel `ch`: its sounding notes glide to `key` over `len` samples. Plugin
+/// instruments have no way to be told (FL Studio's slide notes are native-only too).
+fn slide(voices: &mut VoicePool, synths: &mut SynthBank, ch: &ChanRt, delay: u32, key: u8, len: f32) {
+    match ch.kind {
+        VoiceKind::Synth => {
+            if let Some(s) = synths.get(ch.id) {
+                s.slide(delay, key, len.max(0.0) as u32);
+            }
+        }
+        VoiceKind::Sample | VoiceKind::Keys => voices.slide(ch.id, delay, key, len.max(0.0) as u32),
+        VoiceKind::Plugin | VoiceKind::Click { .. } => {}
     }
 }
 

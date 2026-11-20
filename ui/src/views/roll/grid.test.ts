@@ -51,7 +51,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     pat.len = Math.max(pat.minLen ?? 4, content);
   };
   let sel = new Set<number>();
-  let lastLen = 2, lastTrig = false, lastVel = 1;
+  let lastLen = 2, lastTrig = false, lastVel = 1, slideMode = false;
   let drag: RecDrag | null = null;
   let dblArmed = false;
   let modCb: ((m: Mods) => void) | null = null;
@@ -81,6 +81,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     setSel: s => { sel = s; rec.sels.push([...s]); },
     lastLen: () => lastLen, lastTrig: () => lastTrig, setLastLen: (l, tr = false) => { lastLen = l; lastTrig = tr; },
     lastVel: () => lastVel, setLastVel: v => { lastVel = v; },
+    slideMode: () => slideMode,
     commitNotes: (nts, label) => { setNotes(nts); rec.commits.push({ notes: nts, label }); },
     notesOp: nts => {
       setNotes(nts);
@@ -120,7 +121,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     bindMods: cb => { modCb = cb; return () => { modCb = null; }; },
     autoScroll: () => ({ move: () => {}, stop: () => {} }),
   };
-  return { ctx, rec, live, drag: () => drag, armDbl: () => { dblArmed = true; }, fireMods: (m: Mods) => modCb?.(m), setLen: (n: number) => { pat.len = n; pat.minLen = n; }, patLen: () => pat.len };
+  return { ctx, rec, live, setSlide: (on: boolean) => { slideMode = on; }, drag: () => drag, armDbl: () => { dblArmed = true; }, fireMods: (m: Mods) => modCb?.(m), setLen: (n: number) => { pat.len = n; pat.minLen = n; }, patLen: () => pat.len };
 }
 
 // ---- helpers over the fakes ----
@@ -138,6 +139,19 @@ describe('draw tool', () => {
     c.drag()?.up(mv(c, at(0.2, 60)));
     down(c, 0, at(6.4, 62));
     expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 6, len: 1, p: 62, trig: true });
+  });
+  it('in slide mode (S) new notes are slide notes, held for the last length even after a step', () => {
+    const c = makeCtx([{ ch: CH.id, step: 0, len: 1, p: 60, trig: true }]);
+    c.setSlide(true);
+    down(c, 0, at(0.2, 60));
+    c.drag()?.up(mv(c, at(0.2, 60)));
+    down(c, 0, at(6.4, 67));
+    expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 6, len: 1, p: 67, trig: false, slide: true });
+    c.setSlide(false);
+    c.drag()?.up(mv(c, at(6.4, 67)));
+    down(c, 0, at(10.4, 60));
+    // slide off: back to what the last touched note was (a step)
+    expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 10, len: 1, p: 60, trig: true });
   });
   it('creates a snapped note on empty grid, selects it, auditions it, and drags it', () => {
     const c = makeCtx([]);
