@@ -153,7 +153,7 @@ pub fn import(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value> {
             for part in &parts {
                 if part.channel == DRUM_CHANNEL {
                     for n in &part.notes {
-                        notes.push(Note { ch: drum_ch[&n.key], step: steps(n.start), len: steps(n.len).max(0.01), p: None, v: vel(n.vel), trig: Some(false), pan: 0.0 });
+                        notes.push(Note { ch: drum_ch[&n.key], step: steps(n.start), len: steps(n.len).max(0.01), p: None, v: vel(n.vel), trig: Some(false), pan: 0.0, slide: false });
                     }
                     continue;
                 }
@@ -169,7 +169,7 @@ pub fn import(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value> {
                 ops.push(Op::PutChannel { channel: ch, index: None });
                 channels.push(cid);
                 for n in &part.notes {
-                    notes.push(Note { ch: cid, step: steps(n.start), len: steps(n.len).max(0.01), p: Some(n.key), v: vel(n.vel), trig: Some(false), pan: 0.0 });
+                    notes.push(Note { ch: cid, step: steps(n.start), len: steps(n.len).max(0.01), p: Some(n.key), v: vel(n.vel), trig: Some(false), pan: 0.0, slide: false });
                 }
             }
             let end = parts.iter().flat_map(|p| &p.notes).map(|n| n.start + n.len).fold(0.0, f64::max);
@@ -239,6 +239,7 @@ fn import_into(app: &dyn Host, parts: &[&midi_file::Part], into: &Value, if_revi
         p: Some(n.key),
         v: vel(n.vel),
         trig: Some(false),
+        slide: false,
     }));
     let rev = e.apply(&[Op::PutPattern { pattern: pat }], false, if_revision).map_err(|x| x.to_string())?;
     Ok(json!({ "patternId": pid, "channelIds": [ch], "notes": added, "revision": rev }))
@@ -286,7 +287,9 @@ fn clip_notes(c: &Clip, pat: &Pattern, out: &mut Vec<(Id, SmfNote, Option<u8>)>)
     let end = c.start + c.len;
     let mut base = c.start - off;
     while base < end {
-        for n in &pat.notes {
+        // a slide note bends other notes and has no sound of its own: a MIDI file has no
+        // such note, so it is left out (it would play as an extra note)
+        for n in pat.notes.iter().filter(|n| !n.slide) {
             let t = f64::from(n.step) / 4.0;
             if t >= plen {
                 continue;

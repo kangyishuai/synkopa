@@ -231,6 +231,15 @@ whole pass of it follow; clips sized on purpose keep their length.
 or the end of the sample, whichever comes first. Include `"trig":true` on any trigger in a mixed row. When a row contains held notes or cannot be represented as a step string, the reply's
 `notes` array carries `trig` for each event.
 
+`"slide":true` makes an FL slide note: it starts no sound; the channel's notes sounding when it
+starts glide by the distance from the highest of them to its key `p`, over its `len`, and keep
+that pitch until they end (sampler, Synkopa Keys and Synth channels; plugin instruments ignore
+it; MIDI export leaves it out). An 808 jumping an octave up for an eighth note:
+
+```sh
+synkopa pattern --id 3 --ch 808 --notes '[{"step":0,"len":8,"p":36},{"step":4,"len":2,"p":48,"slide":true}]'
+```
+
 ## Takes and comping
 
 A track you recorded with a loop set (one take per pass), or recorded over

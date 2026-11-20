@@ -180,7 +180,8 @@ export const MIN_PIECE = 0.25;
 /** At most this many notes from one chop or arpeggio (the engine's bound). */
 const MAX_MADE = 20000;
 
-const isTrig = (n: Note) => n.trig === true;
+/** Notes chop, glue and the arpeggiator leave as they are: step triggers and slide notes (engine `untouched`). */
+const isTrig = (n: Note) => n.trig === true || n.slide === true;
 const f = Math.fround;
 
 /** How many notes `chop` makes (the engine's `chop_count`). */
