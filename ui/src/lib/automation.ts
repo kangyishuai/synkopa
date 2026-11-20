@@ -2,7 +2,7 @@
 // as the engine does, the value of an envelope at a beat, which clip drives a target at the
 // playhead, and the ops that create a new automation clip ("Automatyzuj na playliście").
 import { t as tl, tName } from './i18n';
-import { CLIP_GAIN_DB, KEYS_DYNAMICS, KEYS_RELEASE, MB_RELEASE, type AutoPoint, type AutoTarget, type CurveShape, type Automation, type Catalog, type Channel, type Clip, type Id, type Op, type Project, type Track } from '../api/types';
+import { CLIP_GAIN_DB, KEYS_DYNAMICS, KEYS_RELEASE, MB_RELEASE, MB_RING, type AutoPoint, type AutoTarget, type CurveShape, type Automation, type Catalog, type Channel, type Clip, type Id, type Op, type Project, type Track } from '../api/types';
 import { insertTrackOps } from './clipOps';
 import { synthParam } from './synth';
 import { dbText, hzText, panText, volText } from './format';
@@ -42,12 +42,17 @@ export function targetKey(t: AutoTarget): string {
 const chanOf = (p: Project, id: Id): Channel | undefined => p.channels?.find(c => c.id === id);
 const clipOf = (p: Project, id: Id) => p.clips.find(c => c.id === id && c.kind === 'audio');
 
-/** Music Box knobs: release is logarithmic ms, the rest linear %. */
+/**
+ * Music Box knobs: release is logarithmic ms; ring spans 25..250 % (the engine normalizes it
+ * range-relative before the voice reads it); the rest are linear 0..100 %.
+ */
 function musicBoxNorm(t: Extract<AutoTarget, { kind: 'musicBox' }>, x: number): number {
-  return t.param === 'release' ? lg(x, MB_RELEASE.min, MB_RELEASE.max) : lin(x, 0, 100);
+  if (t.param === 'release') return lg(x, MB_RELEASE.min, MB_RELEASE.max);
+  return t.param === 'ring' ? lin(x, MB_RING.min, MB_RING.max) : lin(x, 0, 100);
 }
 function musicBoxDenorm(t: Extract<AutoTarget, { kind: 'musicBox' }>, v: number): number {
-  return t.param === 'release' ? ex(v, MB_RELEASE.min, MB_RELEASE.max) : unlin(v, 0, 100);
+  if (t.param === 'release') return ex(v, MB_RELEASE.min, MB_RELEASE.max);
+  return t.param === 'ring' ? unlin(v, MB_RING.min, MB_RING.max) : unlin(v, 0, 100);
 }
 
 function fxOf(p: Project, id: Id) {
@@ -391,7 +396,7 @@ export function parseAutoValue(p: Project, cat: Catalog | null, t: AutoTarget, t
     }
     case 'mix': return c01(x / 100);
     case 'keys': if (t.param !== 'release') return c01(x / 100); break;
-    case 'musicBox': if (t.param !== 'release') return c01(x / 100); break;
+    case 'musicBox': if (t.param === 'ring') return c01((x - MB_RING.min) / (MB_RING.max - MB_RING.min)); if (t.param !== 'release') return c01(x / 100); break;
   }
   return normalize(p, cat, t, x);
 }

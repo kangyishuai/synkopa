@@ -64,7 +64,7 @@ export function MusicBoxPanel(props: { c: MbChannel }) {
       </div>
       <div class="keysknobs">
         {knob('b.mb.release', () => relT(k().release), () => relText(k().release), t => ({ ...kBase(), release: relMs(t) }), relT(MB_RELEASE.def), 'release')}
-        {knob('b.mb.ring', () => k().ring / 250, () => Math.round(k().ring) + ' %', t => ({ ...kBase(), ring: 25 + Math.round(clamp(t, 0, 1) * 225) }), (MB_RING.def - 25) / 225, 'ring')}
+        {knob('b.mb.ring', () => (k().ring - MB_RING.min) / (MB_RING.max - MB_RING.min), () => Math.round(k().ring) + ' %', t => ({ ...kBase(), ring: MB_RING.min + Math.round(clamp(t, 0, 1) * (MB_RING.max - MB_RING.min)) }), (MB_RING.def - MB_RING.min) / (MB_RING.max - MB_RING.min), 'ring')}
         {knob('b.mb.brightness', () => k().brightness / 100, () => Math.round(k().brightness) + ' %', t => ({ ...kBase(), brightness: Math.round(clamp(t, 0, 1) * 100) }), MB_BRIGHTNESS.def / 100, 'brightness')}
         {knob('b.mb.body', () => k().body / 100, () => Math.round(k().body) + ' %', t => ({ ...kBase(), body: Math.round(clamp(t, 0, 1) * 100) }), MB_BODY.def / 100, 'body')}
         {knob('b.mb.mechanical', () => k().mechanical / 100, () => Math.round(k().mechanical) + ' %', t => ({ ...kBase(), mechanical: Math.round(clamp(t, 0, 1) * 100) }), MB_MECHANICAL.def / 100, 'mechanical')}

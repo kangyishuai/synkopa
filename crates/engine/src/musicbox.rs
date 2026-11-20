@@ -42,8 +42,8 @@ const TICK_T60: f32 = 0.0015;
 const TICK_LP: f32 = 0.3;
 
 /// Output level against a bare sum of partials, like [`crate::synth::KEYS_HEADROOM`]: with
-/// this, one full-velocity note peaks near −11 dBFS and a ten-note chord stays under full
-/// scale, so chords sum linearly.
+/// this, one full-velocity note lands well below full scale (the render test pins the band)
+/// and a ten-note chord stays under full scale, so chords sum linearly.
 pub const HEADROOM: f32 = 0.28;
 
 /// A channel's knobs, resolved for the audio thread (percentages normalized to 0..1, the
@@ -82,6 +82,7 @@ impl Default for Tine {
             lcg: 0,
             tick: 0.0,
             tick_lp: 0.0,
+            tick_coef: 0.0,
             pan: 0.0,
             body: [BodyMode { freq: 0.0, r: 0.0, gain: 0.0, s1: 0.0, s2: 0.0 }; 2],
         }
@@ -157,10 +158,12 @@ pub struct Tine {
     pub decay: [f32; PARTIALS],
     /// Running amplitude of each partial.
     pub amp: [f32; PARTIALS],
-    /// Pin tick: LCG state, its decaying level, and the lowpass state.
+    /// Pin tick: LCG state, its decaying level, the lowpass state, and the precomputed
+    /// per-sample decay coefficient.
     pub lcg: u32,
     pub tick: f32,
     pub tick_lp: f32,
+    pub tick_coef: f32,
     /// Per-note pan offset (the comb's notes sit across the stereo image).
     pub pan: f32,
     body: [BodyMode; 2],
@@ -202,6 +205,7 @@ impl Tine {
             lcg,
             tick: 0.55 * p.mechanical.clamp(0.0, 1.0) * (0.35 + 0.65 * vel.clamp(0.0, 1.0)),
             tick_lp: 0.0,
+            tick_coef: 10f32.powf(-3.0 / (TICK_T60.max(0.001) * sr)),
             pan,
             body: [
                 BodyMode::new(BODY_MODES[0], 0.9 * p.body.clamp(0.0, 1.0), sr),
@@ -225,7 +229,7 @@ impl Tine {
         self.lcg = self.lcg.wrapping_mul(1_103_515_245).wrapping_add(12_345);
         let n = ((self.lcg >> 8) as f32 / 8_388_608.0 - 1.0).clamp(-1.0, 1.0);
         self.tick_lp += TICK_LP * (n - self.tick_lp);
-        self.tick *= 10f32.powf(-3.0 / (TICK_T60 * sr));
+        self.tick *= self.tick_coef;
         x += self.tick * self.tick_lp;
         let body = self.body[0].process(x, sr) + self.body[1].process(x, sr);
         x + body

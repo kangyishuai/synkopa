@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { sketchProject, mockCatalog } from '../api/mockData';
-import { CLIP_GAIN_DB, KEYS_RELEASE, VOL_UNITY, type AutoTarget, type CurveShape, type Channel, type Clip, type Project } from '../api/types';
+import { CLIP_GAIN_DB, KEYS_RELEASE, MB_RELEASE, MB_RING, VOL_UNITY, type AutoTarget, type CurveShape, type Channel, type Clip, type Project } from '../api/types';
 import { applyAll } from './applyOps';
 import { createAutomationOps, curveAt, spansValue, denormalize, normalize, autoValueText, parseAutoValue, readTarget, sortPoints, targetKey, targetLabel, trackForAutomation, valueAt, writeTargetOps } from './automation';
 import { newSynthChannel, synthParam } from './synth';
@@ -13,7 +13,12 @@ function project(): Project {
   const p = sketchProject(cat);
   const synth = { ...newSynthChannel(cat.synth, 7001, null), name: 'Lead' };
   const keys: Channel = { ...p.channels![0], id: 7002, name: 'Piano', kind: 'keys', keys: { release: 350, dynamics: 80 } } as Channel;
-  p.channels = [...(p.channels ?? []), synth, keys];
+  const mbox: Channel = {
+    id: 7004, name: 'Music Box', color: '#cf8e52', kind: 'musicbox',
+    musicBox: { ring: 140, brightness: 45, body: 30, mechanical: 25, spread: 35, release: 400 },
+    vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root: 60,
+  } as Channel;
+  p.channels = [...(p.channels ?? []), synth, keys, mbox];
   const src = p.sources[0] ?? { id: 7100, name: 'Loop', path: 'loop.wav', color: '#4f8ef7', dur: 2, sr: 48000, ch: 2, peakDb: -1 };
   if (!p.sources.length) p.sources.push(src as Project['sources'][number]);
   const clip: Clip = { id: 7003, track: 0, start: 0, len: 4, offset: 0, kind: 'audio', ref: src.id, muted: false, gain: -6, fadeIn: 0, fadeOut: 0, pan: 0.5, norm: false, rev: false };
@@ -57,6 +62,28 @@ describe('automation of channels, synth and Keys parameters, and audio clips', (
     expect(d.log).toBe(true);
     expect(denormalize(p, cat, targets[2], 0)).toBeCloseTo(d.min, 6);
     expect(denormalize(p, cat, targets[2], 1)).toBeCloseTo(d.max, 6);
+  });
+
+  it('normalises Music Box knobs like the engine (ring is range-relative, release logarithmic)', () => {
+    const p = project();
+    // ring spans 25..250 %: the normalized 0..1 the engine consumes is (x − 25) / 225, so a
+    // plain x/100 would make the envelope and the knob disagree (140 % = 0.511, not 1.0)
+    const ring = { kind: 'musicBox' as const, chanId: 7004, param: 'ring' as const };
+    expect(normalize(p, cat, ring, MB_RING.min)).toBe(0);
+    expect(normalize(p, cat, ring, MB_RING.max)).toBe(1);
+    expect(normalize(p, cat, ring, 140)).toBeCloseTo((140 - MB_RING.min) / (MB_RING.max - MB_RING.min), 9);
+    expect(denormalize(p, cat, ring, normalize(p, cat, ring, 140))).toBeCloseTo(140, 6);
+    // release is logarithmic like Keys release
+    const rel = { kind: 'musicBox' as const, chanId: 7004, param: 'release' as const };
+    expect(denormalize(p, cat, rel, 0.5)).toBeCloseTo(MB_RELEASE.min * Math.sqrt(MB_RELEASE.max / MB_RELEASE.min), 6);
+    // the percent-text parse path maps ring through its range too
+    const parsed = parseAutoValue(p, cat, ring, '180%');
+    expect(parsed).toBeCloseTo((180 - MB_RING.min) / (MB_RING.max - MB_RING.min), 6);
+    // read/write hit the musicBox state, and the label names the knob
+    expect(readTarget(p, { kind: 'musicBox', chanId: 7004, param: 'ring' })).toBe(140);
+    const ops = writeTargetOps(p, ring, 180)!;
+    expect(readTarget(applyAll(p, ops), ring)).toBe(180);
+    expect(targetLabel(p, cat, ring)).toMatch(/^Music Box · /);
   });
 
   it('round-trips every target through its normalisation', () => {
