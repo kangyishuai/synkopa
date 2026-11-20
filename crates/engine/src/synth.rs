@@ -327,7 +327,7 @@ impl VoicePool {
         let sounding = |v: &Voice| {
             v.alive
                 && v.chan_id == chan_id
-                && matches!(v.kind, VoiceKind::Sample | VoiceKind::Keys)
+                && matches!(v.kind, VoiceKind::Sample | VoiceKind::Keys | VoiceKind::MusicBox)
                 && v.slice == NO_SLICE
                 && v.delay <= delay
                 && v.cut_at == u32::MAX
@@ -611,7 +611,8 @@ impl VoicePool {
                             break;
                         }
                     }
-                    let y = v.mb.sample(bend, sr);
+                    let slide = v.slide_tick() as f32;
+                    let y = v.mb.sample(bend * slide, sr);
                     let fade = (v.t as f32 / (0.001 * sr)).min(1.0) * v.env;
                     let (gl, gr) = side(i);
                     out_l[i] += y * gl * fade;

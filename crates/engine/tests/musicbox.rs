@@ -224,3 +224,24 @@ fn overlapping_notes_ringing_into_each_other_do_not_click() {
     assert!(lab::click_flags(&x, SR as f32, 3.0).is_empty(), "overlapping notes click");
     assert!(rms(&x) > 0.01);
 }
+
+#[test]
+fn a_slide_note_glides_the_tine_to_its_new_key() {
+    // C4 rings from 0; a slide note to C5 starts at step 4 and glides over its 4 steps
+    // (each step is 0.117 s at 128 BPM): 0.469 s .. 0.938 s
+    let mut p =
+        project(vec![note(0.0, 32.0, 60, 0.9), Note { slide: true, ..Note::new(CH, 4.0, 4.0, Some(72)) }], MusicBoxState::default());
+    p.patterns[0].len = 24.0;
+    p.patterns[0].min_len = 24.0;
+    p.clips[0].len = 24.0;
+    let x = render_to(p, 24.0);
+    let sr = SR as f64;
+    // measure after the attack: the early overtone stack inflates zero crossings
+    let before = freq(&x[(0.28 * sr) as usize..(0.44 * sr) as usize]);
+    assert!((before - 261.63).abs() < 15.0, "before the slide: {before:.1} Hz");
+    // half way through the glide the tine sits between its old and new pitch
+    let mid = freq(&x[(0.66 * sr) as usize..(0.74 * sr) as usize]);
+    assert!(mid > 300.0 && mid < 460.0, "mid-glide should sit between C4 and C5: {mid:.1} Hz");
+    let after = freq(&x[(1.10 * sr) as usize..(1.40 * sr) as usize]);
+    assert!((after - 523.25).abs() < 14.0, "after the glide: {after:.1} Hz");
+}

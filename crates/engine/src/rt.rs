@@ -2347,7 +2347,7 @@ fn slide(voices: &mut VoicePool, synths: &mut SynthBank, ch: &ChanRt, delay: u32
                 s.slide(delay, key, len.max(0.0) as u32);
             }
         }
-        VoiceKind::Sample | VoiceKind::Keys => voices.slide(ch.id, delay, key, len.max(0.0) as u32),
+        VoiceKind::Sample | VoiceKind::Keys | VoiceKind::MusicBox => voices.slide(ch.id, delay, key, len.max(0.0) as u32),
         VoiceKind::Plugin | VoiceKind::Click { .. } => {}
     }
 }
