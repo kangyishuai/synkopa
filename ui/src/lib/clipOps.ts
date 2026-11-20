@@ -209,6 +209,35 @@ export function paintCells(first: { start: number; len: number; track: number },
  * the lanes swap what they hold and ids stay with their slots: names, colours, routing and heights
  * trade places, the clips follow, and a volume automation keeps driving the track it was made for.
  */
+/**
+ * Lane `from` moved to index `to` (the lanes between shift by one). Track ids stay with their
+ * slots (the op set has no reorder), so the lanes' contents move: every slot from the lower to
+ * the higher index takes the data of the lane that lands there, its clips follow, and a track
+ * volume automation follows its lane to the slot's id. `[]` when nothing moves.
+ */
+export function moveTrackOps(p: Project, from: number, to: number): Op[] {
+  const n = p.tracks.length;
+  if (from === to || from < 0 || to < 0 || from >= n || to >= n) return [];
+  // order[k] = the old index of the lane that ends up at index k
+  const order = p.tracks.map((_, k) => k);
+  order.splice(to, 0, ...order.splice(from, 1));
+  const newIndex = new Map(order.map((old, k) => [old, k]));
+  const lo = Math.min(from, to), hi = Math.max(from, to);
+  const ops: Op[] = [];
+  for (let k = lo; k <= hi; k++) ops.push({ op: 'putTrack', track: { ...p.tracks[order[k]], id: p.tracks[k].id } });
+  const moved = p.clips.filter(c => c.track >= lo && c.track <= hi).map(c => ({ ...c, track: newIndex.get(c.track)! }));
+  if (moved.length) ops.push({ op: 'putClips', clips: moved });
+  for (const au of p.automations ?? []) {
+    const t = au.target;
+    if (t.kind !== 'trackVol') continue;
+    const old = p.tracks.findIndex(tr => tr.id === t.id);
+    if (old < lo || old > hi) continue;
+    const id = p.tracks[newIndex.get(old)!].id;
+    if (id !== t.id) ops.push({ op: 'putAutomation', automation: { ...au, target: { kind: 'trackVol', id } } });
+  }
+  return ops;
+}
+
 export function swapTrackOps(p: Project, i: number, j: number): Op[] {
   const a = p.tracks[i], b = p.tracks[j];
   if (!a || !b || i === j) return [];

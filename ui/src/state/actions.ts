@@ -4,7 +4,7 @@ import { shownFloating } from './winOrder';
 import { be } from '../api/backend';
 import { t, tName } from '../lib/i18n';
 import { PLUGIN_FORMAT_LABEL, VOL_UNITY, type AnyBuiltinKind, type PluginInfo, type Clip, type Fx, type Id, type Insert, type Op, type RecoveredProject, type Track } from '../api/types';
-import { clampMove, duplicateSpan, insertTrackOps, moveClips, muteOps, pasteClips, sliceClip, swapTrackOps, TOTAL } from '../lib/clipOps';
+import { clampMove, duplicateSpan, insertTrackOps, moveClips, moveTrackOps, muteOps, pasteClips, sliceClip, swapTrackOps, TOTAL } from '../lib/clipOps';
 import { parseViews, rememberView, viewFor } from '../lib/projView';
 import { clamp, fmtPos } from '../lib/format';
 import { loadPreset as loadPresetFx, newFx, presetInfo, presetList } from '../lib/presets';
@@ -573,6 +573,19 @@ export function moveTrack(i: number, d: -1 | 1) {
   // ids stay with their slots, so what is keyed by a slot's id trades places with the lanes: the open take lanes
   setU('takesOpen', { ...U.takesOpen, [a]: open.b, [b]: open.a });
   say(t(d < 0 ? 'd.act.trackUp' : 'd.act.trackDown', { name: S.project.tracks[i + d]?.name ?? '' }));
+}
+
+/** Drag a lane header: lane `from` goes to index `to`, with its clips (one undo step). */
+export function moveTrackTo(from: number, to: number) {
+  const ops = moveTrackOps(plain(S.project), from, to);
+  if (!ops.length) return;
+  const ids = S.project.tracks.map(tr => tr.id), name = S.project.tracks[from].name;
+  // what is keyed by a slot's id follows the lanes: the open take lanes
+  const order = ids.map((_, k) => k); order.splice(to, 0, ...order.splice(from, 1));
+  const open = Object.fromEntries(order.map((old, k) => [ids[k], U.takesOpen[ids[old]]]));
+  commit(ops, t('d.act.op.movetrack'));
+  setU('takesOpen', { ...U.takesOpen, ...open });
+  say(t('d.act.trackMoved', { name, n: to + 1 }));
 }
 
 // ---------- mixer ----------

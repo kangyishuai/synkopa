@@ -4,6 +4,13 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **Drag a track header to reorder Playlist tracks.** Grab a track's header and drag it up or down;
+  a line shows where it lands and the view scrolls at its edges. The track takes its clips, name,
+  colour, volume, routing and takes along, in one undo step; Esc puts it back.
+
 ## 0.9.30 — 2026-11-19
 
 ### Added
