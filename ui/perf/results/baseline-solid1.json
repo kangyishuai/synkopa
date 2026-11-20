@@ -1,0 +1,9877 @@
+{
+ "meta": {
+  "label": "baseline-solid1",
+  "date": "2026-11-20T09:23:52.985Z",
+  "mode": "prod",
+  "runs": 3,
+  "quick": false,
+  "git": {
+   "sha": "825f2750963a448beeb9b9b99d5077539a567e4d",
+   "branch": "solid2-migration",
+   "dirtyFiles": [
+    "M ui/vite.config.ts"
+   ]
+  },
+  "versions": {
+   "solid-js": "1.9.18",
+   "vite-plugin-solid": "2.11.17",
+   "vite": "8.3.8",
+   "node": "v24.11.1",
+   "playwright": "1.65.0"
+  },
+  "machine": {
+   "os": "Windows_NT 10.0.26300 x64",
+   "cpu": "12th Gen Intel(R) Core(TM) i5-12400F",
+   "cores": 12,
+   "memGiB": 32
+  },
+  "browser": {
+   "gpu": true,
+   "cpuThrottle": 1,
+   "viewport": {
+    "width": 1600,
+    "height": 900
+   },
+   "deviceScaleFactor": 1,
+   "headless": true,
+   "chromium": "156.0.8078.4",
+   "executable": "chromium_headless_shell-1248/chrome-headless-shell-win64/chrome-headless-shell.exe",
+   "webglRenderer": "ANGLE (NVIDIA, NVIDIA GeForce RTX 5060 Ti (0x00002D04) Direct3D11 vs_5_0 ps_5_0, D3D11)"
+  },
+  "fixtures": {
+   "generator": 1,
+   "large": {
+    "tracks": 40,
+    "inserts": 41,
+    "effects": 169,
+    "clips": 1400,
+    "clipKinds": {
+     "audio": 1200,
+     "pat": 170,
+     "auto": 26,
+     "comp": 4
+    },
+    "patterns": 25,
+    "maxPatternNotes": 2000,
+    "automations": 26,
+    "sources": 40,
+    "jsonKiB": 970,
+    "fingerprint": "1b751b48156386df"
+   },
+   "small": {
+    "tracks": 8,
+    "inserts": 9,
+    "effects": 36,
+    "clips": 77,
+    "clipKinds": {
+     "audio": 60,
+     "pat": 12,
+     "auto": 4,
+     "comp": 1
+    },
+    "patterns": 7,
+    "maxPatternNotes": 2000,
+    "automations": 4,
+    "sources": 8,
+    "jsonKiB": 156,
+    "fingerprint": "bb5465a217ec4258"
+   }
+  }
+ },
+ "bundle": {
+  "total": {
+   "raw": 1811639,
+   "gzip": 544369,
+   "brotli": 442432
+  },
+  "js": {
+   "raw": 1674584,
+   "gzip": 517676
+  },
+  "otherAssetsRaw": 148244,
+  "chunks": [
+   {
+    "file": "assets/index.js",
+    "raw": 1524859,
+    "gzip": 472134,
+    "brotli": 379471
+   },
+   {
+    "file": "assets/index.css",
+    "raw": 135366,
+    "gzip": 25803,
+    "brotli": 22190
+   },
+   {
+    "file": "assets/mock.js",
+    "raw": 133208,
+    "gzip": 41308,
+    "brotli": 36327
+   },
+   {
+    "file": "assets/window.js",
+    "raw": 13229,
+    "gzip": 3144,
+    "brotli": 2815
+   },
+   {
+    "file": "assets/webview.js",
+    "raw": 3288,
+    "gzip": 1090,
+    "brotli": 970
+   },
+   {
+    "file": "index.html",
+    "raw": 1689,
+    "gzip": 890,
+    "brotli": 659
+   }
+  ]
+ },
+ "runs": [
+  {
+   "boot_large": {
+    "metrics": {
+     "toInteractive.median": 601.85,
+     "toInteractive.p95": 632.2,
+     "toInteractive.max": 632.2,
+     "scriptMs.median": 213.6,
+     "scriptMs.p95": 225.42,
+     "scriptMs.max": 225.42,
+     "longTasks.median": 2.5,
+     "longTaskMs.median": 405.5,
+     "heapMiB.median": 39.88,
+     "domNodes.median": 4281
+    },
+    "units": {
+     "toInteractive.median": "ms",
+     "toInteractive.p95": "ms",
+     "toInteractive.max": "ms",
+     "scriptMs.median": "ms",
+     "scriptMs.p95": "ms",
+     "scriptMs.max": "ms",
+     "longTasks.median": "count",
+     "heapMiB.median": "MiB",
+     "domNodes.median": "count"
+    }
+   },
+   "boot_small": {
+    "metrics": {
+     "toInteractive.median": 482.6,
+     "toInteractive.p95": 713.3,
+     "toInteractive.max": 713.3,
+     "scriptMs.median": 143.79,
+     "scriptMs.p95": 167.66,
+     "scriptMs.max": 167.66,
+     "longTasks.median": 3,
+     "longTaskMs.median": 308,
+     "heapMiB.median": 16.2,
+     "domNodes.median": 2093
+    },
+    "units": {
+     "toInteractive.median": "ms",
+     "toInteractive.p95": "ms",
+     "toInteractive.max": "ms",
+     "scriptMs.median": "ms",
+     "scriptMs.p95": "ms",
+     "scriptMs.max": "ms",
+     "longTasks.median": "count",
+     "heapMiB.median": "MiB",
+     "domNodes.median": "count"
+    }
+   },
+   "session_start": {
+    "metrics": {
+     "heapAfterGcMiB": 24.57,
+     "domNodes": 3715,
+     "jsEventListeners": 130,
+     "documents": 3,
+     "detachedNodes": 1
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "replace_same": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.3,
+     "frames.dropped": 2,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 502.92,
+     "layoutMs": 0,
+     "styleMs": 0,
+     "taskMs": 1027.61,
+     "scriptMsPerInteraction": 16.76,
+     "heapMiB": 34.41,
+     "parse.median": 2.8,
+     "parse.p95": 9.8,
+     "parse.max": 11.1,
+     "replaceSync.median": 8.25,
+     "replaceSync.p95": 14.2,
+     "replaceSync.max": 16.3,
+     "replaceToFrame.median": 25.35,
+     "replaceToFrame.p95": 35.2,
+     "replaceToFrame.max": 42.4,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "replace_oneClip": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 476.56,
+     "layoutMs": 0,
+     "styleMs": 0,
+     "taskMs": 967.31,
+     "scriptMsPerInteraction": 15.89,
+     "heapMiB": 38.72,
+     "parse.median": 3.05,
+     "parse.p95": 8.6,
+     "parse.max": 11,
+     "replaceSync.median": 7.8,
+     "replaceSync.p95": 10.3,
+     "replaceSync.max": 10.3,
+     "replaceToFrame.median": 24.85,
+     "replaceToFrame.p95": 28.4,
+     "replaceToFrame.max": 32.6,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "replace_load": {
+    "metrics": {
+     "frame.median": 16.75,
+     "frame.p95": 183.3,
+     "frame.max": 200,
+     "frames.dropped": 138,
+     "longTasks": 26,
+     "longTaskMs": 2332,
+     "loaf": 21,
+     "scriptMs": 1195.61,
+     "layoutMs": 196.95,
+     "styleMs": 183.35,
+     "taskMs": 3247.92,
+     "scriptMsPerInteraction": 119.56,
+     "heapMiB": 27.41,
+     "parse.median": 4.6,
+     "parse.p95": 6,
+     "parse.max": 6,
+     "replaceSync.median": 82.75,
+     "replaceSync.p95": 90.4,
+     "replaceSync.max": 90.4,
+     "replaceToFrame.median": 165.05,
+     "replaceToFrame.p95": 214.6,
+     "replaceToFrame.max": 214.6,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "clip_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.4,
+     "frames.dropped": 4,
+     "longTasks": 1,
+     "longTaskMs": 52,
+     "loaf": 2,
+     "pointermove.task.median": 0.6,
+     "pointermove.task.p95": 10.7,
+     "pointermove.task.max": 20.1,
+     "pointermove.frame.median": 0.6,
+     "pointermove.frame.p95": 11.7,
+     "pointermove.frame.max": 20.6,
+     "pointermove.count": 155,
+     "pointerup.task.median": 47.6,
+     "pointerup.task.p95": 54.9,
+     "pointerup.task.max": 54.9,
+     "pointerup.frame.median": 58.8,
+     "pointerup.frame.p95": 98.8,
+     "pointerup.frame.max": 98.8,
+     "pointerup.count": 5,
+     "scriptMs": 535.11,
+     "layoutMs": 12.19,
+     "styleMs": 134.52,
+     "taskMs": 2314.31,
+     "scriptMsPerInteraction": 3.45,
+     "heapMiB": 38.58,
+     "drop.task.median": 47.6,
+     "drop.task.p95": 54.9,
+     "drop.task.max": 54.9,
+     "drop.settled.median": 85.1,
+     "drop.settled.p95": 102.3,
+     "drop.settled.max": 102.3,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "note_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.4,
+     "frame.max": 50,
+     "frames.dropped": 49,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 4,
+     "pointermove.task.median": 41,
+     "pointermove.task.p95": 49.5,
+     "pointermove.task.max": 59.1,
+     "pointermove.frame.median": 41.05,
+     "pointermove.frame.p95": 51.3,
+     "pointermove.frame.max": 59.1,
+     "pointermove.count": 64,
+     "pointerup.task.median": 43.9,
+     "pointerup.task.p95": 45.9,
+     "pointerup.task.max": 45.9,
+     "pointerup.frame.median": 55.3,
+     "pointerup.frame.p95": 56.9,
+     "pointerup.frame.max": 56.9,
+     "pointerup.count": 4,
+     "scriptMs": 2007.62,
+     "layoutMs": 34.15,
+     "styleMs": 163.21,
+     "taskMs": 5141.63,
+     "scriptMsPerInteraction": 31.37,
+     "heapMiB": 109.59,
+     "drop.task.median": 43.9,
+     "drop.task.p95": 45.9,
+     "drop.task.max": 45.9,
+     "drop.settled.median": 79.35,
+     "drop.settled.p95": 90.4,
+     "drop.settled.max": 90.4,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 2000,
+     "notes": 2000
+    }
+   },
+   "fader_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.3,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "pointermove.task.median": 6.3,
+     "pointermove.task.p95": 8.3,
+     "pointermove.task.max": 9.5,
+     "pointermove.frame.median": 6.3,
+     "pointermove.frame.p95": 8.7,
+     "pointermove.frame.max": 9.5,
+     "pointermove.count": 155,
+     "pointerup.task.median": 33.5,
+     "pointerup.task.p95": 44.6,
+     "pointerup.task.max": 44.6,
+     "pointerup.frame.median": 33.7,
+     "pointerup.frame.p95": 80,
+     "pointerup.frame.max": 80,
+     "pointerup.count": 5,
+     "scriptMs": 308.69,
+     "layoutMs": 44.08,
+     "styleMs": 134.37,
+     "taskMs": 4479.49,
+     "scriptMsPerInteraction": 1.99,
+     "heapMiB": 42.41,
+     "drop.task.median": 33.5,
+     "drop.task.p95": 44.6,
+     "drop.task.max": 44.6,
+     "drop.settled.median": 48.9,
+     "drop.settled.p95": 89.8,
+     "drop.settled.max": 89.8,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "fx_param": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.3,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "pointermove.task.median": 6,
+     "pointermove.task.p95": 7.7,
+     "pointermove.task.max": 17,
+     "pointermove.frame.median": 6.1,
+     "pointermove.frame.p95": 8.2,
+     "pointermove.frame.max": 17.3,
+     "pointermove.count": 155,
+     "pointerup.task.median": 44.2,
+     "pointerup.task.p95": 45.8,
+     "pointerup.task.max": 45.8,
+     "pointerup.frame.median": 44.4,
+     "pointerup.frame.p95": 73.8,
+     "pointerup.frame.max": 73.8,
+     "pointerup.count": 5,
+     "scriptMs": 463.68,
+     "layoutMs": 40.69,
+     "styleMs": 155.35,
+     "taskMs": 4271.35,
+     "scriptMsPerInteraction": 2.99,
+     "heapMiB": 32.5,
+     "drop.task.median": 44.2,
+     "drop.task.p95": 45.8,
+     "drop.task.max": 45.8,
+     "drop.settled.median": 47.5,
+     "drop.settled.p95": 76,
+     "drop.settled.max": 76,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "nav_scrollV": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "wheel.task.median": 0.6,
+     "wheel.task.p95": 1.1,
+     "wheel.task.max": 2,
+     "wheel.frame.median": 0.6,
+     "wheel.frame.p95": 1.2,
+     "wheel.frame.max": 2,
+     "wheel.count": 60,
+     "scroll.task.median": 9.35,
+     "scroll.task.p95": 18,
+     "scroll.task.max": 18.8,
+     "scroll.frame.median": 9.45,
+     "scroll.frame.p95": 18.1,
+     "scroll.frame.max": 18.9,
+     "scroll.count": 30,
+     "scriptMs": 209.66,
+     "layoutMs": 3.4,
+     "styleMs": 3.93,
+     "taskMs": 515.77,
+     "scriptMsPerInteraction": 6.99,
+     "heapMiB": 34.38
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "nav_scrollH": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.4,
+     "frames.dropped": 4,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "wheel.task.median": 0.6,
+     "wheel.task.p95": 1.6,
+     "wheel.task.max": 10.6,
+     "wheel.frame.median": 0.7,
+     "wheel.frame.p95": 1.7,
+     "wheel.frame.max": 10.8,
+     "wheel.count": 60,
+     "scroll.task.median": 7.2,
+     "scroll.task.p95": 17.5,
+     "scroll.task.max": 40.4,
+     "scroll.frame.median": 7.5,
+     "scroll.frame.p95": 17.6,
+     "scroll.frame.max": 40.4,
+     "scroll.count": 60,
+     "scriptMs": 343.84,
+     "layoutMs": 9.29,
+     "styleMs": 8.34,
+     "taskMs": 992.16,
+     "scriptMsPerInteraction": 5.73,
+     "heapMiB": 33.02
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "nav_zoom": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 949.9,
+     "frame.max": 1033.4,
+     "frames.dropped": 1740,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 42,
+     "wheel.task.median": 19.25,
+     "wheel.task.p95": 26.3,
+     "wheel.task.max": 33.4,
+     "wheel.frame.median": 19.45,
+     "wheel.frame.p95": 26.8,
+     "wheel.frame.max": 33.7,
+     "wheel.count": 60,
+     "scroll.task.median": 1.2,
+     "scroll.task.p95": 3.1,
+     "scroll.task.max": 7.4,
+     "scroll.frame.median": 1.3,
+     "scroll.frame.p95": 3.1,
+     "scroll.frame.max": 7.4,
+     "scroll.count": 56,
+     "scriptMs": 844.91,
+     "layoutMs": 18.46,
+     "styleMs": 21.77,
+     "taskMs": 1694.65,
+     "scriptMsPerInteraction": 14.08,
+     "heapMiB": 34.28
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "win_mixer": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.4,
+     "frame.max": 50.1,
+     "frames.dropped": 22,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 2,
+     "scriptMs": 407.32,
+     "layoutMs": 131.8,
+     "styleMs": 193.96,
+     "taskMs": 1311.44,
+     "scriptMsPerInteraction": 10.18,
+     "heapMiB": 38.78,
+     "open.median": 47,
+     "open.p95": 63.4,
+     "open.max": 64.9,
+     "close.median": 18.2,
+     "close.p95": 28.4,
+     "close.max": 31.4,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 32.71,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     },
+     "after": {
+      "heapAfterGcMiB": 32.92,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     }
+    }
+   },
+   "win_pianoRoll": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.3,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 317.63,
+     "layoutMs": 57.17,
+     "styleMs": 63.18,
+     "taskMs": 1038.47,
+     "scriptMsPerInteraction": 7.94,
+     "heapMiB": 33.88,
+     "open.median": 33.3,
+     "open.p95": 39.2,
+     "open.max": 52.3,
+     "close.median": 21.75,
+     "close.p95": 31.4,
+     "close.max": 38.6,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 32.94,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     },
+     "after": {
+      "heapAfterGcMiB": 33.18,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     }
+    }
+   },
+   "win_fxWindow": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 58.28,
+     "layoutMs": 49.7,
+     "styleMs": 39.77,
+     "taskMs": 522.48,
+     "scriptMsPerInteraction": 1.46,
+     "heapMiB": 35.45,
+     "open.median": 22.45,
+     "open.p95": 23.9,
+     "open.max": 26.8,
+     "close.median": 9.8,
+     "close.p95": 20.5,
+     "close.max": 21.2,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 33.41,
+      "domNodes": 6278,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     },
+     "after": {
+      "heapAfterGcMiB": 33.59,
+      "domNodes": 6278,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     }
+    }
+   },
+   "playback": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 191.31,
+     "layoutMs": 61.1,
+     "styleMs": 60.89,
+     "taskMs": 2205.97,
+     "scriptMsPerSecond": 31.49,
+     "heapMiB": 35.51
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB"
+    },
+    "extra": {
+     "playing": true
+    }
+   },
+   "session_end": {
+    "metrics": {
+     "heapAfterGcMiB": 33.56,
+     "domNodes": 6288,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 57
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "console_errors": []
+  },
+  {
+   "boot_large": {
+    "metrics": {
+     "toInteractive.median": 613.4,
+     "toInteractive.p95": 733.1,
+     "toInteractive.max": 733.1,
+     "scriptMs.median": 226.59,
+     "scriptMs.p95": 287.75,
+     "scriptMs.max": 287.75,
+     "longTasks.median": 2,
+     "longTaskMs.median": 379.5,
+     "heapMiB.median": 39.61,
+     "domNodes.median": 4281
+    },
+    "units": {
+     "toInteractive.median": "ms",
+     "toInteractive.p95": "ms",
+     "toInteractive.max": "ms",
+     "scriptMs.median": "ms",
+     "scriptMs.p95": "ms",
+     "scriptMs.max": "ms",
+     "longTasks.median": "count",
+     "heapMiB.median": "MiB",
+     "domNodes.median": "count"
+    }
+   },
+   "boot_small": {
+    "metrics": {
+     "toInteractive.median": 347.9,
+     "toInteractive.p95": 357.4,
+     "toInteractive.max": 357.4,
+     "scriptMs.median": 113.79,
+     "scriptMs.p95": 117.18,
+     "scriptMs.max": 117.18,
+     "longTasks.median": 2,
+     "longTaskMs.median": 188,
+     "heapMiB.median": 16.05,
+     "domNodes.median": 2093
+    },
+    "units": {
+     "toInteractive.median": "ms",
+     "toInteractive.p95": "ms",
+     "toInteractive.max": "ms",
+     "scriptMs.median": "ms",
+     "scriptMs.p95": "ms",
+     "scriptMs.max": "ms",
+     "longTasks.median": "count",
+     "heapMiB.median": "MiB",
+     "domNodes.median": "count"
+    }
+   },
+   "session_start": {
+    "metrics": {
+     "heapAfterGcMiB": 24.57,
+     "domNodes": 3715,
+     "jsEventListeners": 130,
+     "documents": 3,
+     "detachedNodes": 1
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "replace_same": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.3,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 508.61,
+     "layoutMs": 0,
+     "styleMs": 0,
+     "taskMs": 1014.18,
+     "scriptMsPerInteraction": 16.95,
+     "heapMiB": 29.93,
+     "parse.median": 3,
+     "parse.p95": 4.3,
+     "parse.max": 4.9,
+     "replaceSync.median": 8.05,
+     "replaceSync.p95": 9.5,
+     "replaceSync.max": 9.9,
+     "replaceToFrame.median": 25.55,
+     "replaceToFrame.p95": 28.3,
+     "replaceToFrame.max": 30.6,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "replace_oneClip": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 500.69,
+     "layoutMs": 0,
+     "styleMs": 0,
+     "taskMs": 989.05,
+     "scriptMsPerInteraction": 16.69,
+     "heapMiB": 31.81,
+     "parse.median": 3,
+     "parse.p95": 3.6,
+     "parse.max": 5.7,
+     "replaceSync.median": 7.9,
+     "replaceSync.p95": 9.5,
+     "replaceSync.max": 9.9,
+     "replaceToFrame.median": 25.3,
+     "replaceToFrame.p95": 30.6,
+     "replaceToFrame.max": 31.6,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "replace_load": {
+    "metrics": {
+     "frame.median": 33.3,
+     "frame.p95": 200,
+     "frame.max": 216.7,
+     "frames.dropped": 164,
+     "longTasks": 26,
+     "longTaskMs": 2584,
+     "loaf": 24,
+     "scriptMs": 1419.04,
+     "layoutMs": 216.77,
+     "styleMs": 199.59,
+     "taskMs": 3663.05,
+     "scriptMsPerInteraction": 141.9,
+     "heapMiB": 27.53,
+     "parse.median": 4.75,
+     "parse.p95": 10.4,
+     "parse.max": 10.4,
+     "replaceSync.median": 87.15,
+     "replaceSync.p95": 111.1,
+     "replaceSync.max": 111.1,
+     "replaceToFrame.median": 194.2,
+     "replaceToFrame.p95": 234.1,
+     "replaceToFrame.max": 234.1,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "clip_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "pointermove.task.median": 0.6,
+     "pointermove.task.p95": 10.7,
+     "pointermove.task.max": 14.4,
+     "pointermove.frame.median": 0.7,
+     "pointermove.frame.p95": 10.9,
+     "pointermove.frame.max": 14.7,
+     "pointermove.count": 155,
+     "pointerup.task.median": 41.6,
+     "pointerup.task.p95": 45.4,
+     "pointerup.task.max": 45.4,
+     "pointerup.frame.median": 52.4,
+     "pointerup.frame.p95": 71.7,
+     "pointerup.frame.max": 71.7,
+     "pointerup.count": 5,
+     "scriptMs": 485.44,
+     "layoutMs": 11.14,
+     "styleMs": 123.75,
+     "taskMs": 2130.94,
+     "scriptMsPerInteraction": 3.13,
+     "heapMiB": 31.2,
+     "drop.task.median": 41.6,
+     "drop.task.p95": 45.4,
+     "drop.task.max": 45.4,
+     "drop.settled.median": 80.6,
+     "drop.settled.p95": 82.6,
+     "drop.settled.max": 82.6,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "note_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.3,
+     "frame.max": 50,
+     "frames.dropped": 33,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 2,
+     "pointermove.task.median": 38.35,
+     "pointermove.task.p95": 47.1,
+     "pointermove.task.max": 50.1,
+     "pointermove.frame.median": 38.6,
+     "pointermove.frame.p95": 47.1,
+     "pointermove.frame.max": 50.1,
+     "pointermove.count": 64,
+     "pointerup.task.median": 41,
+     "pointerup.task.p95": 46.3,
+     "pointerup.task.max": 46.3,
+     "pointerup.frame.median": 51.95,
+     "pointerup.frame.p95": 55.8,
+     "pointerup.frame.max": 55.8,
+     "pointerup.count": 4,
+     "scriptMs": 1904.87,
+     "layoutMs": 33.3,
+     "styleMs": 144.6,
+     "taskMs": 4762,
+     "scriptMsPerInteraction": 29.76,
+     "heapMiB": 109.78,
+     "drop.task.median": 41,
+     "drop.task.p95": 46.3,
+     "drop.task.max": 46.3,
+     "drop.settled.median": 75.1,
+     "drop.settled.p95": 88.8,
+     "drop.settled.max": 88.8,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 2000,
+     "notes": 2000
+    }
+   },
+   "fader_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 50.1,
+     "frames.dropped": 8,
+     "longTasks": 1,
+     "longTaskMs": 50,
+     "loaf": 3,
+     "pointermove.task.median": 6.9,
+     "pointermove.task.p95": 12,
+     "pointermove.task.max": 24.7,
+     "pointermove.frame.median": 6.9,
+     "pointermove.frame.p95": 12.1,
+     "pointermove.frame.max": 24.8,
+     "pointermove.count": 155,
+     "pointerup.task.median": 35,
+     "pointerup.task.p95": 52.1,
+     "pointerup.task.max": 52.1,
+     "pointerup.frame.median": 35.1,
+     "pointerup.frame.p95": 63.1,
+     "pointerup.frame.max": 63.1,
+     "pointerup.count": 5,
+     "scriptMs": 413.88,
+     "layoutMs": 47.32,
+     "styleMs": 174.77,
+     "taskMs": 5239.35,
+     "scriptMsPerInteraction": 2.67,
+     "heapMiB": 42.37,
+     "drop.task.median": 35,
+     "drop.task.p95": 52.1,
+     "drop.task.max": 52.1,
+     "drop.settled.median": 48.7,
+     "drop.settled.p95": 118.3,
+     "drop.settled.max": 118.3,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "fx_param": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "pointermove.task.median": 6,
+     "pointermove.task.p95": 7.8,
+     "pointermove.task.max": 17.2,
+     "pointermove.frame.median": 6.2,
+     "pointermove.frame.p95": 8.3,
+     "pointermove.frame.max": 17.4,
+     "pointermove.count": 155,
+     "pointerup.task.median": 34.1,
+     "pointerup.task.p95": 39.6,
+     "pointerup.task.max": 39.6,
+     "pointerup.frame.median": 34.2,
+     "pointerup.frame.p95": 65.8,
+     "pointerup.frame.max": 65.8,
+     "pointerup.count": 5,
+     "scriptMs": 459.6,
+     "layoutMs": 43.61,
+     "styleMs": 136.36,
+     "taskMs": 4178.23,
+     "scriptMsPerInteraction": 2.97,
+     "heapMiB": 32.49,
+     "drop.task.median": 34.1,
+     "drop.task.p95": 39.6,
+     "drop.task.max": 39.6,
+     "drop.settled.median": 59,
+     "drop.settled.p95": 67.4,
+     "drop.settled.max": 67.4,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "nav_scrollV": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.4,
+     "frames.dropped": 2,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "wheel.task.median": 0.6,
+     "wheel.task.p95": 2.5,
+     "wheel.task.max": 9.7,
+     "wheel.frame.median": 0.6,
+     "wheel.frame.p95": 2.5,
+     "wheel.frame.max": 10,
+     "wheel.count": 60,
+     "scroll.task.median": 12.25,
+     "scroll.task.p95": 24.5,
+     "scroll.task.max": 30.4,
+     "scroll.frame.median": 12.35,
+     "scroll.frame.p95": 24.6,
+     "scroll.frame.max": 30.4,
+     "scroll.count": 30,
+     "scriptMs": 262.54,
+     "layoutMs": 4.2,
+     "styleMs": 6.37,
+     "taskMs": 731.61,
+     "scriptMsPerInteraction": 8.75,
+     "heapMiB": 34.06
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "nav_scrollH": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.2,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "wheel.task.median": 0.5,
+     "wheel.task.p95": 0.8,
+     "wheel.task.max": 1.1,
+     "wheel.frame.median": 0.5,
+     "wheel.frame.p95": 0.8,
+     "wheel.frame.max": 1.2,
+     "wheel.count": 60,
+     "scroll.task.median": 5.45,
+     "scroll.task.p95": 11.4,
+     "scroll.task.max": 17.4,
+     "scroll.frame.median": 5.55,
+     "scroll.frame.p95": 11.4,
+     "scroll.frame.max": 17.4,
+     "scroll.count": 60,
+     "scriptMs": 216.39,
+     "layoutMs": 6.64,
+     "styleMs": 6.19,
+     "taskMs": 668.66,
+     "scriptMsPerInteraction": 3.61,
+     "heapMiB": 33.57
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "nav_zoom": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 933.3,
+     "frame.max": 1183.3,
+     "frames.dropped": 1393,
+     "longTasks": 2,
+     "longTaskMs": 111,
+     "loaf": 40,
+     "wheel.task.median": 14.35,
+     "wheel.task.p95": 25.8,
+     "wheel.task.max": 62.8,
+     "wheel.frame.median": 14.8,
+     "wheel.frame.p95": 26.5,
+     "wheel.frame.max": 63,
+     "wheel.count": 60,
+     "scroll.task.median": 1,
+     "scroll.task.p95": 4.2,
+     "scroll.task.max": 8.1,
+     "scroll.frame.median": 1,
+     "scroll.frame.p95": 4.2,
+     "scroll.frame.max": 8.1,
+     "scroll.count": 56,
+     "scriptMs": 728.51,
+     "layoutMs": 18.5,
+     "styleMs": 17.8,
+     "taskMs": 1424.52,
+     "scriptMsPerInteraction": 12.14,
+     "heapMiB": 34.13
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "win_mixer": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 33.3,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 323.46,
+     "layoutMs": 97.9,
+     "styleMs": 147,
+     "taskMs": 991.61,
+     "scriptMsPerInteraction": 8.09,
+     "heapMiB": 40.09,
+     "open.median": 35.95,
+     "open.p95": 43,
+     "open.max": 52.5,
+     "close.median": 18.3,
+     "close.p95": 20.1,
+     "close.max": 21.5,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 32.71,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 60
+     },
+     "after": {
+      "heapAfterGcMiB": 32.92,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 60
+     }
+    }
+   },
+   "win_pianoRoll": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 235.28,
+     "layoutMs": 53.56,
+     "styleMs": 45.97,
+     "taskMs": 722.68,
+     "scriptMsPerInteraction": 5.88,
+     "heapMiB": 37.89,
+     "open.median": 24.7,
+     "open.p95": 34.9,
+     "open.max": 40.2,
+     "close.median": 19.6,
+     "close.p95": 27.1,
+     "close.max": 28.3,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 32.94,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 60
+     },
+     "after": {
+      "heapAfterGcMiB": 33.15,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 60
+     }
+    }
+   },
+   "win_fxWindow": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 50.97,
+     "layoutMs": 48.9,
+     "styleMs": 38.89,
+     "taskMs": 494.06,
+     "scriptMsPerInteraction": 1.27,
+     "heapMiB": 34.75,
+     "open.median": 22.8,
+     "open.p95": 24.9,
+     "open.max": 24.9,
+     "close.median": 10.75,
+     "close.p95": 14.7,
+     "close.max": 21.2,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 33.38,
+      "domNodes": 6278,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 60
+     },
+     "after": {
+      "heapAfterGcMiB": 33.52,
+      "domNodes": 6278,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 60
+     }
+    }
+   },
+   "playback": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.4,
+     "frames.dropped": 9,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 313.59,
+     "layoutMs": 98.93,
+     "styleMs": 89.04,
+     "taskMs": 3232.05,
+     "scriptMsPerSecond": 50.73,
+     "heapMiB": 35.28
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB"
+    },
+    "extra": {
+     "playing": true
+    }
+   },
+   "session_end": {
+    "metrics": {
+     "heapAfterGcMiB": 33.54,
+     "domNodes": 6288,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 60
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "console_errors": []
+  },
+  {
+   "boot_large": {
+    "metrics": {
+     "toInteractive.median": 632.9,
+     "toInteractive.p95": 790.5,
+     "toInteractive.max": 790.5,
+     "scriptMs.median": 242.18,
+     "scriptMs.p95": 328.01,
+     "scriptMs.max": 328.01,
+     "longTasks.median": 3,
+     "longTaskMs.median": 432,
+     "heapMiB.median": 39.69,
+     "domNodes.median": 4281
+    },
+    "units": {
+     "toInteractive.median": "ms",
+     "toInteractive.p95": "ms",
+     "toInteractive.max": "ms",
+     "scriptMs.median": "ms",
+     "scriptMs.p95": "ms",
+     "scriptMs.max": "ms",
+     "longTasks.median": "count",
+     "heapMiB.median": "MiB",
+     "domNodes.median": "count"
+    }
+   },
+   "boot_small": {
+    "metrics": {
+     "toInteractive.median": 463.8,
+     "toInteractive.p95": 518.3,
+     "toInteractive.max": 518.3,
+     "scriptMs.median": 152.96,
+     "scriptMs.p95": 178.89,
+     "scriptMs.max": 178.89,
+     "longTasks.median": 3,
+     "longTaskMs.median": 294,
+     "heapMiB.median": 18.15,
+     "domNodes.median": 2093
+    },
+    "units": {
+     "toInteractive.median": "ms",
+     "toInteractive.p95": "ms",
+     "toInteractive.max": "ms",
+     "scriptMs.median": "ms",
+     "scriptMs.p95": "ms",
+     "scriptMs.max": "ms",
+     "longTasks.median": "count",
+     "heapMiB.median": "MiB",
+     "domNodes.median": "count"
+    }
+   },
+   "session_start": {
+    "metrics": {
+     "heapAfterGcMiB": 24.59,
+     "domNodes": 3715,
+     "jsEventListeners": 130,
+     "documents": 3,
+     "detachedNodes": 1
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "replace_same": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.4,
+     "frames.dropped": 3,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 571.12,
+     "layoutMs": 0,
+     "styleMs": 0,
+     "taskMs": 1094.76,
+     "scriptMsPerInteraction": 19.04,
+     "heapMiB": 37.57,
+     "parse.median": 3.15,
+     "parse.p95": 4.6,
+     "parse.max": 4.9,
+     "replaceSync.median": 8.35,
+     "replaceSync.p95": 13,
+     "replaceSync.max": 15.1,
+     "replaceToFrame.median": 25.45,
+     "replaceToFrame.p95": 36.5,
+     "replaceToFrame.max": 41.9,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "replace_oneClip": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 496.32,
+     "layoutMs": 0,
+     "styleMs": 0,
+     "taskMs": 992.75,
+     "scriptMsPerInteraction": 16.54,
+     "heapMiB": 39.38,
+     "parse.median": 3.05,
+     "parse.p95": 4.4,
+     "parse.max": 11.1,
+     "replaceSync.median": 8.05,
+     "replaceSync.p95": 10.6,
+     "replaceSync.max": 13.4,
+     "replaceToFrame.median": 25.65,
+     "replaceToFrame.p95": 30.4,
+     "replaceToFrame.max": 30.6,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "replace_load": {
+    "metrics": {
+     "frame.median": 33.3,
+     "frame.p95": 183.4,
+     "frame.max": 250,
+     "frames.dropped": 163,
+     "longTasks": 27,
+     "longTaskMs": 2591,
+     "loaf": 26,
+     "scriptMs": 1394.81,
+     "layoutMs": 211.65,
+     "styleMs": 191.7,
+     "taskMs": 3644.64,
+     "scriptMsPerInteraction": 139.48,
+     "heapMiB": 27.48,
+     "parse.median": 4.2,
+     "parse.p95": 7,
+     "parse.max": 7,
+     "replaceSync.median": 89.25,
+     "replaceSync.p95": 120.6,
+     "replaceSync.max": 120.6,
+     "replaceToFrame.median": 183.3,
+     "replaceToFrame.p95": 257.4,
+     "replaceToFrame.max": 257.4,
+     "stateKiB": 970
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "parse.median": "ms",
+     "parse.p95": "ms",
+     "parse.max": "ms",
+     "replaceSync.median": "ms",
+     "replaceSync.p95": "ms",
+     "replaceSync.max": "ms",
+     "replaceToFrame.median": "ms",
+     "replaceToFrame.p95": "ms",
+     "replaceToFrame.max": "ms",
+     "stateKiB": "KiB"
+    }
+   },
+   "clip_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.3,
+     "frames.dropped": 2,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 1,
+     "pointermove.task.median": 0.6,
+     "pointermove.task.p95": 11.3,
+     "pointermove.task.max": 18.8,
+     "pointermove.frame.median": 0.6,
+     "pointermove.frame.p95": 11.8,
+     "pointermove.frame.max": 19.2,
+     "pointermove.count": 155,
+     "pointerup.task.median": 40.6,
+     "pointerup.task.p95": 47.7,
+     "pointerup.task.max": 47.7,
+     "pointerup.frame.median": 67.4,
+     "pointerup.frame.p95": 87.9,
+     "pointerup.frame.max": 87.9,
+     "pointerup.count": 5,
+     "scriptMs": 529.38,
+     "layoutMs": 12.23,
+     "styleMs": 114.28,
+     "taskMs": 2237.7,
+     "scriptMsPerInteraction": 3.42,
+     "heapMiB": 31.87,
+     "drop.task.median": 40.6,
+     "drop.task.p95": 47.7,
+     "drop.task.max": 47.7,
+     "drop.settled.median": 80.5,
+     "drop.settled.p95": 91,
+     "drop.settled.max": 91,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "note_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.3,
+     "frame.max": 50.1,
+     "frames.dropped": 56,
+     "longTasks": 3,
+     "longTaskMs": 172,
+     "loaf": 14,
+     "pointermove.task.median": 43.8,
+     "pointermove.task.p95": 56,
+     "pointermove.task.max": 70.3,
+     "pointermove.frame.median": 43.8,
+     "pointermove.frame.p95": 56,
+     "pointermove.frame.max": 70.5,
+     "pointermove.count": 64,
+     "pointerup.task.median": 47.6,
+     "pointerup.task.p95": 53.4,
+     "pointerup.task.max": 53.4,
+     "pointerup.frame.median": 57.45,
+     "pointerup.frame.p95": 67,
+     "pointerup.frame.max": 67,
+     "pointerup.count": 4,
+     "scriptMs": 2151.88,
+     "layoutMs": 38.1,
+     "styleMs": 163.88,
+     "taskMs": 5331.46,
+     "scriptMsPerInteraction": 33.62,
+     "heapMiB": 117.52,
+     "drop.task.median": 47.6,
+     "drop.task.p95": 53.4,
+     "drop.task.max": 53.4,
+     "drop.settled.median": 86.7,
+     "drop.settled.p95": 90.1,
+     "drop.settled.max": 90.1,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 2000,
+     "notes": 2000
+    }
+   },
+   "fader_drag": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.3,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "pointermove.task.median": 5.9,
+     "pointermove.task.p95": 7.8,
+     "pointermove.task.max": 17.9,
+     "pointermove.frame.median": 5.9,
+     "pointermove.frame.p95": 7.9,
+     "pointermove.frame.max": 18.9,
+     "pointermove.count": 155,
+     "pointerup.task.median": 39.3,
+     "pointerup.task.p95": 46.4,
+     "pointerup.task.max": 46.4,
+     "pointerup.frame.median": 39.5,
+     "pointerup.frame.p95": 83,
+     "pointerup.frame.max": 83,
+     "pointerup.count": 5,
+     "scriptMs": 317.09,
+     "layoutMs": 44.11,
+     "styleMs": 142.66,
+     "taskMs": 4320.62,
+     "scriptMsPerInteraction": 2.05,
+     "heapMiB": 31.07,
+     "drop.task.median": 39.3,
+     "drop.task.p95": 46.4,
+     "drop.task.max": 46.4,
+     "drop.settled.median": 47.9,
+     "drop.settled.p95": 88.2,
+     "drop.settled.max": 88.2,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "fx_param": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 66.7,
+     "frames.dropped": 6,
+     "longTasks": 1,
+     "longTaskMs": 53,
+     "loaf": 2,
+     "pointermove.task.median": 6.8,
+     "pointermove.task.p95": 9.1,
+     "pointermove.task.max": 16,
+     "pointermove.frame.median": 6.9,
+     "pointermove.frame.p95": 9.3,
+     "pointermove.frame.max": 16,
+     "pointermove.count": 155,
+     "pointerup.task.median": 41.8,
+     "pointerup.task.p95": 56.2,
+     "pointerup.task.max": 56.2,
+     "pointerup.frame.median": 42,
+     "pointerup.frame.p95": 80.4,
+     "pointerup.frame.max": 80.4,
+     "pointerup.count": 5,
+     "scriptMs": 553.26,
+     "layoutMs": 46.32,
+     "styleMs": 157.87,
+     "taskMs": 4681.12,
+     "scriptMsPerInteraction": 3.57,
+     "heapMiB": 64.83,
+     "drop.task.median": 41.8,
+     "drop.task.p95": 56.2,
+     "drop.task.max": 56.2,
+     "drop.settled.median": 59.7,
+     "drop.settled.p95": 125.2,
+     "drop.settled.max": 125.2,
+     "drop.timeouts": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "pointermove.task.median": "ms",
+     "pointermove.task.p95": "ms",
+     "pointermove.task.max": "ms",
+     "pointermove.frame.median": "ms",
+     "pointermove.frame.p95": "ms",
+     "pointermove.frame.max": "ms",
+     "pointermove.count": "count",
+     "pointerup.task.median": "ms",
+     "pointerup.task.p95": "ms",
+     "pointerup.task.max": "ms",
+     "pointerup.frame.median": "ms",
+     "pointerup.frame.p95": "ms",
+     "pointerup.frame.max": "ms",
+     "pointerup.count": "count",
+     "heapMiB": "MiB",
+     "drop.task.median": "ms",
+     "drop.task.p95": "ms",
+     "drop.task.max": "ms",
+     "drop.settled.median": "ms",
+     "drop.settled.p95": "ms",
+     "drop.settled.max": "ms",
+     "drop.timeouts": "count"
+    },
+    "extra": {
+     "changedByFirstDrag": 1
+    }
+   },
+   "nav_scrollV": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.3,
+     "frames.dropped": 3,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "wheel.task.median": 0.5,
+     "wheel.task.p95": 1.5,
+     "wheel.task.max": 11.4,
+     "wheel.frame.median": 0.5,
+     "wheel.frame.p95": 1.5,
+     "wheel.frame.max": 11.4,
+     "wheel.count": 60,
+     "scroll.task.median": 9.95,
+     "scroll.task.p95": 30,
+     "scroll.task.max": 43.6,
+     "scroll.frame.median": 10.15,
+     "scroll.frame.p95": 30.2,
+     "scroll.frame.max": 43.7,
+     "scroll.count": 30,
+     "scriptMs": 284.78,
+     "layoutMs": 4.04,
+     "styleMs": 4.42,
+     "taskMs": 680.25,
+     "scriptMsPerInteraction": 9.49,
+     "heapMiB": 34.61
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "nav_scrollH": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.8,
+     "frame.max": 33.4,
+     "frames.dropped": 1,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "wheel.task.median": 0.5,
+     "wheel.task.p95": 0.9,
+     "wheel.task.max": 1.4,
+     "wheel.frame.median": 0.55,
+     "wheel.frame.p95": 1,
+     "wheel.frame.max": 1.4,
+     "wheel.count": 60,
+     "scroll.task.median": 6,
+     "scroll.task.p95": 12.3,
+     "scroll.task.max": 16.1,
+     "scroll.frame.median": 6.1,
+     "scroll.frame.p95": 12.4,
+     "scroll.frame.max": 16.2,
+     "scroll.count": 60,
+     "scriptMs": 245.55,
+     "layoutMs": 7.29,
+     "styleMs": 7.05,
+     "taskMs": 719.39,
+     "scriptMsPerInteraction": 4.09,
+     "heapMiB": 33.77
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "nav_zoom": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 966.5,
+     "frame.max": 1033.3,
+     "frames.dropped": 1847,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 46,
+     "wheel.task.median": 14.6,
+     "wheel.task.p95": 30.7,
+     "wheel.task.max": 39.4,
+     "wheel.frame.median": 14.9,
+     "wheel.frame.p95": 30.9,
+     "wheel.frame.max": 39.6,
+     "wheel.count": 60,
+     "scroll.task.median": 0.9,
+     "scroll.task.p95": 3.6,
+     "scroll.task.max": 27.7,
+     "scroll.frame.median": 1,
+     "scroll.frame.p95": 3.7,
+     "scroll.frame.max": 27.7,
+     "scroll.count": 56,
+     "scriptMs": 822.9,
+     "layoutMs": 20.97,
+     "styleMs": 23.81,
+     "taskMs": 1692.4,
+     "scriptMsPerInteraction": 13.71,
+     "heapMiB": 33.7
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "wheel.task.median": "ms",
+     "wheel.task.p95": "ms",
+     "wheel.task.max": "ms",
+     "wheel.frame.median": "ms",
+     "wheel.frame.p95": "ms",
+     "wheel.frame.max": "ms",
+     "wheel.count": "count",
+     "scroll.task.median": "ms",
+     "scroll.task.p95": "ms",
+     "scroll.task.max": "ms",
+     "scroll.frame.median": "ms",
+     "scroll.frame.p95": "ms",
+     "scroll.frame.max": "ms",
+     "scroll.count": "count",
+     "heapMiB": "MiB"
+    }
+   },
+   "win_mixer": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 50,
+     "frame.max": 66.8,
+     "frames.dropped": 41,
+     "longTasks": 1,
+     "longTaskMs": 52,
+     "loaf": 13,
+     "scriptMs": 597.76,
+     "layoutMs": 156.77,
+     "styleMs": 295.47,
+     "taskMs": 2200.23,
+     "scriptMsPerInteraction": 14.94,
+     "heapMiB": 41.36,
+     "open.median": 65.5,
+     "open.p95": 82.1,
+     "open.max": 82.7,
+     "close.median": 21.85,
+     "close.p95": 37.1,
+     "close.max": 37.5,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 32.62,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     },
+     "after": {
+      "heapAfterGcMiB": 32.89,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     }
+    }
+   },
+   "win_pianoRoll": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 33.3,
+     "frame.max": 33.4,
+     "frames.dropped": 6,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 425.66,
+     "layoutMs": 80.88,
+     "styleMs": 114.24,
+     "taskMs": 1421.72,
+     "scriptMsPerInteraction": 10.64,
+     "heapMiB": 34.89,
+     "open.median": 42.25,
+     "open.p95": 57.4,
+     "open.max": 78.7,
+     "close.median": 22.1,
+     "close.p95": 33.5,
+     "close.max": 38.5,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 32.86,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     },
+     "after": {
+      "heapAfterGcMiB": 33.13,
+      "domNodes": 6240,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     }
+    }
+   },
+   "win_fxWindow": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 56.03,
+     "layoutMs": 50.59,
+     "styleMs": 38.68,
+     "taskMs": 494.17,
+     "scriptMsPerInteraction": 1.4,
+     "heapMiB": 36.05,
+     "open.median": 23.4,
+     "open.p95": 25.3,
+     "open.max": 28.2,
+     "close.median": 10.8,
+     "close.p95": 21.8,
+     "close.max": 22.2,
+     "leak.heapAfterGcMiB.perCycle": 0.01,
+     "leak.domNodes.perCycle": 0,
+     "leak.jsEventListeners.perCycle": 0,
+     "leak.detachedNodes.perCycle": 0
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB",
+     "open.median": "ms",
+     "open.p95": "ms",
+     "open.max": "ms",
+     "close.median": "ms",
+     "close.p95": "ms",
+     "close.max": "ms",
+     "leak.heapAfterGcMiB.perCycle": "MiB",
+     "leak.domNodes.perCycle": "count",
+     "leak.jsEventListeners.perCycle": "count",
+     "leak.detachedNodes.perCycle": "count"
+    },
+    "extra": {
+     "cycles": 20,
+     "cyclesBackInStartState": 20,
+     "before": {
+      "heapAfterGcMiB": 33.36,
+      "domNodes": 6278,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     },
+     "after": {
+      "heapAfterGcMiB": 33.49,
+      "domNodes": 6278,
+      "jsEventListeners": 224,
+      "documents": 3,
+      "detachedNodes": 57
+     }
+    }
+   },
+   "playback": {
+    "metrics": {
+     "frame.median": 16.7,
+     "frame.p95": 16.7,
+     "frame.max": 16.8,
+     "frames.dropped": 0,
+     "longTasks": 0,
+     "longTaskMs": 0,
+     "loaf": 0,
+     "scriptMs": 261.42,
+     "layoutMs": 75.92,
+     "styleMs": 84.78,
+     "taskMs": 2856.92,
+     "scriptMsPerSecond": 43.03,
+     "heapMiB": 35.56
+    },
+    "units": {
+     "frame.median": "ms",
+     "frame.p95": "ms",
+     "frame.max": "ms",
+     "frames.dropped": "count",
+     "longTasks": "count",
+     "loaf": "count",
+     "heapMiB": "MiB"
+    },
+    "extra": {
+     "playing": true
+    }
+   },
+   "session_end": {
+    "metrics": {
+     "heapAfterGcMiB": 33.58,
+     "domNodes": 6288,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 57
+    },
+    "units": {
+     "heapAfterGcMiB": "MiB",
+     "domNodes": "count",
+     "jsEventListeners": "count",
+     "documents": "count",
+     "detachedNodes": "count"
+    }
+   },
+   "console_errors": []
+  }
+ ],
+ "profile": {
+  "boot_large": {
+   "units": {
+    "toInteractive.median": "ms",
+    "toInteractive.p95": "ms",
+    "toInteractive.max": "ms",
+    "scriptMs.median": "ms",
+    "scriptMs.p95": "ms",
+    "scriptMs.max": "ms",
+    "longTasks.median": "count",
+    "heapMiB.median": "MiB",
+    "domNodes.median": "count"
+   }
+  },
+  "boot_small": {
+   "units": {
+    "toInteractive.median": "ms",
+    "toInteractive.p95": "ms",
+    "toInteractive.max": "ms",
+    "scriptMs.median": "ms",
+    "scriptMs.p95": "ms",
+    "scriptMs.max": "ms",
+    "longTasks.median": "count",
+    "heapMiB.median": "MiB",
+    "domNodes.median": "count"
+   }
+  },
+  "session_start": {
+   "units": {
+    "heapAfterGcMiB": "MiB",
+    "domNodes": "count",
+    "jsEventListeners": "count",
+    "documents": "count",
+    "detachedNodes": "count"
+   }
+  },
+  "replace_same": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "parse.median": "ms",
+    "parse.p95": "ms",
+    "parse.max": "ms",
+    "replaceSync.median": "ms",
+    "replaceSync.p95": "ms",
+    "replaceSync.max": "ms",
+    "replaceToFrame.median": "ms",
+    "replaceToFrame.p95": "ms",
+    "replaceToFrame.max": "ms",
+    "stateKiB": "KiB"
+   },
+   "hot": {
+    "busyMs": 1393.9,
+    "functions": [
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 282.29
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 177.86
+     },
+     {
+      "name": "rect",
+      "selfMs": 97.13
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 89.46
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 85.33
+     },
+     {
+      "name": "fill",
+      "selfMs": 57.74
+     },
+     {
+      "name": "guessIcon src/ui/instIcons.tsx:63",
+      "selfMs": 49.12
+     },
+     {
+      "name": "peakRange src/state/peaks.ts:127",
+      "selfMs": 45.35
+     },
+     {
+      "name": "patSig src/views/playlistDraw.ts:81",
+      "selfMs": 38.37
+     },
+     {
+      "name": "isWrappable solid-js/store/dist/store.js:38",
+      "selfMs": 25.7
+     },
+     {
+      "name": "drawGrid src/views/playlistDraw.ts:120",
+      "selfMs": 24.82
+     },
+     {
+      "name": "fillText",
+      "selfMs": 24.54
+     },
+     {
+      "name": "channelIcon src/ui/instIcons.tsx:98",
+      "selfMs": 24.52
+     },
+     {
+      "name": "laneOverlaps src/lib/overlaps.ts:21",
+      "selfMs": 24.5
+     },
+     {
+      "name": "laneAutoIcons src/ui/instIcons.tsx:131",
+      "selfMs": 17.7
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 449.48
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 330.86
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 209.76
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 111.44
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 85.33
+     },
+     {
+      "name": "src/state/peaks.ts",
+      "selfMs": 46.83
+     },
+     {
+      "name": "src/lib/overlaps.ts",
+      "selfMs": 34.16
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 21.93
+     },
+     {
+      "name": "src/views/Toolbar.tsx",
+      "selfMs": 17
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 15.48
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 498.91
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 449.48
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 344.71
+     },
+     {
+      "name": "gc",
+      "selfMs": 85.33
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 15.48
+     }
+    ]
+   }
+  },
+  "replace_oneClip": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "parse.median": "ms",
+    "parse.p95": "ms",
+    "parse.max": "ms",
+    "replaceSync.median": "ms",
+    "replaceSync.p95": "ms",
+    "replaceSync.max": "ms",
+    "replaceToFrame.median": "ms",
+    "replaceToFrame.p95": "ms",
+    "replaceToFrame.max": "ms",
+    "stateKiB": "KiB"
+   },
+   "hot": {
+    "busyMs": 1266.24,
+    "functions": [
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 274.92
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 122.19
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 98.67
+     },
+     {
+      "name": "rect",
+      "selfMs": 91.49
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 82.13
+     },
+     {
+      "name": "laneOverlaps src/lib/overlaps.ts:21",
+      "selfMs": 43.13
+     },
+     {
+      "name": "peakRange src/state/peaks.ts:127",
+      "selfMs": 37.35
+     },
+     {
+      "name": "fill",
+      "selfMs": 34.61
+     },
+     {
+      "name": "patSig src/views/playlistDraw.ts:81",
+      "selfMs": 30.71
+     },
+     {
+      "name": "isWrappable solid-js/store/dist/store.js:38",
+      "selfMs": 29.86
+     },
+     {
+      "name": "roundRect",
+      "selfMs": 28.48
+     },
+     {
+      "name": "guessIcon src/ui/instIcons.tsx:63",
+      "selfMs": 27.79
+     },
+     {
+      "name": "mix src/lib/color.ts:12",
+      "selfMs": 23.25
+     },
+     {
+      "name": "channelIcon src/ui/instIcons.tsx:98",
+      "selfMs": 21.35
+     },
+     {
+      "name": "fillText",
+      "selfMs": 17.45
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 383.1
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 320.64
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 195.4
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 82.13
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 81.38
+     },
+     {
+      "name": "src/lib/overlaps.ts",
+      "selfMs": 56.39
+     },
+     {
+      "name": "src/state/peaks.ts",
+      "selfMs": 45.94
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 23.95
+     },
+     {
+      "name": "src/lib/color.ts",
+      "selfMs": 23.25
+     },
+     {
+      "name": "src/api/telemetry.ts",
+      "selfMs": 11.2
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 468.83
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 383.1
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 328.74
+     },
+     {
+      "name": "gc",
+      "selfMs": 82.13
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 3.43
+     }
+    ]
+   }
+  },
+  "replace_load": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "parse.median": "ms",
+    "parse.p95": "ms",
+    "parse.max": "ms",
+    "replaceSync.median": "ms",
+    "replaceSync.p95": "ms",
+    "replaceSync.max": "ms",
+    "replaceToFrame.median": "ms",
+    "replaceToFrame.p95": "ms",
+    "replaceToFrame.max": "ms",
+    "stateKiB": "KiB"
+   },
+   "hot": {
+    "busyMs": 5679.68,
+    "functions": [
+     {
+      "name": "toDataURL",
+      "selfMs": 831.55
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 805.14
+     },
+     {
+      "name": "get ready",
+      "selfMs": 414.09
+     },
+     {
+      "name": "wrap$1 solid-js/store/dist/store.js:7",
+      "selfMs": 323.3
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 224.57
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 217.41
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 200.01
+     },
+     {
+      "name": "(anonymous) src/views/Browser.tsx:130",
+      "selfMs": 186.95
+     },
+     {
+      "name": "createSignal solid-js/dist/solid.js:201",
+      "selfMs": 152.88
+     },
+     {
+      "name": "(anonymous) src/views/Browser.tsx:209",
+      "selfMs": 152.72
+     },
+     {
+      "name": "getNodes solid-js/store/dist/store.js:65",
+      "selfMs": 124.49
+     },
+     {
+      "name": "setAttribute",
+      "selfMs": 112.04
+     },
+     {
+      "name": "cleanNode solid-js/dist/solid.js:949",
+      "selfMs": 99.39
+     },
+     {
+      "name": "melodic src/views/playlistDraw.ts:71",
+      "selfMs": 98.49
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 95.68
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 2134.55
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 805.14
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 786.35
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 617.71
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 420.3
+     },
+     {
+      "name": "src/views/Browser.tsx",
+      "selfMs": 383.37
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 127.23
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 53.36
+     },
+     {
+      "name": "src/lib/automation.ts",
+      "selfMs": 50.42
+     },
+     {
+      "name": "solid-js/web/dist/web.js",
+      "selfMs": 49.16
+     }
+    ],
+    "owners": [
+     {
+      "name": "browser APIs",
+      "selfMs": 2134.55
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 1453.23
+     },
+     {
+      "name": "app",
+      "selfMs": 1259.35
+     },
+     {
+      "name": "gc",
+      "selfMs": 805.14
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 27.42
+     }
+    ]
+   }
+  },
+  "clip_drag": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "pointermove.task.median": "ms",
+    "pointermove.task.p95": "ms",
+    "pointermove.task.max": "ms",
+    "pointermove.frame.median": "ms",
+    "pointermove.frame.p95": "ms",
+    "pointermove.frame.max": "ms",
+    "pointermove.count": "count",
+    "pointerup.task.median": "ms",
+    "pointerup.task.p95": "ms",
+    "pointerup.task.max": "ms",
+    "pointerup.frame.median": "ms",
+    "pointerup.frame.p95": "ms",
+    "pointerup.frame.max": "ms",
+    "pointerup.count": "count",
+    "heapMiB": "MiB",
+    "drop.task.median": "ms",
+    "drop.task.p95": "ms",
+    "drop.task.max": "ms",
+    "drop.settled.median": "ms",
+    "drop.settled.p95": "ms",
+    "drop.settled.max": "ms",
+    "drop.timeouts": "count"
+   },
+   "extra": {
+    "changedByFirstDrag": 1
+   },
+   "hot": {
+    "busyMs": 1589.12,
+    "functions": [
+     {
+      "name": "applyAll src/lib/applyOps.ts:254",
+      "selfMs": 684.94
+     },
+     {
+      "name": "projectEq src/lib/projectEq.ts:10",
+      "selfMs": 90.82
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 83.3
+     },
+     {
+      "name": "dto src/api/mock.ts:213",
+      "selfMs": 73.7
+     },
+     {
+      "name": "beginGesture src/api/mock.ts:306",
+      "selfMs": 69.75
+     },
+     {
+      "name": "(anonymous) src/api/mock.ts:314",
+      "selfMs": 55.81
+     },
+     {
+      "name": "laneOverlaps src/lib/overlaps.ts:21",
+      "selfMs": 39.85
+     },
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 32.74
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 29.63
+     },
+     {
+      "name": "rect",
+      "selfMs": 26.63
+     },
+     {
+      "name": "guessIcon src/ui/instIcons.tsx:63",
+      "selfMs": 25.42
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 24.79
+     },
+     {
+      "name": "endGesture src/api/mock.ts:307",
+      "selfMs": 23.68
+     },
+     {
+      "name": "paintOverview src/views/Playlist.tsx:1369",
+      "selfMs": 18.76
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 16.29
+     }
+    ],
+    "files": [
+     {
+      "name": "src/lib/applyOps.ts",
+      "selfMs": 685.48
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 239.49
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 149.11
+     },
+     {
+      "name": "src/lib/projectEq.ts",
+      "selfMs": 97.51
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 83.3
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 60.17
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 54.16
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 49.78
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 48.22
+     },
+     {
+      "name": "src/lib/overlaps.ts",
+      "selfMs": 48.03
+     }
+    ],
+    "owners": [
+     {
+      "name": "mock backend",
+      "selfMs": 1022.48
+     },
+     {
+      "name": "app",
+      "selfMs": 273.74
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 149.11
+     },
+     {
+      "name": "gc",
+      "selfMs": 83.3
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 60.49
+     }
+    ]
+   }
+  },
+  "note_drag": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "pointermove.task.median": "ms",
+    "pointermove.task.p95": "ms",
+    "pointermove.task.max": "ms",
+    "pointermove.frame.median": "ms",
+    "pointermove.frame.p95": "ms",
+    "pointermove.frame.max": "ms",
+    "pointermove.count": "count",
+    "pointerup.task.median": "ms",
+    "pointerup.task.p95": "ms",
+    "pointerup.task.max": "ms",
+    "pointerup.frame.median": "ms",
+    "pointerup.frame.p95": "ms",
+    "pointerup.frame.max": "ms",
+    "pointerup.count": "count",
+    "heapMiB": "MiB",
+    "drop.task.median": "ms",
+    "drop.task.p95": "ms",
+    "drop.task.max": "ms",
+    "drop.settled.median": "ms",
+    "drop.settled.p95": "ms",
+    "drop.settled.max": "ms",
+    "drop.timeouts": "count"
+   },
+   "extra": {
+    "changedByFirstDrag": 2000,
+    "notes": 2000
+   },
+   "hot": {
+    "busyMs": 5214.19,
+    "functions": [
+     {
+      "name": "applyAll src/lib/applyOps.ts:254",
+      "selfMs": 1090.57
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 439.09
+     },
+     {
+      "name": "projectEq src/lib/projectEq.ts:10",
+      "selfMs": 373.52
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 266.87
+     },
+     {
+      "name": "wrap$1 solid-js/store/dist/store.js:7",
+      "selfMs": 195.69
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 186.7
+     },
+     {
+      "name": "toDataURL",
+      "selfMs": 186.38
+     },
+     {
+      "name": "applyPatternOp src/lib/pattern.ts:119",
+      "selfMs": 161.99
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 150.46
+     },
+     {
+      "name": "patternIcon src/ui/instIcons.tsx:111",
+      "selfMs": 106.38
+     },
+     {
+      "name": "getNodes solid-js/store/dist/store.js:65",
+      "selfMs": 105.82
+     },
+     {
+      "name": "rowKey src/views/playlistDraw.ts:80",
+      "selfMs": 101.11
+     },
+     {
+      "name": "melodic src/views/playlistDraw.ts:71",
+      "selfMs": 98.79
+     },
+     {
+      "name": "getBoundingClientRect",
+      "selfMs": 92.81
+     },
+     {
+      "name": "cleanNode solid-js/dist/solid.js:949",
+      "selfMs": 81.75
+     }
+    ],
+    "files": [
+     {
+      "name": "src/lib/applyOps.ts",
+      "selfMs": 1093.71
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 703.17
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 570.46
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 439.09
+     },
+     {
+      "name": "src/lib/projectEq.ts",
+      "selfMs": 424.79
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 412.2
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 393.51
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 256.05
+     },
+     {
+      "name": "src/lib/pattern.ts",
+      "selfMs": 207.93
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 185.87
+     }
+    ],
+    "owners": [
+     {
+      "name": "mock backend",
+      "selfMs": 1704.37
+     },
+     {
+      "name": "app",
+      "selfMs": 1373.33
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 1126.95
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 570.46
+     },
+     {
+      "name": "gc",
+      "selfMs": 439.09
+     }
+    ]
+   }
+  },
+  "fader_drag": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "pointermove.task.median": "ms",
+    "pointermove.task.p95": "ms",
+    "pointermove.task.max": "ms",
+    "pointermove.frame.median": "ms",
+    "pointermove.frame.p95": "ms",
+    "pointermove.frame.max": "ms",
+    "pointermove.count": "count",
+    "pointerup.task.median": "ms",
+    "pointerup.task.p95": "ms",
+    "pointerup.task.max": "ms",
+    "pointerup.frame.median": "ms",
+    "pointerup.frame.p95": "ms",
+    "pointerup.frame.max": "ms",
+    "pointerup.count": "count",
+    "heapMiB": "MiB",
+    "drop.task.median": "ms",
+    "drop.task.p95": "ms",
+    "drop.task.max": "ms",
+    "drop.settled.median": "ms",
+    "drop.settled.p95": "ms",
+    "drop.settled.max": "ms",
+    "drop.timeouts": "count"
+   },
+   "extra": {
+    "changedByFirstDrag": 1
+   },
+   "hot": {
+    "busyMs": 3729.11,
+    "functions": [
+     {
+      "name": "applyAll src/lib/applyOps.ts:254",
+      "selfMs": 2239.71
+     },
+     {
+      "name": "projectEq src/lib/projectEq.ts:10",
+      "selfMs": 599.72
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 124.54
+     },
+     {
+      "name": "(anonymous) src/lib/projectEq.ts:12",
+      "selfMs": 114.96
+     },
+     {
+      "name": "beginGesture src/api/mock.ts:306",
+      "selfMs": 80.04
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 74.87
+     },
+     {
+      "name": "dto src/api/mock.ts:213",
+      "selfMs": 66.07
+     },
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 33.06
+     },
+     {
+      "name": "endGesture src/api/mock.ts:307",
+      "selfMs": 30.25
+     },
+     {
+      "name": "rect",
+      "selfMs": 19.85
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 19.72
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 15.44
+     },
+     {
+      "name": "guessIcon src/ui/instIcons.tsx:63",
+      "selfMs": 13.5
+     },
+     {
+      "name": "MessageChannel",
+      "selfMs": 12.49
+     },
+     {
+      "name": "requestAnimationFrame",
+      "selfMs": 11.68
+     }
+    ],
+    "files": [
+     {
+      "name": "src/lib/applyOps.ts",
+      "selfMs": 2241.92
+     },
+     {
+      "name": "src/lib/projectEq.ts",
+      "selfMs": 714.67
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 206.58
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 144.83
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 124.54
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 78.02
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 43.18
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 39.22
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 23.66
+     },
+     {
+      "name": "src/views/Mixer.tsx",
+      "selfMs": 19.79
+     }
+    ],
+    "owners": [
+     {
+      "name": "mock backend",
+      "selfMs": 3163.17
+     },
+     {
+      "name": "app",
+      "selfMs": 229.73
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 144.83
+     },
+     {
+      "name": "gc",
+      "selfMs": 124.54
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 66.84
+     }
+    ]
+   }
+  },
+  "fx_param": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "pointermove.task.median": "ms",
+    "pointermove.task.p95": "ms",
+    "pointermove.task.max": "ms",
+    "pointermove.frame.median": "ms",
+    "pointermove.frame.p95": "ms",
+    "pointermove.frame.max": "ms",
+    "pointermove.count": "count",
+    "pointerup.task.median": "ms",
+    "pointerup.task.p95": "ms",
+    "pointerup.task.max": "ms",
+    "pointerup.frame.median": "ms",
+    "pointerup.frame.p95": "ms",
+    "pointerup.frame.max": "ms",
+    "pointerup.count": "count",
+    "heapMiB": "MiB",
+    "drop.task.median": "ms",
+    "drop.task.p95": "ms",
+    "drop.task.max": "ms",
+    "drop.settled.median": "ms",
+    "drop.settled.p95": "ms",
+    "drop.settled.max": "ms",
+    "drop.timeouts": "count"
+   },
+   "extra": {
+    "changedByFirstDrag": 1
+   },
+   "hot": {
+    "busyMs": 4668.83,
+    "functions": [
+     {
+      "name": "applyAll src/lib/applyOps.ts:254",
+      "selfMs": 2455.4
+     },
+     {
+      "name": "projectEq src/lib/projectEq.ts:10",
+      "selfMs": 652.68
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 194.18
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 127.44
+     },
+     {
+      "name": "beginGesture src/api/mock.ts:306",
+      "selfMs": 118.88
+     },
+     {
+      "name": "(anonymous) src/lib/projectEq.ts:12",
+      "selfMs": 102.61
+     },
+     {
+      "name": "dto src/api/mock.ts:213",
+      "selfMs": 81.72
+     },
+     {
+      "name": "applyState solid-js/store/dist/store.js:336",
+      "selfMs": 36.39
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 33.11
+     },
+     {
+      "name": "endGesture src/api/mock.ts:307",
+      "selfMs": 32.33
+     },
+     {
+      "name": "drawImage",
+      "selfMs": 31.99
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 30.78
+     },
+     {
+      "name": "findFx src/state/store.ts:326",
+      "selfMs": 30.78
+     },
+     {
+      "name": "frame src/ui/frameLoop.ts:16",
+      "selfMs": 28.74
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 28.25
+     }
+    ],
+    "files": [
+     {
+      "name": "src/lib/applyOps.ts",
+      "selfMs": 2460.02
+     },
+     {
+      "name": "src/lib/projectEq.ts",
+      "selfMs": 755.28
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 287.32
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 247.72
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 194.18
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 157.96
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 132.32
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 64.68
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 47.43
+     },
+     {
+      "name": "src/state/store.ts",
+      "selfMs": 44
+     }
+    ],
+    "owners": [
+     {
+      "name": "mock backend",
+      "selfMs": 3502.62
+     },
+     {
+      "name": "app",
+      "selfMs": 496.52
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 247.72
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 227.79
+     },
+     {
+      "name": "gc",
+      "selfMs": 194.18
+     }
+    ]
+   }
+  },
+  "nav_scrollV": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "wheel.task.median": "ms",
+    "wheel.task.p95": "ms",
+    "wheel.task.max": "ms",
+    "wheel.frame.median": "ms",
+    "wheel.frame.p95": "ms",
+    "wheel.frame.max": "ms",
+    "wheel.count": "count",
+    "scroll.task.median": "ms",
+    "scroll.task.p95": "ms",
+    "scroll.task.max": "ms",
+    "scroll.frame.median": "ms",
+    "scroll.frame.p95": "ms",
+    "scroll.frame.max": "ms",
+    "scroll.count": "count",
+    "heapMiB": "MiB"
+   },
+   "hot": {
+    "busyMs": 269.25,
+    "functions": [
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 24.83
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 20.95
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 19
+     },
+     {
+      "name": "rect",
+      "selfMs": 18.39
+     },
+     {
+      "name": "fillText",
+      "selfMs": 17.29
+     },
+     {
+      "name": "fill",
+      "selfMs": 12.77
+     },
+     {
+      "name": "laneOverlaps src/lib/overlaps.ts:21",
+      "selfMs": 12.62
+     },
+     {
+      "name": "drawGrid src/views/playlistDraw.ts:120",
+      "selfMs": 9.71
+     },
+     {
+      "name": "peakRange src/state/peaks.ts:127",
+      "selfMs": 8.6
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 6.97
+     },
+     {
+      "name": "postMessage",
+      "selfMs": 6.46
+     },
+     {
+      "name": "stroke",
+      "selfMs": 6.14
+     },
+     {
+      "name": "restore",
+      "selfMs": 5.41
+     },
+     {
+      "name": "requestAnimationFrame",
+      "selfMs": 4.88
+     },
+     {
+      "name": "tick src/api/mock.ts:449",
+      "selfMs": 4.53
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 112.61
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 42.97
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 30.51
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 20.95
+     },
+     {
+      "name": "src/lib/overlaps.ts",
+      "selfMs": 16.56
+     },
+     {
+      "name": "src/state/peaks.ts",
+      "selfMs": 9.27
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 8.23
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 4.13
+     },
+     {
+      "name": "src/views/Toolbar.tsx",
+      "selfMs": 3.94
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 3.92
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 120.83
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 112.61
+     },
+     {
+      "name": "gc",
+      "selfMs": 20.95
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 8.23
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 6.64
+     }
+    ]
+   }
+  },
+  "nav_scrollH": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "wheel.task.median": "ms",
+    "wheel.task.p95": "ms",
+    "wheel.task.max": "ms",
+    "wheel.frame.median": "ms",
+    "wheel.frame.p95": "ms",
+    "wheel.frame.max": "ms",
+    "wheel.count": "count",
+    "scroll.task.median": "ms",
+    "scroll.task.p95": "ms",
+    "scroll.task.max": "ms",
+    "scroll.frame.median": "ms",
+    "scroll.frame.p95": "ms",
+    "scroll.frame.max": "ms",
+    "scroll.count": "count",
+    "heapMiB": "MiB"
+   },
+   "hot": {
+    "busyMs": 449.73,
+    "functions": [
+     {
+      "name": "rect",
+      "selfMs": 54.41
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 29.49
+     },
+     {
+      "name": "laneOverlaps src/lib/overlaps.ts:21",
+      "selfMs": 29.01
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 26.25
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 20.99
+     },
+     {
+      "name": "tick src/api/mock.ts:449",
+      "selfMs": 19.67
+     },
+     {
+      "name": "fill",
+      "selfMs": 19.11
+     },
+     {
+      "name": "MessageChannel",
+      "selfMs": 18.3
+     },
+     {
+      "name": "valueAt src/lib/automation.ts:193",
+      "selfMs": 17.67
+     },
+     {
+      "name": "peakRange src/state/peaks.ts:127",
+      "selfMs": 16.57
+     },
+     {
+      "name": "drawGrid src/views/playlistDraw.ts:120",
+      "selfMs": 14.86
+     },
+     {
+      "name": "drawEnvelope src/views/playlistDraw.ts:492",
+      "selfMs": 14.64
+     },
+     {
+      "name": "setAttribute solid-js/web/dist/web.js:235",
+      "selfMs": 11.75
+     },
+     {
+      "name": "paintRuler src/views/Playlist.tsx:439",
+      "selfMs": 10.68
+     },
+     {
+      "name": "roundRect",
+      "selfMs": 10.33
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 154.27
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 66.61
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 41.5
+     },
+     {
+      "name": "src/lib/overlaps.ts",
+      "selfMs": 34.06
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 29.49
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 23.96
+     },
+     {
+      "name": "src/lib/automation.ts",
+      "selfMs": 17.67
+     },
+     {
+      "name": "src/state/peaks.ts",
+      "selfMs": 16.57
+     },
+     {
+      "name": "solid-js/web/dist/web.js",
+      "selfMs": 13.39
+     },
+     {
+      "name": "src/api/telemetry.ts",
+      "selfMs": 11.11
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 211.08
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 154.27
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 30.93
+     },
+     {
+      "name": "gc",
+      "selfMs": 29.49
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 23.96
+     }
+    ]
+   }
+  },
+  "nav_zoom": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "wheel.task.median": "ms",
+    "wheel.task.p95": "ms",
+    "wheel.task.max": "ms",
+    "wheel.frame.median": "ms",
+    "wheel.frame.p95": "ms",
+    "wheel.frame.max": "ms",
+    "wheel.count": "count",
+    "scroll.task.median": "ms",
+    "scroll.task.p95": "ms",
+    "scroll.task.max": "ms",
+    "scroll.frame.median": "ms",
+    "scroll.frame.p95": "ms",
+    "scroll.frame.max": "ms",
+    "scroll.count": "count",
+    "heapMiB": "MiB"
+   },
+   "hot": {
+    "busyMs": 847.96,
+    "functions": [
+     {
+      "name": "rulerLabel src/ui/timeRuler.ts:26",
+      "selfMs": 276.28
+     },
+     {
+      "name": "requestAnimationFrame",
+      "selfMs": 185.31
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 70.87
+     },
+     {
+      "name": "rect",
+      "selfMs": 60.71
+     },
+     {
+      "name": "drawClip src/views/playlistDraw.ts:393",
+      "selfMs": 24.35
+     },
+     {
+      "name": "laneOverlaps src/lib/overlaps.ts:21",
+      "selfMs": 16.49
+     },
+     {
+      "name": "tick src/api/mock.ts:449",
+      "selfMs": 15.1
+     },
+     {
+      "name": "fillText",
+      "selfMs": 13.83
+     },
+     {
+      "name": "fill",
+      "selfMs": 13.22
+     },
+     {
+      "name": "drawEnvelope src/views/playlistDraw.ts:492",
+      "selfMs": 11.06
+     },
+     {
+      "name": "postMessage",
+      "selfMs": 9.86
+     },
+     {
+      "name": "stroke",
+      "selfMs": 9.65
+     },
+     {
+      "name": "encodeFrame src/api/telemetry.ts:169",
+      "selfMs": 9.12
+     },
+     {
+      "name": "applyView src/views/Playlist.tsx:195",
+      "selfMs": 8.95
+     },
+     {
+      "name": "drawRuler src/ui/timeRuler.ts:33",
+      "selfMs": 8.75
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 317.3
+     },
+     {
+      "name": "src/ui/timeRuler.ts",
+      "selfMs": 285.03
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 70.87
+     },
+     {
+      "name": "src/views/playlistDraw.ts",
+      "selfMs": 50.39
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 24.45
+     },
+     {
+      "name": "src/lib/overlaps.ts",
+      "selfMs": 24.07
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 20.89
+     },
+     {
+      "name": "src/api/telemetry.ts",
+      "selfMs": 11.52
+     },
+     {
+      "name": "src/ui/frameLoop.ts",
+      "selfMs": 9.14
+     },
+     {
+      "name": "src/ui/instIcons.tsx",
+      "selfMs": 5.09
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 431.51
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 317.3
+     },
+     {
+      "name": "gc",
+      "selfMs": 70.87
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 20.89
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 7.38
+     }
+    ]
+   }
+  },
+  "win_mixer": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "open.median": "ms",
+    "open.p95": "ms",
+    "open.max": "ms",
+    "close.median": "ms",
+    "close.p95": "ms",
+    "close.max": "ms",
+    "leak.heapAfterGcMiB.perCycle": "MiB",
+    "leak.domNodes.perCycle": "count",
+    "leak.jsEventListeners.perCycle": "count",
+    "leak.detachedNodes.perCycle": "count"
+   },
+   "extra": {
+    "cycles": 20,
+    "cyclesBackInStartState": 20,
+    "before": {
+     "heapAfterGcMiB": 33.45,
+     "domNodes": 6240,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 6
+    },
+    "after": {
+     "heapAfterGcMiB": 33.68,
+     "domNodes": 6240,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 6
+    }
+   },
+   "hot": {
+    "busyMs": 1289.38,
+    "functions": [
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 490.71
+     },
+     {
+      "name": "(anonymous) src/views/Mixer.tsx:438",
+      "selfMs": 304.76
+     },
+     {
+      "name": "setProperty",
+      "selfMs": 117.2
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 58.07
+     },
+     {
+      "name": "remove",
+      "selfMs": 40.32
+     },
+     {
+      "name": "cleanNode solid-js/dist/solid.js:949",
+      "selfMs": 40.11
+     },
+     {
+      "name": "getBoundingClientRect",
+      "selfMs": 33.55
+     },
+     {
+      "name": "insertBefore",
+      "selfMs": 28.5
+     },
+     {
+      "name": "setStyleProperty solid-js/web/dist/web.js:302",
+      "selfMs": 14.8
+     },
+     {
+      "name": "(anonymous) src/views/PatDock.tsx:47",
+      "selfMs": 8.65
+     },
+     {
+      "name": "getNodes solid-js/store/dist/store.js:65",
+      "selfMs": 8.3
+     },
+     {
+      "name": "untrack solid-js/dist/solid.js:458",
+      "selfMs": 8.19
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 7.61
+     },
+     {
+      "name": "(anonymous) src/lib/presets.ts:23",
+      "selfMs": 7.32
+     },
+     {
+      "name": "dockTip src/state/docking.ts:74",
+      "selfMs": 6.99
+     }
+    ],
+    "files": [
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 557.38
+     },
+     {
+      "name": "src/views/Mixer.tsx",
+      "selfMs": 318.7
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 236.78
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 58.07
+     },
+     {
+      "name": "solid-js/web/dist/web.js",
+      "selfMs": 24.85
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 15.59
+     },
+     {
+      "name": "src/views/PatDock.tsx",
+      "selfMs": 15.38
+     },
+     {
+      "name": "src/lib/presets.ts",
+      "selfMs": 12.49
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 11.53
+     },
+     {
+      "name": "src/state/docking.ts",
+      "selfMs": 6.99
+     }
+    ],
+    "owners": [
+     {
+      "name": "solid-js",
+      "selfMs": 593.75
+     },
+     {
+      "name": "app",
+      "selfMs": 400.18
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 236.78
+     },
+     {
+      "name": "gc",
+      "selfMs": 58.07
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 0.6
+     }
+    ]
+   }
+  },
+  "win_pianoRoll": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "open.median": "ms",
+    "open.p95": "ms",
+    "open.max": "ms",
+    "close.median": "ms",
+    "close.p95": "ms",
+    "close.max": "ms",
+    "leak.heapAfterGcMiB.perCycle": "MiB",
+    "leak.domNodes.perCycle": "count",
+    "leak.jsEventListeners.perCycle": "count",
+    "leak.detachedNodes.perCycle": "count"
+   },
+   "extra": {
+    "cycles": 20,
+    "cyclesBackInStartState": 20,
+    "before": {
+     "heapAfterGcMiB": 33.72,
+     "domNodes": 6240,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 6
+    },
+    "after": {
+     "heapAfterGcMiB": 34,
+     "domNodes": 6240,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 6
+    }
+   },
+   "hot": {
+    "busyMs": 628.03,
+    "functions": [
+     {
+      "name": "(garbage collector)",
+      "selfMs": 76.2
+     },
+     {
+      "name": "measure src/ui/ZoomScrollbar.tsx:35",
+      "selfMs": 62.57
+     },
+     {
+      "name": "getBoundingClientRect",
+      "selfMs": 60.52
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 39.97
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 29.02
+     },
+     {
+      "name": "vocalsUnder src/lib/melody.ts:61",
+      "selfMs": 24.09
+     },
+     {
+      "name": "clipOfPattern src/lib/patLoop.ts:29",
+      "selfMs": 19.74
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 19.19
+     },
+     {
+      "name": "(anonymous) src/views/PianoRoll.tsx:216",
+      "selfMs": 13.89
+     },
+     {
+      "name": "cleanChildren solid-js/web/dist/web.js:644",
+      "selfMs": 13.56
+     },
+     {
+      "name": "cleanNode solid-js/dist/solid.js:949",
+      "selfMs": 12.57
+     },
+     {
+      "name": "fillRect",
+      "selfMs": 10.52
+     },
+     {
+      "name": "ch.port1.onmessage",
+      "selfMs": 8.97
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 8.96
+     },
+     {
+      "name": "isWrappable solid-js/store/dist/store.js:38",
+      "selfMs": 8.23
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 167.87
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 76.2
+     },
+     {
+      "name": "src/ui/ZoomScrollbar.tsx",
+      "selfMs": 63.77
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 53.33
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 39.97
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 39.38
+     },
+     {
+      "name": "src/views/PianoRoll.tsx",
+      "selfMs": 33.33
+     },
+     {
+      "name": "src/lib/melody.ts",
+      "selfMs": 26.67
+     },
+     {
+      "name": "solid-js/web/dist/web.js",
+      "selfMs": 22.82
+     },
+     {
+      "name": "src/views/patternDraw.ts",
+      "selfMs": 21.43
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 267.28
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 167.87
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 115.53
+     },
+     {
+      "name": "gc",
+      "selfMs": 76.2
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 1.15
+     }
+    ]
+   }
+  },
+  "win_fxWindow": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB",
+    "open.median": "ms",
+    "open.p95": "ms",
+    "open.max": "ms",
+    "close.median": "ms",
+    "close.p95": "ms",
+    "close.max": "ms",
+    "leak.heapAfterGcMiB.perCycle": "MiB",
+    "leak.domNodes.perCycle": "count",
+    "leak.jsEventListeners.perCycle": "count",
+    "leak.detachedNodes.perCycle": "count"
+   },
+   "extra": {
+    "cycles": 20,
+    "cyclesBackInStartState": 20,
+    "before": {
+     "heapAfterGcMiB": 34.26,
+     "domNodes": 6278,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 6
+    },
+    "after": {
+     "heapAfterGcMiB": 34.42,
+     "domNodes": 6278,
+     "jsEventListeners": 224,
+     "documents": 3,
+     "detachedNodes": 6
+    }
+   },
+   "hot": {
+    "busyMs": 395.73,
+    "functions": [
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 74.97
+     },
+     {
+      "name": "getBoundingClientRect",
+      "selfMs": 61.17
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 18.45
+     },
+     {
+      "name": "replaceChild",
+      "selfMs": 15.39
+     },
+     {
+      "name": "refit src/views/Toolbar.tsx:59",
+      "selfMs": 12.33
+     },
+     {
+      "name": "getContext",
+      "selfMs": 11.9
+     },
+     {
+      "name": "specCurve src/views/fx/common.ts:45",
+      "selfMs": 11.74
+     },
+     {
+      "name": "(anonymous)",
+      "selfMs": 11.61
+     },
+     {
+      "name": "gridH src/views/Playlist.tsx:161",
+      "selfMs": 11.59
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 10.65
+     },
+     {
+      "name": "draw src/views/fx/eq.ts:91",
+      "selfMs": 9.17
+     },
+     {
+      "name": "findFx src/state/store.ts:326",
+      "selfMs": 8.07
+     },
+     {
+      "name": "proxyDescriptor$1 solid-js/store/dist/store.js:81",
+      "selfMs": 7.54
+     },
+     {
+      "name": "setProperty",
+      "selfMs": 7.21
+     },
+     {
+      "name": "drawImage",
+      "selfMs": 6.46
+     }
+    ],
+    "files": [
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 148.3
+     },
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 86.56
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 23.01
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 18.45
+     },
+     {
+      "name": "src/views/Toolbar.tsx",
+      "selfMs": 17.98
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 14.99
+     },
+     {
+      "name": "src/views/fx/eq.ts",
+      "selfMs": 13.82
+     },
+     {
+      "name": "src/views/fx/common.ts",
+      "selfMs": 12.84
+     },
+     {
+      "name": "src/views/FxWindow.tsx",
+      "selfMs": 10.5
+     },
+     {
+      "name": "src/state/store.ts",
+      "selfMs": 8.6
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 185.74
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 148.3
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 39.95
+     },
+     {
+      "name": "gc",
+      "selfMs": 18.45
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 3.29
+     }
+    ]
+   }
+  },
+  "playback": {
+   "units": {
+    "frame.median": "ms",
+    "frame.p95": "ms",
+    "frame.max": "ms",
+    "frames.dropped": "count",
+    "longTasks": "count",
+    "loaf": "count",
+    "heapMiB": "MiB"
+   },
+   "extra": {
+    "playing": true
+   },
+   "hot": {
+    "busyMs": 499.46,
+    "functions": [
+     {
+      "name": "follow src/views/Playlist.tsx:340",
+      "selfMs": 112.21
+     },
+     {
+      "name": "tick src/api/mock.ts:449",
+      "selfMs": 47.97
+     },
+     {
+      "name": "dto src/api/mock.ts:213",
+      "selfMs": 34.17
+     },
+     {
+      "name": "(anonymous) src/views/Toolbar.tsx:73",
+      "selfMs": 30.16
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 29.18
+     },
+     {
+      "name": "selectedInserts src/state/actions.ts:597",
+      "selfMs": 23
+     },
+     {
+      "name": "(anonymous) src/api/mock.ts:184",
+      "selfMs": 20.92
+     },
+     {
+      "name": "readSignal solid-js/dist/solid.js:622",
+      "selfMs": 16.8
+     },
+     {
+      "name": "draw src/views/Playlist.tsx:349",
+      "selfMs": 14.72
+     },
+     {
+      "name": "placePlayhead src/views/Playlist.tsx:450",
+      "selfMs": 13.63
+     },
+     {
+      "name": "frame src/ui/frameLoop.ts:16",
+      "selfMs": 13.44
+     },
+     {
+      "name": "getBoundingClientRect",
+      "selfMs": 11.56
+     },
+     {
+      "name": "Strip.createRenderEffect.e src/views/Mixer.tsx:328",
+      "selfMs": 10.22
+     },
+     {
+      "name": "get solid-js/store/dist/store.js:97",
+      "selfMs": 10.04
+     },
+     {
+      "name": "encodeFrame src/api/telemetry.ts:169",
+      "selfMs": 8.7
+     }
+    ],
+    "files": [
+     {
+      "name": "src/views/Playlist.tsx",
+      "selfMs": 141.2
+     },
+     {
+      "name": "src/api/mock.ts",
+      "selfMs": 109.51
+     },
+     {
+      "name": "src/views/Toolbar.tsx",
+      "selfMs": 32.15
+     },
+     {
+      "name": "solid-js/dist/solid.js",
+      "selfMs": 29.24
+     },
+     {
+      "name": "(garbage collector)",
+      "selfMs": 29.18
+     },
+     {
+      "name": "src/state/actions.ts",
+      "selfMs": 27.43
+     },
+     {
+      "name": "(browser: DOM / canvas / layout APIs)",
+      "selfMs": 24.02
+     },
+     {
+      "name": "src/views/Mixer.tsx",
+      "selfMs": 22.33
+     },
+     {
+      "name": "solid-js/store/dist/store.js",
+      "selfMs": 17.97
+     },
+     {
+      "name": "src/ui/frameLoop.ts",
+      "selfMs": 13.44
+     }
+    ],
+    "owners": [
+     {
+      "name": "app",
+      "selfMs": 280.51
+     },
+     {
+      "name": "mock backend",
+      "selfMs": 109.51
+     },
+     {
+      "name": "solid-js",
+      "selfMs": 56.24
+     },
+     {
+      "name": "gc",
+      "selfMs": 29.18
+     },
+     {
+      "name": "browser APIs",
+      "selfMs": 24.02
+     }
+    ]
+   }
+  },
+  "session_end": {
+   "units": {
+    "heapAfterGcMiB": "MiB",
+    "domNodes": "count",
+    "jsEventListeners": "count",
+    "documents": "count",
+    "detachedNodes": "count"
+   }
+  },
+  "console_errors": []
+ },
+ "metrics": {
+  "boot_large.toInteractive.median": {
+   "unit": "ms",
+   "runs": [
+    601.85,
+    613.4,
+    632.9
+   ],
+   "median": 613.4,
+   "min": 601.85,
+   "max": 632.9,
+   "spread": 0.05
+  },
+  "boot_large.toInteractive.p95": {
+   "unit": "ms",
+   "runs": [
+    632.2,
+    733.1,
+    790.5
+   ],
+   "median": 733.1,
+   "min": 632.2,
+   "max": 790.5,
+   "spread": 0.22
+  },
+  "boot_large.toInteractive.max": {
+   "unit": "ms",
+   "runs": [
+    632.2,
+    733.1,
+    790.5
+   ],
+   "median": 733.1,
+   "min": 632.2,
+   "max": 790.5,
+   "spread": 0.22
+  },
+  "boot_large.scriptMs.median": {
+   "unit": "ms",
+   "runs": [
+    213.6,
+    226.59,
+    242.18
+   ],
+   "median": 226.59,
+   "min": 213.6,
+   "max": 242.18,
+   "spread": 0.13
+  },
+  "boot_large.scriptMs.p95": {
+   "unit": "ms",
+   "runs": [
+    225.42,
+    287.75,
+    328.01
+   ],
+   "median": 287.75,
+   "min": 225.42,
+   "max": 328.01,
+   "spread": 0.36
+  },
+  "boot_large.scriptMs.max": {
+   "unit": "ms",
+   "runs": [
+    225.42,
+    287.75,
+    328.01
+   ],
+   "median": 287.75,
+   "min": 225.42,
+   "max": 328.01,
+   "spread": 0.36
+  },
+  "boot_large.longTasks.median": {
+   "unit": "count",
+   "runs": [
+    2.5,
+    2,
+    3
+   ],
+   "median": 2.5,
+   "min": 2,
+   "max": 3,
+   "spread": 0.4
+  },
+  "boot_large.longTaskMs.median": {
+   "unit": "ms",
+   "runs": [
+    405.5,
+    379.5,
+    432
+   ],
+   "median": 405.5,
+   "min": 379.5,
+   "max": 432,
+   "spread": 0.13
+  },
+  "boot_large.heapMiB.median": {
+   "unit": "MiB",
+   "runs": [
+    39.88,
+    39.61,
+    39.69
+   ],
+   "median": 39.69,
+   "min": 39.61,
+   "max": 39.88,
+   "spread": 0.01
+  },
+  "boot_large.domNodes.median": {
+   "unit": "count",
+   "runs": [
+    4281,
+    4281,
+    4281
+   ],
+   "median": 4281,
+   "min": 4281,
+   "max": 4281,
+   "spread": 0
+  },
+  "boot_small.toInteractive.median": {
+   "unit": "ms",
+   "runs": [
+    482.6,
+    347.9,
+    463.8
+   ],
+   "median": 463.8,
+   "min": 347.9,
+   "max": 482.6,
+   "spread": 0.29
+  },
+  "boot_small.toInteractive.p95": {
+   "unit": "ms",
+   "runs": [
+    713.3,
+    357.4,
+    518.3
+   ],
+   "median": 518.3,
+   "min": 357.4,
+   "max": 713.3,
+   "spread": 0.69
+  },
+  "boot_small.toInteractive.max": {
+   "unit": "ms",
+   "runs": [
+    713.3,
+    357.4,
+    518.3
+   ],
+   "median": 518.3,
+   "min": 357.4,
+   "max": 713.3,
+   "spread": 0.69
+  },
+  "boot_small.scriptMs.median": {
+   "unit": "ms",
+   "runs": [
+    143.79,
+    113.79,
+    152.96
+   ],
+   "median": 143.79,
+   "min": 113.79,
+   "max": 152.96,
+   "spread": 0.27
+  },
+  "boot_small.scriptMs.p95": {
+   "unit": "ms",
+   "runs": [
+    167.66,
+    117.18,
+    178.89
+   ],
+   "median": 167.66,
+   "min": 117.18,
+   "max": 178.89,
+   "spread": 0.37
+  },
+  "boot_small.scriptMs.max": {
+   "unit": "ms",
+   "runs": [
+    167.66,
+    117.18,
+    178.89
+   ],
+   "median": 167.66,
+   "min": 117.18,
+   "max": 178.89,
+   "spread": 0.37
+  },
+  "boot_small.longTasks.median": {
+   "unit": "count",
+   "runs": [
+    3,
+    2,
+    3
+   ],
+   "median": 3,
+   "min": 2,
+   "max": 3,
+   "spread": 0.33
+  },
+  "boot_small.longTaskMs.median": {
+   "unit": "ms",
+   "runs": [
+    308,
+    188,
+    294
+   ],
+   "median": 294,
+   "min": 188,
+   "max": 308,
+   "spread": 0.41
+  },
+  "boot_small.heapMiB.median": {
+   "unit": "MiB",
+   "runs": [
+    16.2,
+    16.05,
+    18.15
+   ],
+   "median": 16.2,
+   "min": 16.05,
+   "max": 18.15,
+   "spread": 0.13
+  },
+  "boot_small.domNodes.median": {
+   "unit": "count",
+   "runs": [
+    2093,
+    2093,
+    2093
+   ],
+   "median": 2093,
+   "min": 2093,
+   "max": 2093,
+   "spread": 0
+  },
+  "session_start.heapAfterGcMiB": {
+   "unit": "MiB",
+   "runs": [
+    24.57,
+    24.57,
+    24.59
+   ],
+   "median": 24.57,
+   "min": 24.57,
+   "max": 24.59,
+   "spread": 0
+  },
+  "session_start.domNodes": {
+   "unit": "count",
+   "runs": [
+    3715,
+    3715,
+    3715
+   ],
+   "median": 3715,
+   "min": 3715,
+   "max": 3715,
+   "spread": 0
+  },
+  "session_start.jsEventListeners": {
+   "unit": "count",
+   "runs": [
+    130,
+    130,
+    130
+   ],
+   "median": 130,
+   "min": 130,
+   "max": 130,
+   "spread": 0
+  },
+  "session_start.documents": {
+   "unit": "count",
+   "runs": [
+    3,
+    3,
+    3
+   ],
+   "median": 3,
+   "min": 3,
+   "max": 3,
+   "spread": 0
+  },
+  "session_start.detachedNodes": {
+   "unit": "count",
+   "runs": [
+    1,
+    1,
+    1
+   ],
+   "median": 1,
+   "min": 1,
+   "max": 1,
+   "spread": 0
+  },
+  "replace_same.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "replace_same.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    16.7,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "replace_same.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.3,
+    33.3,
+    33.4
+   ],
+   "median": 33.3,
+   "min": 33.3,
+   "max": 33.4,
+   "spread": 0
+  },
+  "replace_same.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    2,
+    1,
+    3
+   ],
+   "median": 2,
+   "min": 1,
+   "max": 3,
+   "spread": 1
+  },
+  "replace_same.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_same.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_same.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_same.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    502.92,
+    508.61,
+    571.12
+   ],
+   "median": 508.61,
+   "min": 502.92,
+   "max": 571.12,
+   "spread": 0.13
+  },
+  "replace_same.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_same.styleMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_same.taskMs": {
+   "unit": "ms",
+   "runs": [
+    1027.61,
+    1014.18,
+    1094.76
+   ],
+   "median": 1027.61,
+   "min": 1014.18,
+   "max": 1094.76,
+   "spread": 0.08
+  },
+  "replace_same.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    16.76,
+    16.95,
+    19.04
+   ],
+   "median": 16.95,
+   "min": 16.76,
+   "max": 19.04,
+   "spread": 0.13
+  },
+  "replace_same.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    34.41,
+    29.93,
+    37.57
+   ],
+   "median": 34.41,
+   "min": 29.93,
+   "max": 37.57,
+   "spread": 0.22
+  },
+  "replace_same.parse.median": {
+   "unit": "ms",
+   "runs": [
+    2.8,
+    3,
+    3.15
+   ],
+   "median": 3,
+   "min": 2.8,
+   "max": 3.15,
+   "spread": 0.12
+  },
+  "replace_same.parse.p95": {
+   "unit": "ms",
+   "runs": [
+    9.8,
+    4.3,
+    4.6
+   ],
+   "median": 4.6,
+   "min": 4.3,
+   "max": 9.8,
+   "spread": 1.2
+  },
+  "replace_same.parse.max": {
+   "unit": "ms",
+   "runs": [
+    11.1,
+    4.9,
+    4.9
+   ],
+   "median": 4.9,
+   "min": 4.9,
+   "max": 11.1,
+   "spread": 1.27
+  },
+  "replace_same.replaceSync.median": {
+   "unit": "ms",
+   "runs": [
+    8.25,
+    8.05,
+    8.35
+   ],
+   "median": 8.25,
+   "min": 8.05,
+   "max": 8.35,
+   "spread": 0.04
+  },
+  "replace_same.replaceSync.p95": {
+   "unit": "ms",
+   "runs": [
+    14.2,
+    9.5,
+    13
+   ],
+   "median": 13,
+   "min": 9.5,
+   "max": 14.2,
+   "spread": 0.36
+  },
+  "replace_same.replaceSync.max": {
+   "unit": "ms",
+   "runs": [
+    16.3,
+    9.9,
+    15.1
+   ],
+   "median": 15.1,
+   "min": 9.9,
+   "max": 16.3,
+   "spread": 0.42
+  },
+  "replace_same.replaceToFrame.median": {
+   "unit": "ms",
+   "runs": [
+    25.35,
+    25.55,
+    25.45
+   ],
+   "median": 25.45,
+   "min": 25.35,
+   "max": 25.55,
+   "spread": 0.01
+  },
+  "replace_same.replaceToFrame.p95": {
+   "unit": "ms",
+   "runs": [
+    35.2,
+    28.3,
+    36.5
+   ],
+   "median": 35.2,
+   "min": 28.3,
+   "max": 36.5,
+   "spread": 0.23
+  },
+  "replace_same.replaceToFrame.max": {
+   "unit": "ms",
+   "runs": [
+    42.4,
+    30.6,
+    41.9
+   ],
+   "median": 41.9,
+   "min": 30.6,
+   "max": 42.4,
+   "spread": 0.28
+  },
+  "replace_same.stateKiB": {
+   "unit": "KiB",
+   "runs": [
+    970,
+    970,
+    970
+   ],
+   "median": 970,
+   "min": 970,
+   "max": 970,
+   "spread": 0
+  },
+  "replace_oneClip.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "replace_oneClip.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "replace_oneClip.frame.max": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    16.8,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.8,
+   "max": 16.8,
+   "spread": 0
+  },
+  "replace_oneClip.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_oneClip.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_oneClip.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_oneClip.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_oneClip.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    476.56,
+    500.69,
+    496.32
+   ],
+   "median": 496.32,
+   "min": 476.56,
+   "max": 500.69,
+   "spread": 0.05
+  },
+  "replace_oneClip.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_oneClip.styleMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "replace_oneClip.taskMs": {
+   "unit": "ms",
+   "runs": [
+    967.31,
+    989.05,
+    992.75
+   ],
+   "median": 989.05,
+   "min": 967.31,
+   "max": 992.75,
+   "spread": 0.03
+  },
+  "replace_oneClip.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    15.89,
+    16.69,
+    16.54
+   ],
+   "median": 16.54,
+   "min": 15.89,
+   "max": 16.69,
+   "spread": 0.05
+  },
+  "replace_oneClip.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    38.72,
+    31.81,
+    39.38
+   ],
+   "median": 38.72,
+   "min": 31.81,
+   "max": 39.38,
+   "spread": 0.2
+  },
+  "replace_oneClip.parse.median": {
+   "unit": "ms",
+   "runs": [
+    3.05,
+    3,
+    3.05
+   ],
+   "median": 3.05,
+   "min": 3,
+   "max": 3.05,
+   "spread": 0.02
+  },
+  "replace_oneClip.parse.p95": {
+   "unit": "ms",
+   "runs": [
+    8.6,
+    3.6,
+    4.4
+   ],
+   "median": 4.4,
+   "min": 3.6,
+   "max": 8.6,
+   "spread": 1.14
+  },
+  "replace_oneClip.parse.max": {
+   "unit": "ms",
+   "runs": [
+    11,
+    5.7,
+    11.1
+   ],
+   "median": 11,
+   "min": 5.7,
+   "max": 11.1,
+   "spread": 0.49
+  },
+  "replace_oneClip.replaceSync.median": {
+   "unit": "ms",
+   "runs": [
+    7.8,
+    7.9,
+    8.05
+   ],
+   "median": 7.9,
+   "min": 7.8,
+   "max": 8.05,
+   "spread": 0.03
+  },
+  "replace_oneClip.replaceSync.p95": {
+   "unit": "ms",
+   "runs": [
+    10.3,
+    9.5,
+    10.6
+   ],
+   "median": 10.3,
+   "min": 9.5,
+   "max": 10.6,
+   "spread": 0.11
+  },
+  "replace_oneClip.replaceSync.max": {
+   "unit": "ms",
+   "runs": [
+    10.3,
+    9.9,
+    13.4
+   ],
+   "median": 10.3,
+   "min": 9.9,
+   "max": 13.4,
+   "spread": 0.34
+  },
+  "replace_oneClip.replaceToFrame.median": {
+   "unit": "ms",
+   "runs": [
+    24.85,
+    25.3,
+    25.65
+   ],
+   "median": 25.3,
+   "min": 24.85,
+   "max": 25.65,
+   "spread": 0.03
+  },
+  "replace_oneClip.replaceToFrame.p95": {
+   "unit": "ms",
+   "runs": [
+    28.4,
+    30.6,
+    30.4
+   ],
+   "median": 30.4,
+   "min": 28.4,
+   "max": 30.6,
+   "spread": 0.07
+  },
+  "replace_oneClip.replaceToFrame.max": {
+   "unit": "ms",
+   "runs": [
+    32.6,
+    31.6,
+    30.6
+   ],
+   "median": 31.6,
+   "min": 30.6,
+   "max": 32.6,
+   "spread": 0.06
+  },
+  "replace_oneClip.stateKiB": {
+   "unit": "KiB",
+   "runs": [
+    970,
+    970,
+    970
+   ],
+   "median": 970,
+   "min": 970,
+   "max": 970,
+   "spread": 0
+  },
+  "replace_load.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.75,
+    33.3,
+    33.3
+   ],
+   "median": 33.3,
+   "min": 16.75,
+   "max": 33.3,
+   "spread": 0.5
+  },
+  "replace_load.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    183.3,
+    200,
+    183.4
+   ],
+   "median": 183.4,
+   "min": 183.3,
+   "max": 200,
+   "spread": 0.09
+  },
+  "replace_load.frame.max": {
+   "unit": "ms",
+   "runs": [
+    200,
+    216.7,
+    250
+   ],
+   "median": 216.7,
+   "min": 200,
+   "max": 250,
+   "spread": 0.23
+  },
+  "replace_load.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    138,
+    164,
+    163
+   ],
+   "median": 163,
+   "min": 138,
+   "max": 164,
+   "spread": 0.16
+  },
+  "replace_load.longTasks": {
+   "unit": "count",
+   "runs": [
+    26,
+    26,
+    27
+   ],
+   "median": 26,
+   "min": 26,
+   "max": 27,
+   "spread": 0.04
+  },
+  "replace_load.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    2332,
+    2584,
+    2591
+   ],
+   "median": 2584,
+   "min": 2332,
+   "max": 2591,
+   "spread": 0.1
+  },
+  "replace_load.loaf": {
+   "unit": "count",
+   "runs": [
+    21,
+    24,
+    26
+   ],
+   "median": 24,
+   "min": 21,
+   "max": 26,
+   "spread": 0.21
+  },
+  "replace_load.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    1195.61,
+    1419.04,
+    1394.81
+   ],
+   "median": 1394.81,
+   "min": 1195.61,
+   "max": 1419.04,
+   "spread": 0.16
+  },
+  "replace_load.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    196.95,
+    216.77,
+    211.65
+   ],
+   "median": 211.65,
+   "min": 196.95,
+   "max": 216.77,
+   "spread": 0.09
+  },
+  "replace_load.styleMs": {
+   "unit": "ms",
+   "runs": [
+    183.35,
+    199.59,
+    191.7
+   ],
+   "median": 191.7,
+   "min": 183.35,
+   "max": 199.59,
+   "spread": 0.08
+  },
+  "replace_load.taskMs": {
+   "unit": "ms",
+   "runs": [
+    3247.92,
+    3663.05,
+    3644.64
+   ],
+   "median": 3644.64,
+   "min": 3247.92,
+   "max": 3663.05,
+   "spread": 0.11
+  },
+  "replace_load.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    119.56,
+    141.9,
+    139.48
+   ],
+   "median": 139.48,
+   "min": 119.56,
+   "max": 141.9,
+   "spread": 0.16
+  },
+  "replace_load.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    27.41,
+    27.53,
+    27.48
+   ],
+   "median": 27.48,
+   "min": 27.41,
+   "max": 27.53,
+   "spread": 0
+  },
+  "replace_load.parse.median": {
+   "unit": "ms",
+   "runs": [
+    4.6,
+    4.75,
+    4.2
+   ],
+   "median": 4.6,
+   "min": 4.2,
+   "max": 4.75,
+   "spread": 0.12
+  },
+  "replace_load.parse.p95": {
+   "unit": "ms",
+   "runs": [
+    6,
+    10.4,
+    7
+   ],
+   "median": 7,
+   "min": 6,
+   "max": 10.4,
+   "spread": 0.63
+  },
+  "replace_load.parse.max": {
+   "unit": "ms",
+   "runs": [
+    6,
+    10.4,
+    7
+   ],
+   "median": 7,
+   "min": 6,
+   "max": 10.4,
+   "spread": 0.63
+  },
+  "replace_load.replaceSync.median": {
+   "unit": "ms",
+   "runs": [
+    82.75,
+    87.15,
+    89.25
+   ],
+   "median": 87.15,
+   "min": 82.75,
+   "max": 89.25,
+   "spread": 0.07
+  },
+  "replace_load.replaceSync.p95": {
+   "unit": "ms",
+   "runs": [
+    90.4,
+    111.1,
+    120.6
+   ],
+   "median": 111.1,
+   "min": 90.4,
+   "max": 120.6,
+   "spread": 0.27
+  },
+  "replace_load.replaceSync.max": {
+   "unit": "ms",
+   "runs": [
+    90.4,
+    111.1,
+    120.6
+   ],
+   "median": 111.1,
+   "min": 90.4,
+   "max": 120.6,
+   "spread": 0.27
+  },
+  "replace_load.replaceToFrame.median": {
+   "unit": "ms",
+   "runs": [
+    165.05,
+    194.2,
+    183.3
+   ],
+   "median": 183.3,
+   "min": 165.05,
+   "max": 194.2,
+   "spread": 0.16
+  },
+  "replace_load.replaceToFrame.p95": {
+   "unit": "ms",
+   "runs": [
+    214.6,
+    234.1,
+    257.4
+   ],
+   "median": 234.1,
+   "min": 214.6,
+   "max": 257.4,
+   "spread": 0.18
+  },
+  "replace_load.replaceToFrame.max": {
+   "unit": "ms",
+   "runs": [
+    214.6,
+    234.1,
+    257.4
+   ],
+   "median": 234.1,
+   "min": 214.6,
+   "max": 257.4,
+   "spread": 0.18
+  },
+  "replace_load.stateKiB": {
+   "unit": "KiB",
+   "runs": [
+    970,
+    970,
+    970
+   ],
+   "median": 970,
+   "min": 970,
+   "max": 970,
+   "spread": 0
+  },
+  "clip_drag.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "clip_drag.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    16.7,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "clip_drag.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.4,
+    16.8,
+    33.3
+   ],
+   "median": 33.3,
+   "min": 16.8,
+   "max": 33.4,
+   "spread": 0.5
+  },
+  "clip_drag.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    4,
+    0,
+    2
+   ],
+   "median": 2,
+   "min": 0,
+   "max": 4,
+   "spread": 2
+  },
+  "clip_drag.longTasks": {
+   "unit": "count",
+   "runs": [
+    1,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 1,
+   "spread": 0
+  },
+  "clip_drag.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    52,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 52,
+   "spread": 0
+  },
+  "clip_drag.loaf": {
+   "unit": "count",
+   "runs": [
+    2,
+    0,
+    1
+   ],
+   "median": 1,
+   "min": 0,
+   "max": 2,
+   "spread": 2
+  },
+  "clip_drag.pointermove.task.median": {
+   "unit": "ms",
+   "runs": [
+    0.6,
+    0.6,
+    0.6
+   ],
+   "median": 0.6,
+   "min": 0.6,
+   "max": 0.6,
+   "spread": 0
+  },
+  "clip_drag.pointermove.task.p95": {
+   "unit": "ms",
+   "runs": [
+    10.7,
+    10.7,
+    11.3
+   ],
+   "median": 10.7,
+   "min": 10.7,
+   "max": 11.3,
+   "spread": 0.06
+  },
+  "clip_drag.pointermove.task.max": {
+   "unit": "ms",
+   "runs": [
+    20.1,
+    14.4,
+    18.8
+   ],
+   "median": 18.8,
+   "min": 14.4,
+   "max": 20.1,
+   "spread": 0.3
+  },
+  "clip_drag.pointermove.frame.median": {
+   "unit": "ms",
+   "runs": [
+    0.6,
+    0.7,
+    0.6
+   ],
+   "median": 0.6,
+   "min": 0.6,
+   "max": 0.7,
+   "spread": 0.17
+  },
+  "clip_drag.pointermove.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    11.7,
+    10.9,
+    11.8
+   ],
+   "median": 11.7,
+   "min": 10.9,
+   "max": 11.8,
+   "spread": 0.08
+  },
+  "clip_drag.pointermove.frame.max": {
+   "unit": "ms",
+   "runs": [
+    20.6,
+    14.7,
+    19.2
+   ],
+   "median": 19.2,
+   "min": 14.7,
+   "max": 20.6,
+   "spread": 0.31
+  },
+  "clip_drag.pointermove.count": {
+   "unit": "count",
+   "runs": [
+    155,
+    155,
+    155
+   ],
+   "median": 155,
+   "min": 155,
+   "max": 155,
+   "spread": 0
+  },
+  "clip_drag.pointerup.task.median": {
+   "unit": "ms",
+   "runs": [
+    47.6,
+    41.6,
+    40.6
+   ],
+   "median": 41.6,
+   "min": 40.6,
+   "max": 47.6,
+   "spread": 0.17
+  },
+  "clip_drag.pointerup.task.p95": {
+   "unit": "ms",
+   "runs": [
+    54.9,
+    45.4,
+    47.7
+   ],
+   "median": 47.7,
+   "min": 45.4,
+   "max": 54.9,
+   "spread": 0.2
+  },
+  "clip_drag.pointerup.task.max": {
+   "unit": "ms",
+   "runs": [
+    54.9,
+    45.4,
+    47.7
+   ],
+   "median": 47.7,
+   "min": 45.4,
+   "max": 54.9,
+   "spread": 0.2
+  },
+  "clip_drag.pointerup.frame.median": {
+   "unit": "ms",
+   "runs": [
+    58.8,
+    52.4,
+    67.4
+   ],
+   "median": 58.8,
+   "min": 52.4,
+   "max": 67.4,
+   "spread": 0.26
+  },
+  "clip_drag.pointerup.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    98.8,
+    71.7,
+    87.9
+   ],
+   "median": 87.9,
+   "min": 71.7,
+   "max": 98.8,
+   "spread": 0.31
+  },
+  "clip_drag.pointerup.frame.max": {
+   "unit": "ms",
+   "runs": [
+    98.8,
+    71.7,
+    87.9
+   ],
+   "median": 87.9,
+   "min": 71.7,
+   "max": 98.8,
+   "spread": 0.31
+  },
+  "clip_drag.pointerup.count": {
+   "unit": "count",
+   "runs": [
+    5,
+    5,
+    5
+   ],
+   "median": 5,
+   "min": 5,
+   "max": 5,
+   "spread": 0
+  },
+  "clip_drag.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    535.11,
+    485.44,
+    529.38
+   ],
+   "median": 529.38,
+   "min": 485.44,
+   "max": 535.11,
+   "spread": 0.09
+  },
+  "clip_drag.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    12.19,
+    11.14,
+    12.23
+   ],
+   "median": 12.19,
+   "min": 11.14,
+   "max": 12.23,
+   "spread": 0.09
+  },
+  "clip_drag.styleMs": {
+   "unit": "ms",
+   "runs": [
+    134.52,
+    123.75,
+    114.28
+   ],
+   "median": 123.75,
+   "min": 114.28,
+   "max": 134.52,
+   "spread": 0.16
+  },
+  "clip_drag.taskMs": {
+   "unit": "ms",
+   "runs": [
+    2314.31,
+    2130.94,
+    2237.7
+   ],
+   "median": 2237.7,
+   "min": 2130.94,
+   "max": 2314.31,
+   "spread": 0.08
+  },
+  "clip_drag.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    3.45,
+    3.13,
+    3.42
+   ],
+   "median": 3.42,
+   "min": 3.13,
+   "max": 3.45,
+   "spread": 0.09
+  },
+  "clip_drag.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    38.58,
+    31.2,
+    31.87
+   ],
+   "median": 31.87,
+   "min": 31.2,
+   "max": 38.58,
+   "spread": 0.23
+  },
+  "clip_drag.drop.task.median": {
+   "unit": "ms",
+   "runs": [
+    47.6,
+    41.6,
+    40.6
+   ],
+   "median": 41.6,
+   "min": 40.6,
+   "max": 47.6,
+   "spread": 0.17
+  },
+  "clip_drag.drop.task.p95": {
+   "unit": "ms",
+   "runs": [
+    54.9,
+    45.4,
+    47.7
+   ],
+   "median": 47.7,
+   "min": 45.4,
+   "max": 54.9,
+   "spread": 0.2
+  },
+  "clip_drag.drop.task.max": {
+   "unit": "ms",
+   "runs": [
+    54.9,
+    45.4,
+    47.7
+   ],
+   "median": 47.7,
+   "min": 45.4,
+   "max": 54.9,
+   "spread": 0.2
+  },
+  "clip_drag.drop.settled.median": {
+   "unit": "ms",
+   "runs": [
+    85.1,
+    80.6,
+    80.5
+   ],
+   "median": 80.6,
+   "min": 80.5,
+   "max": 85.1,
+   "spread": 0.06
+  },
+  "clip_drag.drop.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    102.3,
+    82.6,
+    91
+   ],
+   "median": 91,
+   "min": 82.6,
+   "max": 102.3,
+   "spread": 0.22
+  },
+  "clip_drag.drop.settled.max": {
+   "unit": "ms",
+   "runs": [
+    102.3,
+    82.6,
+    91
+   ],
+   "median": 91,
+   "min": 82.6,
+   "max": 102.3,
+   "spread": 0.22
+  },
+  "clip_drag.drop.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "note_drag.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "note_drag.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    33.4,
+    33.3,
+    33.3
+   ],
+   "median": 33.3,
+   "min": 33.3,
+   "max": 33.4,
+   "spread": 0
+  },
+  "note_drag.frame.max": {
+   "unit": "ms",
+   "runs": [
+    50,
+    50,
+    50.1
+   ],
+   "median": 50,
+   "min": 50,
+   "max": 50.1,
+   "spread": 0
+  },
+  "note_drag.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    49,
+    33,
+    56
+   ],
+   "median": 49,
+   "min": 33,
+   "max": 56,
+   "spread": 0.47
+  },
+  "note_drag.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    3
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 3,
+   "spread": 0
+  },
+  "note_drag.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    172
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 172,
+   "spread": 0
+  },
+  "note_drag.loaf": {
+   "unit": "count",
+   "runs": [
+    4,
+    2,
+    14
+   ],
+   "median": 4,
+   "min": 2,
+   "max": 14,
+   "spread": 3
+  },
+  "note_drag.pointermove.task.median": {
+   "unit": "ms",
+   "runs": [
+    41,
+    38.35,
+    43.8
+   ],
+   "median": 41,
+   "min": 38.35,
+   "max": 43.8,
+   "spread": 0.13
+  },
+  "note_drag.pointermove.task.p95": {
+   "unit": "ms",
+   "runs": [
+    49.5,
+    47.1,
+    56
+   ],
+   "median": 49.5,
+   "min": 47.1,
+   "max": 56,
+   "spread": 0.18
+  },
+  "note_drag.pointermove.task.max": {
+   "unit": "ms",
+   "runs": [
+    59.1,
+    50.1,
+    70.3
+   ],
+   "median": 59.1,
+   "min": 50.1,
+   "max": 70.3,
+   "spread": 0.34
+  },
+  "note_drag.pointermove.frame.median": {
+   "unit": "ms",
+   "runs": [
+    41.05,
+    38.6,
+    43.8
+   ],
+   "median": 41.05,
+   "min": 38.6,
+   "max": 43.8,
+   "spread": 0.13
+  },
+  "note_drag.pointermove.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    51.3,
+    47.1,
+    56
+   ],
+   "median": 51.3,
+   "min": 47.1,
+   "max": 56,
+   "spread": 0.17
+  },
+  "note_drag.pointermove.frame.max": {
+   "unit": "ms",
+   "runs": [
+    59.1,
+    50.1,
+    70.5
+   ],
+   "median": 59.1,
+   "min": 50.1,
+   "max": 70.5,
+   "spread": 0.35
+  },
+  "note_drag.pointermove.count": {
+   "unit": "count",
+   "runs": [
+    64,
+    64,
+    64
+   ],
+   "median": 64,
+   "min": 64,
+   "max": 64,
+   "spread": 0
+  },
+  "note_drag.pointerup.task.median": {
+   "unit": "ms",
+   "runs": [
+    43.9,
+    41,
+    47.6
+   ],
+   "median": 43.9,
+   "min": 41,
+   "max": 47.6,
+   "spread": 0.15
+  },
+  "note_drag.pointerup.task.p95": {
+   "unit": "ms",
+   "runs": [
+    45.9,
+    46.3,
+    53.4
+   ],
+   "median": 46.3,
+   "min": 45.9,
+   "max": 53.4,
+   "spread": 0.16
+  },
+  "note_drag.pointerup.task.max": {
+   "unit": "ms",
+   "runs": [
+    45.9,
+    46.3,
+    53.4
+   ],
+   "median": 46.3,
+   "min": 45.9,
+   "max": 53.4,
+   "spread": 0.16
+  },
+  "note_drag.pointerup.frame.median": {
+   "unit": "ms",
+   "runs": [
+    55.3,
+    51.95,
+    57.45
+   ],
+   "median": 55.3,
+   "min": 51.95,
+   "max": 57.45,
+   "spread": 0.1
+  },
+  "note_drag.pointerup.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    56.9,
+    55.8,
+    67
+   ],
+   "median": 56.9,
+   "min": 55.8,
+   "max": 67,
+   "spread": 0.2
+  },
+  "note_drag.pointerup.frame.max": {
+   "unit": "ms",
+   "runs": [
+    56.9,
+    55.8,
+    67
+   ],
+   "median": 56.9,
+   "min": 55.8,
+   "max": 67,
+   "spread": 0.2
+  },
+  "note_drag.pointerup.count": {
+   "unit": "count",
+   "runs": [
+    4,
+    4,
+    4
+   ],
+   "median": 4,
+   "min": 4,
+   "max": 4,
+   "spread": 0
+  },
+  "note_drag.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    2007.62,
+    1904.87,
+    2151.88
+   ],
+   "median": 2007.62,
+   "min": 1904.87,
+   "max": 2151.88,
+   "spread": 0.12
+  },
+  "note_drag.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    34.15,
+    33.3,
+    38.1
+   ],
+   "median": 34.15,
+   "min": 33.3,
+   "max": 38.1,
+   "spread": 0.14
+  },
+  "note_drag.styleMs": {
+   "unit": "ms",
+   "runs": [
+    163.21,
+    144.6,
+    163.88
+   ],
+   "median": 163.21,
+   "min": 144.6,
+   "max": 163.88,
+   "spread": 0.12
+  },
+  "note_drag.taskMs": {
+   "unit": "ms",
+   "runs": [
+    5141.63,
+    4762,
+    5331.46
+   ],
+   "median": 5141.63,
+   "min": 4762,
+   "max": 5331.46,
+   "spread": 0.11
+  },
+  "note_drag.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    31.37,
+    29.76,
+    33.62
+   ],
+   "median": 31.37,
+   "min": 29.76,
+   "max": 33.62,
+   "spread": 0.12
+  },
+  "note_drag.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    109.59,
+    109.78,
+    117.52
+   ],
+   "median": 109.78,
+   "min": 109.59,
+   "max": 117.52,
+   "spread": 0.07
+  },
+  "note_drag.drop.task.median": {
+   "unit": "ms",
+   "runs": [
+    43.9,
+    41,
+    47.6
+   ],
+   "median": 43.9,
+   "min": 41,
+   "max": 47.6,
+   "spread": 0.15
+  },
+  "note_drag.drop.task.p95": {
+   "unit": "ms",
+   "runs": [
+    45.9,
+    46.3,
+    53.4
+   ],
+   "median": 46.3,
+   "min": 45.9,
+   "max": 53.4,
+   "spread": 0.16
+  },
+  "note_drag.drop.task.max": {
+   "unit": "ms",
+   "runs": [
+    45.9,
+    46.3,
+    53.4
+   ],
+   "median": 46.3,
+   "min": 45.9,
+   "max": 53.4,
+   "spread": 0.16
+  },
+  "note_drag.drop.settled.median": {
+   "unit": "ms",
+   "runs": [
+    79.35,
+    75.1,
+    86.7
+   ],
+   "median": 79.35,
+   "min": 75.1,
+   "max": 86.7,
+   "spread": 0.15
+  },
+  "note_drag.drop.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    90.4,
+    88.8,
+    90.1
+   ],
+   "median": 90.1,
+   "min": 88.8,
+   "max": 90.4,
+   "spread": 0.02
+  },
+  "note_drag.drop.settled.max": {
+   "unit": "ms",
+   "runs": [
+    90.4,
+    88.8,
+    90.1
+   ],
+   "median": 90.1,
+   "min": 88.8,
+   "max": 90.4,
+   "spread": 0.02
+  },
+  "note_drag.drop.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "fader_drag.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "fader_drag.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.8,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "fader_drag.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.3,
+    50.1,
+    33.3
+   ],
+   "median": 33.3,
+   "min": 33.3,
+   "max": 50.1,
+   "spread": 0.5
+  },
+  "fader_drag.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    1,
+    8,
+    1
+   ],
+   "median": 1,
+   "min": 1,
+   "max": 8,
+   "spread": 7
+  },
+  "fader_drag.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    1,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 1,
+   "spread": 0
+  },
+  "fader_drag.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    50,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 50,
+   "spread": 0
+  },
+  "fader_drag.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    3,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 3,
+   "spread": 0
+  },
+  "fader_drag.pointermove.task.median": {
+   "unit": "ms",
+   "runs": [
+    6.3,
+    6.9,
+    5.9
+   ],
+   "median": 6.3,
+   "min": 5.9,
+   "max": 6.9,
+   "spread": 0.16
+  },
+  "fader_drag.pointermove.task.p95": {
+   "unit": "ms",
+   "runs": [
+    8.3,
+    12,
+    7.8
+   ],
+   "median": 8.3,
+   "min": 7.8,
+   "max": 12,
+   "spread": 0.51
+  },
+  "fader_drag.pointermove.task.max": {
+   "unit": "ms",
+   "runs": [
+    9.5,
+    24.7,
+    17.9
+   ],
+   "median": 17.9,
+   "min": 9.5,
+   "max": 24.7,
+   "spread": 0.85
+  },
+  "fader_drag.pointermove.frame.median": {
+   "unit": "ms",
+   "runs": [
+    6.3,
+    6.9,
+    5.9
+   ],
+   "median": 6.3,
+   "min": 5.9,
+   "max": 6.9,
+   "spread": 0.16
+  },
+  "fader_drag.pointermove.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    8.7,
+    12.1,
+    7.9
+   ],
+   "median": 8.7,
+   "min": 7.9,
+   "max": 12.1,
+   "spread": 0.48
+  },
+  "fader_drag.pointermove.frame.max": {
+   "unit": "ms",
+   "runs": [
+    9.5,
+    24.8,
+    18.9
+   ],
+   "median": 18.9,
+   "min": 9.5,
+   "max": 24.8,
+   "spread": 0.81
+  },
+  "fader_drag.pointermove.count": {
+   "unit": "count",
+   "runs": [
+    155,
+    155,
+    155
+   ],
+   "median": 155,
+   "min": 155,
+   "max": 155,
+   "spread": 0
+  },
+  "fader_drag.pointerup.task.median": {
+   "unit": "ms",
+   "runs": [
+    33.5,
+    35,
+    39.3
+   ],
+   "median": 35,
+   "min": 33.5,
+   "max": 39.3,
+   "spread": 0.17
+  },
+  "fader_drag.pointerup.task.p95": {
+   "unit": "ms",
+   "runs": [
+    44.6,
+    52.1,
+    46.4
+   ],
+   "median": 46.4,
+   "min": 44.6,
+   "max": 52.1,
+   "spread": 0.16
+  },
+  "fader_drag.pointerup.task.max": {
+   "unit": "ms",
+   "runs": [
+    44.6,
+    52.1,
+    46.4
+   ],
+   "median": 46.4,
+   "min": 44.6,
+   "max": 52.1,
+   "spread": 0.16
+  },
+  "fader_drag.pointerup.frame.median": {
+   "unit": "ms",
+   "runs": [
+    33.7,
+    35.1,
+    39.5
+   ],
+   "median": 35.1,
+   "min": 33.7,
+   "max": 39.5,
+   "spread": 0.17
+  },
+  "fader_drag.pointerup.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    80,
+    63.1,
+    83
+   ],
+   "median": 80,
+   "min": 63.1,
+   "max": 83,
+   "spread": 0.25
+  },
+  "fader_drag.pointerup.frame.max": {
+   "unit": "ms",
+   "runs": [
+    80,
+    63.1,
+    83
+   ],
+   "median": 80,
+   "min": 63.1,
+   "max": 83,
+   "spread": 0.25
+  },
+  "fader_drag.pointerup.count": {
+   "unit": "count",
+   "runs": [
+    5,
+    5,
+    5
+   ],
+   "median": 5,
+   "min": 5,
+   "max": 5,
+   "spread": 0
+  },
+  "fader_drag.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    308.69,
+    413.88,
+    317.09
+   ],
+   "median": 317.09,
+   "min": 308.69,
+   "max": 413.88,
+   "spread": 0.33
+  },
+  "fader_drag.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    44.08,
+    47.32,
+    44.11
+   ],
+   "median": 44.11,
+   "min": 44.08,
+   "max": 47.32,
+   "spread": 0.07
+  },
+  "fader_drag.styleMs": {
+   "unit": "ms",
+   "runs": [
+    134.37,
+    174.77,
+    142.66
+   ],
+   "median": 142.66,
+   "min": 134.37,
+   "max": 174.77,
+   "spread": 0.28
+  },
+  "fader_drag.taskMs": {
+   "unit": "ms",
+   "runs": [
+    4479.49,
+    5239.35,
+    4320.62
+   ],
+   "median": 4479.49,
+   "min": 4320.62,
+   "max": 5239.35,
+   "spread": 0.21
+  },
+  "fader_drag.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    1.99,
+    2.67,
+    2.05
+   ],
+   "median": 2.05,
+   "min": 1.99,
+   "max": 2.67,
+   "spread": 0.33
+  },
+  "fader_drag.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    42.41,
+    42.37,
+    31.07
+   ],
+   "median": 42.37,
+   "min": 31.07,
+   "max": 42.41,
+   "spread": 0.27
+  },
+  "fader_drag.drop.task.median": {
+   "unit": "ms",
+   "runs": [
+    33.5,
+    35,
+    39.3
+   ],
+   "median": 35,
+   "min": 33.5,
+   "max": 39.3,
+   "spread": 0.17
+  },
+  "fader_drag.drop.task.p95": {
+   "unit": "ms",
+   "runs": [
+    44.6,
+    52.1,
+    46.4
+   ],
+   "median": 46.4,
+   "min": 44.6,
+   "max": 52.1,
+   "spread": 0.16
+  },
+  "fader_drag.drop.task.max": {
+   "unit": "ms",
+   "runs": [
+    44.6,
+    52.1,
+    46.4
+   ],
+   "median": 46.4,
+   "min": 44.6,
+   "max": 52.1,
+   "spread": 0.16
+  },
+  "fader_drag.drop.settled.median": {
+   "unit": "ms",
+   "runs": [
+    48.9,
+    48.7,
+    47.9
+   ],
+   "median": 48.7,
+   "min": 47.9,
+   "max": 48.9,
+   "spread": 0.02
+  },
+  "fader_drag.drop.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    89.8,
+    118.3,
+    88.2
+   ],
+   "median": 89.8,
+   "min": 88.2,
+   "max": 118.3,
+   "spread": 0.34
+  },
+  "fader_drag.drop.settled.max": {
+   "unit": "ms",
+   "runs": [
+    89.8,
+    118.3,
+    88.2
+   ],
+   "median": 89.8,
+   "min": 88.2,
+   "max": 118.3,
+   "spread": 0.34
+  },
+  "fader_drag.drop.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "fx_param.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "fx_param.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.8,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "fx_param.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.3,
+    16.8,
+    66.7
+   ],
+   "median": 33.3,
+   "min": 16.8,
+   "max": 66.7,
+   "spread": 1.5
+  },
+  "fx_param.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    1,
+    0,
+    6
+   ],
+   "median": 1,
+   "min": 0,
+   "max": 6,
+   "spread": 6
+  },
+  "fx_param.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    1
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 1,
+   "spread": 0
+  },
+  "fx_param.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    53
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 53,
+   "spread": 0
+  },
+  "fx_param.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    2
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 2,
+   "spread": 0
+  },
+  "fx_param.pointermove.task.median": {
+   "unit": "ms",
+   "runs": [
+    6,
+    6,
+    6.8
+   ],
+   "median": 6,
+   "min": 6,
+   "max": 6.8,
+   "spread": 0.13
+  },
+  "fx_param.pointermove.task.p95": {
+   "unit": "ms",
+   "runs": [
+    7.7,
+    7.8,
+    9.1
+   ],
+   "median": 7.8,
+   "min": 7.7,
+   "max": 9.1,
+   "spread": 0.18
+  },
+  "fx_param.pointermove.task.max": {
+   "unit": "ms",
+   "runs": [
+    17,
+    17.2,
+    16
+   ],
+   "median": 17,
+   "min": 16,
+   "max": 17.2,
+   "spread": 0.07
+  },
+  "fx_param.pointermove.frame.median": {
+   "unit": "ms",
+   "runs": [
+    6.1,
+    6.2,
+    6.9
+   ],
+   "median": 6.2,
+   "min": 6.1,
+   "max": 6.9,
+   "spread": 0.13
+  },
+  "fx_param.pointermove.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    8.2,
+    8.3,
+    9.3
+   ],
+   "median": 8.3,
+   "min": 8.2,
+   "max": 9.3,
+   "spread": 0.13
+  },
+  "fx_param.pointermove.frame.max": {
+   "unit": "ms",
+   "runs": [
+    17.3,
+    17.4,
+    16
+   ],
+   "median": 17.3,
+   "min": 16,
+   "max": 17.4,
+   "spread": 0.08
+  },
+  "fx_param.pointermove.count": {
+   "unit": "count",
+   "runs": [
+    155,
+    155,
+    155
+   ],
+   "median": 155,
+   "min": 155,
+   "max": 155,
+   "spread": 0
+  },
+  "fx_param.pointerup.task.median": {
+   "unit": "ms",
+   "runs": [
+    44.2,
+    34.1,
+    41.8
+   ],
+   "median": 41.8,
+   "min": 34.1,
+   "max": 44.2,
+   "spread": 0.24
+  },
+  "fx_param.pointerup.task.p95": {
+   "unit": "ms",
+   "runs": [
+    45.8,
+    39.6,
+    56.2
+   ],
+   "median": 45.8,
+   "min": 39.6,
+   "max": 56.2,
+   "spread": 0.36
+  },
+  "fx_param.pointerup.task.max": {
+   "unit": "ms",
+   "runs": [
+    45.8,
+    39.6,
+    56.2
+   ],
+   "median": 45.8,
+   "min": 39.6,
+   "max": 56.2,
+   "spread": 0.36
+  },
+  "fx_param.pointerup.frame.median": {
+   "unit": "ms",
+   "runs": [
+    44.4,
+    34.2,
+    42
+   ],
+   "median": 42,
+   "min": 34.2,
+   "max": 44.4,
+   "spread": 0.24
+  },
+  "fx_param.pointerup.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    73.8,
+    65.8,
+    80.4
+   ],
+   "median": 73.8,
+   "min": 65.8,
+   "max": 80.4,
+   "spread": 0.2
+  },
+  "fx_param.pointerup.frame.max": {
+   "unit": "ms",
+   "runs": [
+    73.8,
+    65.8,
+    80.4
+   ],
+   "median": 73.8,
+   "min": 65.8,
+   "max": 80.4,
+   "spread": 0.2
+  },
+  "fx_param.pointerup.count": {
+   "unit": "count",
+   "runs": [
+    5,
+    5,
+    5
+   ],
+   "median": 5,
+   "min": 5,
+   "max": 5,
+   "spread": 0
+  },
+  "fx_param.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    463.68,
+    459.6,
+    553.26
+   ],
+   "median": 463.68,
+   "min": 459.6,
+   "max": 553.26,
+   "spread": 0.2
+  },
+  "fx_param.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    40.69,
+    43.61,
+    46.32
+   ],
+   "median": 43.61,
+   "min": 40.69,
+   "max": 46.32,
+   "spread": 0.13
+  },
+  "fx_param.styleMs": {
+   "unit": "ms",
+   "runs": [
+    155.35,
+    136.36,
+    157.87
+   ],
+   "median": 155.35,
+   "min": 136.36,
+   "max": 157.87,
+   "spread": 0.14
+  },
+  "fx_param.taskMs": {
+   "unit": "ms",
+   "runs": [
+    4271.35,
+    4178.23,
+    4681.12
+   ],
+   "median": 4271.35,
+   "min": 4178.23,
+   "max": 4681.12,
+   "spread": 0.12
+  },
+  "fx_param.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    2.99,
+    2.97,
+    3.57
+   ],
+   "median": 2.99,
+   "min": 2.97,
+   "max": 3.57,
+   "spread": 0.2
+  },
+  "fx_param.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    32.5,
+    32.49,
+    64.83
+   ],
+   "median": 32.5,
+   "min": 32.49,
+   "max": 64.83,
+   "spread": 1
+  },
+  "fx_param.drop.task.median": {
+   "unit": "ms",
+   "runs": [
+    44.2,
+    34.1,
+    41.8
+   ],
+   "median": 41.8,
+   "min": 34.1,
+   "max": 44.2,
+   "spread": 0.24
+  },
+  "fx_param.drop.task.p95": {
+   "unit": "ms",
+   "runs": [
+    45.8,
+    39.6,
+    56.2
+   ],
+   "median": 45.8,
+   "min": 39.6,
+   "max": 56.2,
+   "spread": 0.36
+  },
+  "fx_param.drop.task.max": {
+   "unit": "ms",
+   "runs": [
+    45.8,
+    39.6,
+    56.2
+   ],
+   "median": 45.8,
+   "min": 39.6,
+   "max": 56.2,
+   "spread": 0.36
+  },
+  "fx_param.drop.settled.median": {
+   "unit": "ms",
+   "runs": [
+    47.5,
+    59,
+    59.7
+   ],
+   "median": 59,
+   "min": 47.5,
+   "max": 59.7,
+   "spread": 0.21
+  },
+  "fx_param.drop.settled.p95": {
+   "unit": "ms",
+   "runs": [
+    76,
+    67.4,
+    125.2
+   ],
+   "median": 76,
+   "min": 67.4,
+   "max": 125.2,
+   "spread": 0.76
+  },
+  "fx_param.drop.settled.max": {
+   "unit": "ms",
+   "runs": [
+    76,
+    67.4,
+    125.2
+   ],
+   "median": 76,
+   "min": 67.4,
+   "max": 125.2,
+   "spread": 0.76
+  },
+  "fx_param.drop.timeouts": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollV.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "nav_scrollV.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.8,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "nav_scrollV.frame.max": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    33.4,
+    33.3
+   ],
+   "median": 33.3,
+   "min": 16.8,
+   "max": 33.4,
+   "spread": 0.5
+  },
+  "nav_scrollV.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    0,
+    2,
+    3
+   ],
+   "median": 2,
+   "min": 0,
+   "max": 3,
+   "spread": 1.5
+  },
+  "nav_scrollV.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollV.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollV.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollV.wheel.task.median": {
+   "unit": "ms",
+   "runs": [
+    0.6,
+    0.6,
+    0.5
+   ],
+   "median": 0.6,
+   "min": 0.5,
+   "max": 0.6,
+   "spread": 0.17
+  },
+  "nav_scrollV.wheel.task.p95": {
+   "unit": "ms",
+   "runs": [
+    1.1,
+    2.5,
+    1.5
+   ],
+   "median": 1.5,
+   "min": 1.1,
+   "max": 2.5,
+   "spread": 0.93
+  },
+  "nav_scrollV.wheel.task.max": {
+   "unit": "ms",
+   "runs": [
+    2,
+    9.7,
+    11.4
+   ],
+   "median": 9.7,
+   "min": 2,
+   "max": 11.4,
+   "spread": 0.97
+  },
+  "nav_scrollV.wheel.frame.median": {
+   "unit": "ms",
+   "runs": [
+    0.6,
+    0.6,
+    0.5
+   ],
+   "median": 0.6,
+   "min": 0.5,
+   "max": 0.6,
+   "spread": 0.17
+  },
+  "nav_scrollV.wheel.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    1.2,
+    2.5,
+    1.5
+   ],
+   "median": 1.5,
+   "min": 1.2,
+   "max": 2.5,
+   "spread": 0.87
+  },
+  "nav_scrollV.wheel.frame.max": {
+   "unit": "ms",
+   "runs": [
+    2,
+    10,
+    11.4
+   ],
+   "median": 10,
+   "min": 2,
+   "max": 11.4,
+   "spread": 0.94
+  },
+  "nav_scrollV.wheel.count": {
+   "unit": "count",
+   "runs": [
+    60,
+    60,
+    60
+   ],
+   "median": 60,
+   "min": 60,
+   "max": 60,
+   "spread": 0
+  },
+  "nav_scrollV.scroll.task.median": {
+   "unit": "ms",
+   "runs": [
+    9.35,
+    12.25,
+    9.95
+   ],
+   "median": 9.95,
+   "min": 9.35,
+   "max": 12.25,
+   "spread": 0.29
+  },
+  "nav_scrollV.scroll.task.p95": {
+   "unit": "ms",
+   "runs": [
+    18,
+    24.5,
+    30
+   ],
+   "median": 24.5,
+   "min": 18,
+   "max": 30,
+   "spread": 0.49
+  },
+  "nav_scrollV.scroll.task.max": {
+   "unit": "ms",
+   "runs": [
+    18.8,
+    30.4,
+    43.6
+   ],
+   "median": 30.4,
+   "min": 18.8,
+   "max": 43.6,
+   "spread": 0.82
+  },
+  "nav_scrollV.scroll.frame.median": {
+   "unit": "ms",
+   "runs": [
+    9.45,
+    12.35,
+    10.15
+   ],
+   "median": 10.15,
+   "min": 9.45,
+   "max": 12.35,
+   "spread": 0.29
+  },
+  "nav_scrollV.scroll.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    18.1,
+    24.6,
+    30.2
+   ],
+   "median": 24.6,
+   "min": 18.1,
+   "max": 30.2,
+   "spread": 0.49
+  },
+  "nav_scrollV.scroll.frame.max": {
+   "unit": "ms",
+   "runs": [
+    18.9,
+    30.4,
+    43.7
+   ],
+   "median": 30.4,
+   "min": 18.9,
+   "max": 43.7,
+   "spread": 0.82
+  },
+  "nav_scrollV.scroll.count": {
+   "unit": "count",
+   "runs": [
+    30,
+    30,
+    30
+   ],
+   "median": 30,
+   "min": 30,
+   "max": 30,
+   "spread": 0
+  },
+  "nav_scrollV.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    209.66,
+    262.54,
+    284.78
+   ],
+   "median": 262.54,
+   "min": 209.66,
+   "max": 284.78,
+   "spread": 0.29
+  },
+  "nav_scrollV.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    3.4,
+    4.2,
+    4.04
+   ],
+   "median": 4.04,
+   "min": 3.4,
+   "max": 4.2,
+   "spread": 0.2
+  },
+  "nav_scrollV.styleMs": {
+   "unit": "ms",
+   "runs": [
+    3.93,
+    6.37,
+    4.42
+   ],
+   "median": 4.42,
+   "min": 3.93,
+   "max": 6.37,
+   "spread": 0.55
+  },
+  "nav_scrollV.taskMs": {
+   "unit": "ms",
+   "runs": [
+    515.77,
+    731.61,
+    680.25
+   ],
+   "median": 680.25,
+   "min": 515.77,
+   "max": 731.61,
+   "spread": 0.32
+  },
+  "nav_scrollV.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    6.99,
+    8.75,
+    9.49
+   ],
+   "median": 8.75,
+   "min": 6.99,
+   "max": 9.49,
+   "spread": 0.29
+  },
+  "nav_scrollV.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    34.38,
+    34.06,
+    34.61
+   ],
+   "median": 34.38,
+   "min": 34.06,
+   "max": 34.61,
+   "spread": 0.02
+  },
+  "nav_scrollH.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "nav_scrollH.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.8
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "nav_scrollH.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.4,
+    33.2,
+    33.4
+   ],
+   "median": 33.4,
+   "min": 33.2,
+   "max": 33.4,
+   "spread": 0.01
+  },
+  "nav_scrollH.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    4,
+    1,
+    1
+   ],
+   "median": 1,
+   "min": 1,
+   "max": 4,
+   "spread": 3
+  },
+  "nav_scrollH.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollH.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollH.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "nav_scrollH.wheel.task.median": {
+   "unit": "ms",
+   "runs": [
+    0.6,
+    0.5,
+    0.5
+   ],
+   "median": 0.5,
+   "min": 0.5,
+   "max": 0.6,
+   "spread": 0.2
+  },
+  "nav_scrollH.wheel.task.p95": {
+   "unit": "ms",
+   "runs": [
+    1.6,
+    0.8,
+    0.9
+   ],
+   "median": 0.9,
+   "min": 0.8,
+   "max": 1.6,
+   "spread": 0.89
+  },
+  "nav_scrollH.wheel.task.max": {
+   "unit": "ms",
+   "runs": [
+    10.6,
+    1.1,
+    1.4
+   ],
+   "median": 1.4,
+   "min": 1.1,
+   "max": 10.6,
+   "spread": 6.79
+  },
+  "nav_scrollH.wheel.frame.median": {
+   "unit": "ms",
+   "runs": [
+    0.7,
+    0.5,
+    0.55
+   ],
+   "median": 0.55,
+   "min": 0.5,
+   "max": 0.7,
+   "spread": 0.36
+  },
+  "nav_scrollH.wheel.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    1.7,
+    0.8,
+    1
+   ],
+   "median": 1,
+   "min": 0.8,
+   "max": 1.7,
+   "spread": 0.9
+  },
+  "nav_scrollH.wheel.frame.max": {
+   "unit": "ms",
+   "runs": [
+    10.8,
+    1.2,
+    1.4
+   ],
+   "median": 1.4,
+   "min": 1.2,
+   "max": 10.8,
+   "spread": 6.86
+  },
+  "nav_scrollH.wheel.count": {
+   "unit": "count",
+   "runs": [
+    60,
+    60,
+    60
+   ],
+   "median": 60,
+   "min": 60,
+   "max": 60,
+   "spread": 0
+  },
+  "nav_scrollH.scroll.task.median": {
+   "unit": "ms",
+   "runs": [
+    7.2,
+    5.45,
+    6
+   ],
+   "median": 6,
+   "min": 5.45,
+   "max": 7.2,
+   "spread": 0.29
+  },
+  "nav_scrollH.scroll.task.p95": {
+   "unit": "ms",
+   "runs": [
+    17.5,
+    11.4,
+    12.3
+   ],
+   "median": 12.3,
+   "min": 11.4,
+   "max": 17.5,
+   "spread": 0.5
+  },
+  "nav_scrollH.scroll.task.max": {
+   "unit": "ms",
+   "runs": [
+    40.4,
+    17.4,
+    16.1
+   ],
+   "median": 17.4,
+   "min": 16.1,
+   "max": 40.4,
+   "spread": 1.4
+  },
+  "nav_scrollH.scroll.frame.median": {
+   "unit": "ms",
+   "runs": [
+    7.5,
+    5.55,
+    6.1
+   ],
+   "median": 6.1,
+   "min": 5.55,
+   "max": 7.5,
+   "spread": 0.32
+  },
+  "nav_scrollH.scroll.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    17.6,
+    11.4,
+    12.4
+   ],
+   "median": 12.4,
+   "min": 11.4,
+   "max": 17.6,
+   "spread": 0.5
+  },
+  "nav_scrollH.scroll.frame.max": {
+   "unit": "ms",
+   "runs": [
+    40.4,
+    17.4,
+    16.2
+   ],
+   "median": 17.4,
+   "min": 16.2,
+   "max": 40.4,
+   "spread": 1.39
+  },
+  "nav_scrollH.scroll.count": {
+   "unit": "count",
+   "runs": [
+    60,
+    60,
+    60
+   ],
+   "median": 60,
+   "min": 60,
+   "max": 60,
+   "spread": 0
+  },
+  "nav_scrollH.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    343.84,
+    216.39,
+    245.55
+   ],
+   "median": 245.55,
+   "min": 216.39,
+   "max": 343.84,
+   "spread": 0.52
+  },
+  "nav_scrollH.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    9.29,
+    6.64,
+    7.29
+   ],
+   "median": 7.29,
+   "min": 6.64,
+   "max": 9.29,
+   "spread": 0.36
+  },
+  "nav_scrollH.styleMs": {
+   "unit": "ms",
+   "runs": [
+    8.34,
+    6.19,
+    7.05
+   ],
+   "median": 7.05,
+   "min": 6.19,
+   "max": 8.34,
+   "spread": 0.3
+  },
+  "nav_scrollH.taskMs": {
+   "unit": "ms",
+   "runs": [
+    992.16,
+    668.66,
+    719.39
+   ],
+   "median": 719.39,
+   "min": 668.66,
+   "max": 992.16,
+   "spread": 0.45
+  },
+  "nav_scrollH.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    5.73,
+    3.61,
+    4.09
+   ],
+   "median": 4.09,
+   "min": 3.61,
+   "max": 5.73,
+   "spread": 0.52
+  },
+  "nav_scrollH.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    33.02,
+    33.57,
+    33.77
+   ],
+   "median": 33.57,
+   "min": 33.02,
+   "max": 33.77,
+   "spread": 0.02
+  },
+  "nav_zoom.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "nav_zoom.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    949.9,
+    933.3,
+    966.5
+   ],
+   "median": 949.9,
+   "min": 933.3,
+   "max": 966.5,
+   "spread": 0.03
+  },
+  "nav_zoom.frame.max": {
+   "unit": "ms",
+   "runs": [
+    1033.4,
+    1183.3,
+    1033.3
+   ],
+   "median": 1033.4,
+   "min": 1033.3,
+   "max": 1183.3,
+   "spread": 0.15
+  },
+  "nav_zoom.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    1740,
+    1393,
+    1847
+   ],
+   "median": 1740,
+   "min": 1393,
+   "max": 1847,
+   "spread": 0.26
+  },
+  "nav_zoom.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    2,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 2,
+   "spread": 0
+  },
+  "nav_zoom.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    111,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 111,
+   "spread": 0
+  },
+  "nav_zoom.loaf": {
+   "unit": "count",
+   "runs": [
+    42,
+    40,
+    46
+   ],
+   "median": 42,
+   "min": 40,
+   "max": 46,
+   "spread": 0.14
+  },
+  "nav_zoom.wheel.task.median": {
+   "unit": "ms",
+   "runs": [
+    19.25,
+    14.35,
+    14.6
+   ],
+   "median": 14.6,
+   "min": 14.35,
+   "max": 19.25,
+   "spread": 0.34
+  },
+  "nav_zoom.wheel.task.p95": {
+   "unit": "ms",
+   "runs": [
+    26.3,
+    25.8,
+    30.7
+   ],
+   "median": 26.3,
+   "min": 25.8,
+   "max": 30.7,
+   "spread": 0.19
+  },
+  "nav_zoom.wheel.task.max": {
+   "unit": "ms",
+   "runs": [
+    33.4,
+    62.8,
+    39.4
+   ],
+   "median": 39.4,
+   "min": 33.4,
+   "max": 62.8,
+   "spread": 0.75
+  },
+  "nav_zoom.wheel.frame.median": {
+   "unit": "ms",
+   "runs": [
+    19.45,
+    14.8,
+    14.9
+   ],
+   "median": 14.9,
+   "min": 14.8,
+   "max": 19.45,
+   "spread": 0.31
+  },
+  "nav_zoom.wheel.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    26.8,
+    26.5,
+    30.9
+   ],
+   "median": 26.8,
+   "min": 26.5,
+   "max": 30.9,
+   "spread": 0.16
+  },
+  "nav_zoom.wheel.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.7,
+    63,
+    39.6
+   ],
+   "median": 39.6,
+   "min": 33.7,
+   "max": 63,
+   "spread": 0.74
+  },
+  "nav_zoom.wheel.count": {
+   "unit": "count",
+   "runs": [
+    60,
+    60,
+    60
+   ],
+   "median": 60,
+   "min": 60,
+   "max": 60,
+   "spread": 0
+  },
+  "nav_zoom.scroll.task.median": {
+   "unit": "ms",
+   "runs": [
+    1.2,
+    1,
+    0.9
+   ],
+   "median": 1,
+   "min": 0.9,
+   "max": 1.2,
+   "spread": 0.3
+  },
+  "nav_zoom.scroll.task.p95": {
+   "unit": "ms",
+   "runs": [
+    3.1,
+    4.2,
+    3.6
+   ],
+   "median": 3.6,
+   "min": 3.1,
+   "max": 4.2,
+   "spread": 0.31
+  },
+  "nav_zoom.scroll.task.max": {
+   "unit": "ms",
+   "runs": [
+    7.4,
+    8.1,
+    27.7
+   ],
+   "median": 8.1,
+   "min": 7.4,
+   "max": 27.7,
+   "spread": 2.51
+  },
+  "nav_zoom.scroll.frame.median": {
+   "unit": "ms",
+   "runs": [
+    1.3,
+    1,
+    1
+   ],
+   "median": 1,
+   "min": 1,
+   "max": 1.3,
+   "spread": 0.3
+  },
+  "nav_zoom.scroll.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    3.1,
+    4.2,
+    3.7
+   ],
+   "median": 3.7,
+   "min": 3.1,
+   "max": 4.2,
+   "spread": 0.3
+  },
+  "nav_zoom.scroll.frame.max": {
+   "unit": "ms",
+   "runs": [
+    7.4,
+    8.1,
+    27.7
+   ],
+   "median": 8.1,
+   "min": 7.4,
+   "max": 27.7,
+   "spread": 2.51
+  },
+  "nav_zoom.scroll.count": {
+   "unit": "count",
+   "runs": [
+    56,
+    56,
+    56
+   ],
+   "median": 56,
+   "min": 56,
+   "max": 56,
+   "spread": 0
+  },
+  "nav_zoom.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    844.91,
+    728.51,
+    822.9
+   ],
+   "median": 822.9,
+   "min": 728.51,
+   "max": 844.91,
+   "spread": 0.14
+  },
+  "nav_zoom.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    18.46,
+    18.5,
+    20.97
+   ],
+   "median": 18.5,
+   "min": 18.46,
+   "max": 20.97,
+   "spread": 0.14
+  },
+  "nav_zoom.styleMs": {
+   "unit": "ms",
+   "runs": [
+    21.77,
+    17.8,
+    23.81
+   ],
+   "median": 21.77,
+   "min": 17.8,
+   "max": 23.81,
+   "spread": 0.28
+  },
+  "nav_zoom.taskMs": {
+   "unit": "ms",
+   "runs": [
+    1694.65,
+    1424.52,
+    1692.4
+   ],
+   "median": 1692.4,
+   "min": 1424.52,
+   "max": 1694.65,
+   "spread": 0.16
+  },
+  "nav_zoom.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    14.08,
+    12.14,
+    13.71
+   ],
+   "median": 13.71,
+   "min": 12.14,
+   "max": 14.08,
+   "spread": 0.14
+  },
+  "nav_zoom.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    34.28,
+    34.13,
+    33.7
+   ],
+   "median": 34.13,
+   "min": 33.7,
+   "max": 34.28,
+   "spread": 0.02
+  },
+  "win_mixer.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "win_mixer.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    33.4,
+    16.7,
+    50
+   ],
+   "median": 33.4,
+   "min": 16.7,
+   "max": 50,
+   "spread": 1
+  },
+  "win_mixer.frame.max": {
+   "unit": "ms",
+   "runs": [
+    50.1,
+    33.3,
+    66.8
+   ],
+   "median": 50.1,
+   "min": 33.3,
+   "max": 66.8,
+   "spread": 0.67
+  },
+  "win_mixer.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    22,
+    1,
+    41
+   ],
+   "median": 22,
+   "min": 1,
+   "max": 41,
+   "spread": 1.82
+  },
+  "win_mixer.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    1
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 1,
+   "spread": 0
+  },
+  "win_mixer.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    52
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 52,
+   "spread": 0
+  },
+  "win_mixer.loaf": {
+   "unit": "count",
+   "runs": [
+    2,
+    0,
+    13
+   ],
+   "median": 2,
+   "min": 0,
+   "max": 13,
+   "spread": 6.5
+  },
+  "win_mixer.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    407.32,
+    323.46,
+    597.76
+   ],
+   "median": 407.32,
+   "min": 323.46,
+   "max": 597.76,
+   "spread": 0.67
+  },
+  "win_mixer.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    131.8,
+    97.9,
+    156.77
+   ],
+   "median": 131.8,
+   "min": 97.9,
+   "max": 156.77,
+   "spread": 0.45
+  },
+  "win_mixer.styleMs": {
+   "unit": "ms",
+   "runs": [
+    193.96,
+    147,
+    295.47
+   ],
+   "median": 193.96,
+   "min": 147,
+   "max": 295.47,
+   "spread": 0.77
+  },
+  "win_mixer.taskMs": {
+   "unit": "ms",
+   "runs": [
+    1311.44,
+    991.61,
+    2200.23
+   ],
+   "median": 1311.44,
+   "min": 991.61,
+   "max": 2200.23,
+   "spread": 0.92
+  },
+  "win_mixer.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    10.18,
+    8.09,
+    14.94
+   ],
+   "median": 10.18,
+   "min": 8.09,
+   "max": 14.94,
+   "spread": 0.67
+  },
+  "win_mixer.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    38.78,
+    40.09,
+    41.36
+   ],
+   "median": 40.09,
+   "min": 38.78,
+   "max": 41.36,
+   "spread": 0.06
+  },
+  "win_mixer.open.median": {
+   "unit": "ms",
+   "runs": [
+    47,
+    35.95,
+    65.5
+   ],
+   "median": 47,
+   "min": 35.95,
+   "max": 65.5,
+   "spread": 0.63
+  },
+  "win_mixer.open.p95": {
+   "unit": "ms",
+   "runs": [
+    63.4,
+    43,
+    82.1
+   ],
+   "median": 63.4,
+   "min": 43,
+   "max": 82.1,
+   "spread": 0.62
+  },
+  "win_mixer.open.max": {
+   "unit": "ms",
+   "runs": [
+    64.9,
+    52.5,
+    82.7
+   ],
+   "median": 64.9,
+   "min": 52.5,
+   "max": 82.7,
+   "spread": 0.47
+  },
+  "win_mixer.close.median": {
+   "unit": "ms",
+   "runs": [
+    18.2,
+    18.3,
+    21.85
+   ],
+   "median": 18.3,
+   "min": 18.2,
+   "max": 21.85,
+   "spread": 0.2
+  },
+  "win_mixer.close.p95": {
+   "unit": "ms",
+   "runs": [
+    28.4,
+    20.1,
+    37.1
+   ],
+   "median": 28.4,
+   "min": 20.1,
+   "max": 37.1,
+   "spread": 0.6
+  },
+  "win_mixer.close.max": {
+   "unit": "ms",
+   "runs": [
+    31.4,
+    21.5,
+    37.5
+   ],
+   "median": 31.4,
+   "min": 21.5,
+   "max": 37.5,
+   "spread": 0.51
+  },
+  "win_mixer.leak.heapAfterGcMiB.perCycle": {
+   "unit": "MiB",
+   "runs": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "median": 0.01,
+   "min": 0.01,
+   "max": 0.01,
+   "spread": 0
+  },
+  "win_mixer.leak.domNodes.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_mixer.leak.jsEventListeners.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_mixer.leak.detachedNodes.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_pianoRoll.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "win_pianoRoll.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    33.3
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 33.3,
+   "spread": 0.99
+  },
+  "win_pianoRoll.frame.max": {
+   "unit": "ms",
+   "runs": [
+    33.3,
+    16.8,
+    33.4
+   ],
+   "median": 33.3,
+   "min": 16.8,
+   "max": 33.4,
+   "spread": 0.5
+  },
+  "win_pianoRoll.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    1,
+    0,
+    6
+   ],
+   "median": 1,
+   "min": 0,
+   "max": 6,
+   "spread": 6
+  },
+  "win_pianoRoll.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_pianoRoll.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_pianoRoll.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_pianoRoll.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    317.63,
+    235.28,
+    425.66
+   ],
+   "median": 317.63,
+   "min": 235.28,
+   "max": 425.66,
+   "spread": 0.6
+  },
+  "win_pianoRoll.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    57.17,
+    53.56,
+    80.88
+   ],
+   "median": 57.17,
+   "min": 53.56,
+   "max": 80.88,
+   "spread": 0.48
+  },
+  "win_pianoRoll.styleMs": {
+   "unit": "ms",
+   "runs": [
+    63.18,
+    45.97,
+    114.24
+   ],
+   "median": 63.18,
+   "min": 45.97,
+   "max": 114.24,
+   "spread": 1.08
+  },
+  "win_pianoRoll.taskMs": {
+   "unit": "ms",
+   "runs": [
+    1038.47,
+    722.68,
+    1421.72
+   ],
+   "median": 1038.47,
+   "min": 722.68,
+   "max": 1421.72,
+   "spread": 0.67
+  },
+  "win_pianoRoll.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    7.94,
+    5.88,
+    10.64
+   ],
+   "median": 7.94,
+   "min": 5.88,
+   "max": 10.64,
+   "spread": 0.6
+  },
+  "win_pianoRoll.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    33.88,
+    37.89,
+    34.89
+   ],
+   "median": 34.89,
+   "min": 33.88,
+   "max": 37.89,
+   "spread": 0.11
+  },
+  "win_pianoRoll.open.median": {
+   "unit": "ms",
+   "runs": [
+    33.3,
+    24.7,
+    42.25
+   ],
+   "median": 33.3,
+   "min": 24.7,
+   "max": 42.25,
+   "spread": 0.53
+  },
+  "win_pianoRoll.open.p95": {
+   "unit": "ms",
+   "runs": [
+    39.2,
+    34.9,
+    57.4
+   ],
+   "median": 39.2,
+   "min": 34.9,
+   "max": 57.4,
+   "spread": 0.57
+  },
+  "win_pianoRoll.open.max": {
+   "unit": "ms",
+   "runs": [
+    52.3,
+    40.2,
+    78.7
+   ],
+   "median": 52.3,
+   "min": 40.2,
+   "max": 78.7,
+   "spread": 0.74
+  },
+  "win_pianoRoll.close.median": {
+   "unit": "ms",
+   "runs": [
+    21.75,
+    19.6,
+    22.1
+   ],
+   "median": 21.75,
+   "min": 19.6,
+   "max": 22.1,
+   "spread": 0.11
+  },
+  "win_pianoRoll.close.p95": {
+   "unit": "ms",
+   "runs": [
+    31.4,
+    27.1,
+    33.5
+   ],
+   "median": 31.4,
+   "min": 27.1,
+   "max": 33.5,
+   "spread": 0.2
+  },
+  "win_pianoRoll.close.max": {
+   "unit": "ms",
+   "runs": [
+    38.6,
+    28.3,
+    38.5
+   ],
+   "median": 38.5,
+   "min": 28.3,
+   "max": 38.6,
+   "spread": 0.27
+  },
+  "win_pianoRoll.leak.heapAfterGcMiB.perCycle": {
+   "unit": "MiB",
+   "runs": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "median": 0.01,
+   "min": 0.01,
+   "max": 0.01,
+   "spread": 0
+  },
+  "win_pianoRoll.leak.domNodes.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_pianoRoll.leak.jsEventListeners.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_pianoRoll.leak.detachedNodes.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "win_fxWindow.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "win_fxWindow.frame.max": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    16.8,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.8,
+   "max": 16.8,
+   "spread": 0
+  },
+  "win_fxWindow.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    58.28,
+    50.97,
+    56.03
+   ],
+   "median": 56.03,
+   "min": 50.97,
+   "max": 58.28,
+   "spread": 0.13
+  },
+  "win_fxWindow.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    49.7,
+    48.9,
+    50.59
+   ],
+   "median": 49.7,
+   "min": 48.9,
+   "max": 50.59,
+   "spread": 0.03
+  },
+  "win_fxWindow.styleMs": {
+   "unit": "ms",
+   "runs": [
+    39.77,
+    38.89,
+    38.68
+   ],
+   "median": 38.89,
+   "min": 38.68,
+   "max": 39.77,
+   "spread": 0.03
+  },
+  "win_fxWindow.taskMs": {
+   "unit": "ms",
+   "runs": [
+    522.48,
+    494.06,
+    494.17
+   ],
+   "median": 494.17,
+   "min": 494.06,
+   "max": 522.48,
+   "spread": 0.06
+  },
+  "win_fxWindow.scriptMsPerInteraction": {
+   "unit": "ms",
+   "runs": [
+    1.46,
+    1.27,
+    1.4
+   ],
+   "median": 1.4,
+   "min": 1.27,
+   "max": 1.46,
+   "spread": 0.14
+  },
+  "win_fxWindow.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    35.45,
+    34.75,
+    36.05
+   ],
+   "median": 35.45,
+   "min": 34.75,
+   "max": 36.05,
+   "spread": 0.04
+  },
+  "win_fxWindow.open.median": {
+   "unit": "ms",
+   "runs": [
+    22.45,
+    22.8,
+    23.4
+   ],
+   "median": 22.8,
+   "min": 22.45,
+   "max": 23.4,
+   "spread": 0.04
+  },
+  "win_fxWindow.open.p95": {
+   "unit": "ms",
+   "runs": [
+    23.9,
+    24.9,
+    25.3
+   ],
+   "median": 24.9,
+   "min": 23.9,
+   "max": 25.3,
+   "spread": 0.06
+  },
+  "win_fxWindow.open.max": {
+   "unit": "ms",
+   "runs": [
+    26.8,
+    24.9,
+    28.2
+   ],
+   "median": 26.8,
+   "min": 24.9,
+   "max": 28.2,
+   "spread": 0.12
+  },
+  "win_fxWindow.close.median": {
+   "unit": "ms",
+   "runs": [
+    9.8,
+    10.75,
+    10.8
+   ],
+   "median": 10.75,
+   "min": 9.8,
+   "max": 10.8,
+   "spread": 0.09
+  },
+  "win_fxWindow.close.p95": {
+   "unit": "ms",
+   "runs": [
+    20.5,
+    14.7,
+    21.8
+   ],
+   "median": 20.5,
+   "min": 14.7,
+   "max": 21.8,
+   "spread": 0.35
+  },
+  "win_fxWindow.close.max": {
+   "unit": "ms",
+   "runs": [
+    21.2,
+    21.2,
+    22.2
+   ],
+   "median": 21.2,
+   "min": 21.2,
+   "max": 22.2,
+   "spread": 0.05
+  },
+  "win_fxWindow.leak.heapAfterGcMiB.perCycle": {
+   "unit": "MiB",
+   "runs": [
+    0.01,
+    0.01,
+    0.01
+   ],
+   "median": 0.01,
+   "min": 0.01,
+   "max": 0.01,
+   "spread": 0
+  },
+  "win_fxWindow.leak.domNodes.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.leak.jsEventListeners.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "win_fxWindow.leak.detachedNodes.perCycle": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "playback.frame.median": {
+   "unit": "ms",
+   "runs": [
+    16.7,
+    16.7,
+    16.7
+   ],
+   "median": 16.7,
+   "min": 16.7,
+   "max": 16.7,
+   "spread": 0
+  },
+  "playback.frame.p95": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    16.8,
+    16.7
+   ],
+   "median": 16.8,
+   "min": 16.7,
+   "max": 16.8,
+   "spread": 0.01
+  },
+  "playback.frame.max": {
+   "unit": "ms",
+   "runs": [
+    16.8,
+    33.4,
+    16.8
+   ],
+   "median": 16.8,
+   "min": 16.8,
+   "max": 33.4,
+   "spread": 0.99
+  },
+  "playback.frames.dropped": {
+   "unit": "count",
+   "runs": [
+    0,
+    9,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 9,
+   "spread": 0
+  },
+  "playback.longTasks": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "playback.longTaskMs": {
+   "unit": "ms",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "playback.loaf": {
+   "unit": "count",
+   "runs": [
+    0,
+    0,
+    0
+   ],
+   "median": 0,
+   "min": 0,
+   "max": 0,
+   "spread": 0
+  },
+  "playback.scriptMs": {
+   "unit": "ms",
+   "runs": [
+    191.31,
+    313.59,
+    261.42
+   ],
+   "median": 261.42,
+   "min": 191.31,
+   "max": 313.59,
+   "spread": 0.47
+  },
+  "playback.layoutMs": {
+   "unit": "ms",
+   "runs": [
+    61.1,
+    98.93,
+    75.92
+   ],
+   "median": 75.92,
+   "min": 61.1,
+   "max": 98.93,
+   "spread": 0.5
+  },
+  "playback.styleMs": {
+   "unit": "ms",
+   "runs": [
+    60.89,
+    89.04,
+    84.78
+   ],
+   "median": 84.78,
+   "min": 60.89,
+   "max": 89.04,
+   "spread": 0.33
+  },
+  "playback.taskMs": {
+   "unit": "ms",
+   "runs": [
+    2205.97,
+    3232.05,
+    2856.92
+   ],
+   "median": 2856.92,
+   "min": 2205.97,
+   "max": 3232.05,
+   "spread": 0.36
+  },
+  "playback.scriptMsPerSecond": {
+   "unit": "ms",
+   "runs": [
+    31.49,
+    50.73,
+    43.03
+   ],
+   "median": 43.03,
+   "min": 31.49,
+   "max": 50.73,
+   "spread": 0.45
+  },
+  "playback.heapMiB": {
+   "unit": "MiB",
+   "runs": [
+    35.51,
+    35.28,
+    35.56
+   ],
+   "median": 35.51,
+   "min": 35.28,
+   "max": 35.56,
+   "spread": 0.01
+  },
+  "session_end.heapAfterGcMiB": {
+   "unit": "MiB",
+   "runs": [
+    33.56,
+    33.54,
+    33.58
+   ],
+   "median": 33.56,
+   "min": 33.54,
+   "max": 33.58,
+   "spread": 0
+  },
+  "session_end.domNodes": {
+   "unit": "count",
+   "runs": [
+    6288,
+    6288,
+    6288
+   ],
+   "median": 6288,
+   "min": 6288,
+   "max": 6288,
+   "spread": 0
+  },
+  "session_end.jsEventListeners": {
+   "unit": "count",
+   "runs": [
+    224,
+    224,
+    224
+   ],
+   "median": 224,
+   "min": 224,
+   "max": 224,
+   "spread": 0
+  },
+  "session_end.documents": {
+   "unit": "count",
+   "runs": [
+    3,
+    3,
+    3
+   ],
+   "median": 3,
+   "min": 3,
+   "max": 3,
+   "spread": 0
+  },
+  "session_end.detachedNodes": {
+   "unit": "count",
+   "runs": [
+    57,
+    60,
+    57
+   ],
+   "median": 57,
+   "min": 57,
+   "max": 60,
+   "spread": 0.05
+  },
+  "bundle.total.raw": {
+   "unit": "bytes",
+   "median": 1811639,
+   "spread": 0,
+   "runs": [
+    1811639
+   ]
+  },
+  "bundle.total.gzip": {
+   "unit": "bytes",
+   "median": 544369,
+   "spread": 0,
+   "runs": [
+    544369
+   ]
+  },
+  "bundle.js.gzip": {
+   "unit": "bytes",
+   "median": 517676,
+   "spread": 0,
+   "runs": [
+    517676
+   ]
+  }
+ },
+ "noise": {
+  "runs": 3,
+  "note": "relative (max-min)/median between whole-suite runs, over ms metrics >= 1 ms",
+  "medianSpread": 0.2,
+  "p90Spread": 0.76
+ }
+}

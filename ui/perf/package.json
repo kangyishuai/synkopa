@@ -1,0 +1,9 @@
+{
+  "name": "synkopa-ui-perf",
+  "private": true,
+  "type": "module",
+  "description": "UI performance harness (Playwright Chromium against the in-browser MockBackend). See run.mjs.",
+  "dependencies": {
+    "playwright-core": "1.65.0"
+  }
+}
