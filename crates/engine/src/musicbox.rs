@@ -112,8 +112,9 @@ pub fn check(ring: f32, brightness: f32, body: f32, mechanical: f32, spread: f32
 /// treble tines die quickly (music box combs run roughly two octaves either side of C5).
 fn fundamental_t60(f0: f32, ring: f32) -> f32 {
     let natural = 5.0 * (180.0 / f0.max(20.0)).powf(0.35);
-    // Ring 100 % plays the natural decay; 250 % really lets it ring, 25 % damps it.
-    let t60 = natural * (0.3 + 1.7 * ring.clamp(0.0, 1.0));
+    // The knob promises 25..250 % of the natural decay (RANGE-relative, the same
+    // normalization the UI's automation mapping uses): 100 % plays it exactly.
+    let t60 = natural * (0.25 + 2.25 * ring.clamp(0.0, 1.0));
     t60.clamp(0.15, 12.0)
 }
 
