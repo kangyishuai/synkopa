@@ -15,6 +15,7 @@
   <a href="https://github.com/miskibin/synkopa/releases/latest"><img src="https://img.shields.io/github/v/release/miskibin/synkopa?label=release" alt="Latest release"></a>
   <a href="https://github.com/miskibin/synkopa/actions/workflows/ci.yml"><img src="https://github.com/miskibin/synkopa/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
   <a href="https://deepwiki.com/miskibin/synkopa"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
+  <a href="https://discord.gg/zHMjE3fCY"><img src="https://img.shields.io/badge/Discord-join%20the%20chat-5865F2?logo=discord&logoColor=white" alt="Join the Synkopa Discord"></a>
 </p>
 
 [![Synkopa: playlist, automation and the mixer. Click for the video.](site/img/hero.png)](https://www.youtube.com/watch?v=wtuHDyIQpYk)
