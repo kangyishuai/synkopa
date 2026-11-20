@@ -288,6 +288,19 @@ projects load and play unchanged. `curve_at` (model.rs) and `curveAt` (`lib/auto
 the same formulas, both checked against `crates/engine/tests/fixtures/curves.json`. The engine
 still evaluates automation once per audio block, so a hold or a stair lands on a block boundary.
 
+**Recording tweaks.** With the record filter's *Automation* ticked (`rec_automation`,
+right-click on Record), a control tweak while the song plays appends points to that
+parameter's envelope — creating it with its playlist clip first, like the right-click
+"Automate" — instead of writing the static value. Capture is UI-side: it rides the published
+playhead (~30 Hz), decimates (a point on a direction change or a ≥ 1 % move, 2000 points per
+envelope) and lands as one undo step per drag. Touch stops writing at release; Latch keeps
+writing the held value until the transport stops. A manual tweak on an automated control
+while playing overrides its envelope instead (Ableton's semantics): `Core::auto_overrides`
+(runtime-only, cleared on stop) leaves the envelope out of `build_timeline` — so the offline
+render, which passes no overrides, is unaffected — and the control's menu offers
+"Re-enable automation". The UI's automation index mirrors `overridden_autos`, so an
+overridden control displays its static value until re-enabled.
+
 **Stacked clips.** Clips may overlap on a track, as in FL (layers, crossfades). The
 playlist overlay hatches the header where clips of a track play at once, and puts "×N" on a
 clip that hides N − 1 clips entirely (`lib/overlaps.ts`). Clicking such a clip says so in

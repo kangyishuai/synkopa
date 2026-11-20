@@ -182,7 +182,7 @@ PLUGINS  (VST3 everywhere, LV2 on Linux)
   plugin-load-anyway --fx ID               load a plugin Synkopa's safety check refused (it crashed or hung
                                            when tried in a separate process); from now on, every project
   vst3 [--rescan] | vst3-add | vst3-params | vst3-set    the same, VST3 only (older names)
-  auto-add --fx ID --param ID [--points "0:0.2,4:0.8" | --value V] [--track N --name TEXT]
+  auto-add [--fx ID --param ID | --target mix --fx ID | --target insertVol|insertPan|trackVol|chanVol|chanPan --id ID] [--points "0:0.2,4:0.8" | --value V] [--track N --name TEXT]
                                            automate a hosted plugin parameter (adds the playlist clip too)
 
 NOTES  (deterministic transforms and generators for a pattern's notes)
@@ -1068,9 +1068,26 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
             json!({"fxId": a.num("fx").map_err(u)?.ok_or_else(|| u("missing --fx".into()))? as u64, "id": a.num("id").map_err(u)?.ok_or_else(|| u("missing --id".into()))? as u64, "value": a.num("value").map_err(u)?.ok_or_else(|| u("missing --value".into()))?}),
         ),
         "auto-add" => {
-            // an automation envelope on a hosted plugin parameter, plus the playlist clip that plays it
-            let fx = a.num("fx").map_err(u)?.ok_or_else(|| u("missing --fx".into()))? as u64;
-            let param = a.num("param").map_err(u)?.ok_or_else(|| u("missing --param".into()))? as u64;
+            // an automation envelope (a hosted plugin parameter by default, `--target` for the
+            // rest), plus the playlist clip that plays it
+            let target = match a.get("target") {
+                None | Some("plugin") => {
+                    let fx = a.num("fx").map_err(u)?.ok_or_else(|| u("missing --fx".into()))? as u64;
+                    let param = a.num("param").map_err(u)?.ok_or_else(|| u("missing --param".into()))? as u64;
+                    json!({"kind": "plugin", "fxId": fx, "paramId": param})
+                }
+                Some("mix") => {
+                    let fx = a.num("fx").map_err(u)?.ok_or_else(|| u("--target mix needs --fx".into()))? as u64;
+                    json!({"kind": "mix", "fxId": fx})
+                }
+                Some(kind @ ("insertVol" | "insertPan" | "trackVol" | "chanVol" | "chanPan")) => {
+                    let id = a.num("id").map_err(u)?.ok_or_else(|| u(format!("--target {kind} needs --id")))? as u64;
+                    json!({"kind": kind, "id": id})
+                }
+                Some(other) => {
+                    return Err(u(format!("unknown --target `{other}` (plugin, mix, insertVol, insertPan, trackVol, chanVol, chanPan)")))
+                }
+            };
             let mut points: Vec<Value> = vec![];
             if let Some(p) = a.get("points") {
                 for pair in p.split(',') {
@@ -1100,7 +1117,7 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                 a,
                 "apply",
                 json!({"ops": [
-                    {"op": "putAutomation", "automation": {"id": auto_id, "name": name, "color": "#e0a44a", "target": {"kind": "plugin", "fxId": fx, "paramId": param}, "points": points}},
+                    {"op": "putAutomation", "automation": {"id": auto_id, "name": name, "color": "#e0a44a", "target": target, "points": points}},
                     {"op": "putClips", "clips": [{"id": clip_id, "track": track, "start": 0.0, "len": len, "offset": 0.0, "kind": "auto", "ref": auto_id, "muted": false, "gain": 0.0, "fadeIn": 0.0, "fadeOut": 0.0, "pan": 0.0, "norm": false, "rev": false}]}
                 ]}),
             )

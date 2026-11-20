@@ -48,7 +48,9 @@ export interface Backend {
   transportStop(): Promise<void>;
   /** A second Stop (panic): cut every tail still ringing — voices, effect tails, the preview. Not an edit. */
   transportSilence(): Promise<void>;
-  transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor' | 'recAudio' | 'recNotes' | 'recQuantize'>>): Promise<TransportDto>;
+  transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor' | 'recAudio' | 'recNotes' | 'recQuantize' | 'recAutomation' | 'recAutoLatch'>>): Promise<TransportDto>;
+  /** Whether automation `id` drives its target while playing; `on: false` re-enables it (a tweak had overridden it). */
+  automationOverride(id: Id, on: boolean): Promise<TransportDto>;
   subscribeTelemetry(onFrame: (buf: ArrayBuffer) => void): Promise<void>;
   watchFx(ids: Id[]): Promise<void>;
   fxCatalog(): Promise<Catalog>;
@@ -343,6 +345,7 @@ export function tauriBackend(): Backend {
     transportStop: () => invoke('transport_stop'),
     transportSilence: () => invoke('transport_silence'),
     transportSet: patch => invoke('transport_set', patch),
+    automationOverride: (id, on) => invoke('automation_override', { id, on }),
     async subscribeTelemetry(onFrame) {
       const ch = new Channel<ArrayBuffer>();
       ch.onmessage = m => onFrame(m instanceof ArrayBuffer ? m : (toF32(m).buffer as ArrayBuffer));

@@ -108,6 +108,13 @@ pub struct TransportDto {
     /// Input quantize of recorded notes: their starts move to multiples of this many beats
     /// (lengths kept); 0 = as played.
     pub rec_quantize: f64,
+    /// The recording filter: control tweaks during playback are captured into automation
+    /// envelopes. The UI's capture reads this; the MIDI-controller capture to come reads it
+    /// in the audio thread. Stored here so every transport setting lives in one place.
+    pub rec_automation: bool,
+    /// Automation capture keeps writing the held value after the control is released, until
+    /// the transport stops (Ableton's latch; the default is touch).
+    pub rec_auto_latch: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -133,6 +140,8 @@ pub struct StateDto {
     pub stretching: Vec<Id>,
     /// Audio clips whose time-stretch failed (they play resampled): clip id → message.
     pub stretch_errors: HashMap<Id, String>,
+    /// Automations a manual tweak overrode while playing (see [`Core::auto_overrides`]).
+    pub overridden_autos: Vec<Id>,
     /// Sources whose audio is not loaded (file moved, deleted, unreadable; they play
     /// silence): source id → why. Relink them with [`Engine::relink_sources`].
     pub missing: HashMap<Id, String>,
@@ -389,6 +398,9 @@ pub(crate) struct Core {
     watch: Vec<Id>,
     /// Comp id → take played instead of the comp (live only: not saved, not undone).
     audition: HashMap<Id, Id>,
+    /// Automations a manual tweak overrode while playing: they stop driving their target
+    /// until re-enabled (or the transport stops). Live only: not saved, not undone.
+    auto_overrides: HashSet<Id>,
     midi: MidiState,
     /// Synth channels the audio thread holds an instance for, with the patch it was last sent.
     synths: HashMap<Id, crate::poly::Patch>,
@@ -532,6 +544,8 @@ impl Engine {
                     rec_audio: true,
                     rec_notes: true,
                     rec_quantize: 0.0,
+                    rec_automation: true,
+                    rec_auto_latch: false,
                 },
                 live_fx: HashMap::new(),
                 sent_params: HashMap::new(),
@@ -548,6 +562,7 @@ impl Engine {
                 graph_deferred: false,
                 watch: vec![],
                 audition: HashMap::new(),
+                auto_overrides: HashSet::new(),
                 midi: MidiState::default(),
                 synths: HashMap::new(),
                 plugs: HashMap::new(),
@@ -672,6 +687,7 @@ impl Engine {
             sr: sample_rate,
             max_block,
         });
+        c.auto_overrides.clear(); // before the rebuild: the new stream starts clean
         self.sync(&mut c, Dirty { timeline: true, mixer: true, params: true });
         let flags = Cmd::Flags { metro: c.transport.metro, monitor: c.transport.monitor };
         let watch = watch_cmd(&c.watch);
@@ -715,6 +731,11 @@ impl Engine {
             stretching,
             stretch_errors,
             missing: missing_sources(c),
+            overridden_autos: {
+                let mut v: Vec<Id> = c.auto_overrides.iter().copied().collect();
+                v.sort_unstable();
+                v
+            },
         }
     }
 
@@ -1105,20 +1126,58 @@ impl Engine {
         self.finish_midi_take();
         let mut c = self.core.lock();
         self.settle_rec_track(&mut c);
+        if !c.auto_overrides.is_empty() {
+            // a stopped transport re-arms every automation: rebuild now, so the next
+            // play starts from a timeline that drives every envelope again
+            c.auto_overrides.clear();
+            self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
+        }
         let t = c.transport.clone();
         drop(control);
         self.changed(c);
         written.map(|_| t)
     }
 
-    /// The recording filter: what a recording captures (the input's audio, keyboard notes).
-    /// At least one stays on; a recording running keeps what it started with.
-    pub fn set_rec_filter(&self, audio: Option<bool>, notes: Option<bool>) -> TransportDto {
+    /// The recording filter: what a recording captures (the input's audio, keyboard notes,
+    /// control tweaks into automation envelopes). One capturer stays on (audio, notes or
+    /// automation); a recording running keeps what it started with. The latch is always free.
+    pub fn set_rec_filter(
+        &self,
+        audio: Option<bool>,
+        notes: Option<bool>,
+        automation: Option<bool>,
+        auto_latch: Option<bool>,
+    ) -> TransportDto {
         let mut c = self.core.lock();
         let (a, n) = (audio.unwrap_or(c.transport.rec_audio), notes.unwrap_or(c.transport.rec_notes));
-        if a || n {
+        let au = automation.unwrap_or(c.transport.rec_automation);
+        if a || n || au {
             c.transport.rec_audio = a;
             c.transport.rec_notes = n;
+            c.transport.rec_automation = au;
+        }
+        if let Some(v) = auto_latch {
+            c.transport.rec_auto_latch = v;
+        }
+        let t = c.transport.clone();
+        self.changed(c);
+        t
+    }
+
+    /// Whether automation `id` drives its target while playing (`on` false re-enables it).
+    /// A manual tweak on an automated control overrides it (Ableton): the fader wins until
+    /// "Re-enable automation" or the transport stops. Rebuilding the timeline drops the
+    /// automation from it, so the static value the tweak wrote stands.
+    pub fn automation_override(&self, id: Id, on: bool) -> TransportDto {
+        let mut c = self.core.lock();
+        // both directions rebuild now: the override must take effect even when the tweak
+        // that follows sends no ops (a hosted plugin parameter is written to directly)
+        if on {
+            if c.auto_overrides.insert(id) {
+                self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
+            }
+        } else if c.auto_overrides.remove(&id) {
+            self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
         }
         let t = c.transport.clone();
         self.changed(c);
@@ -1548,6 +1607,10 @@ impl Engine {
             {
                 let mut c = self.core.lock();
                 c.transport.playing = false;
+                if !c.auto_overrides.is_empty() {
+                    c.auto_overrides.clear();
+                    self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
+                }
             }
             if let Err(e) = self.finish_take() {
                 log::error!("{e}");

@@ -1,6 +1,6 @@
 import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
 import { be } from '../api/backend';
-import { PLUGIN_FORMAT_LABEL, unsafeReason, type Fx, type FxKind, type Id, type ParamDef, type PluginParam, type PluginRef } from '../api/types';
+import { PLUGIN_FORMAT_LABEL, unsafeReason, type Fx, type FxKind, type Id, type Op, type ParamDef, type PluginParam, type PluginRef } from '../api/types';
 import { sliderStep } from '../lib/pluginParam';
 import { clamp } from '../lib/format';
 import { lang, t, tName, type TranslationKey } from '../lib/i18n';
@@ -8,9 +8,9 @@ import { NOTE_NAMES } from '../lib/pitch';
 import { knobVal, paramDefs, pFmt, pNorm, presetInfo, presetList } from '../lib/presets';
 import { noteName, stepBeats } from '../lib/beatDiv';
 import * as A from '../state/actions';
-import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, captureArmed, controlMenu, isAutomated, isOverridden, noteManualTweak, paramMenu, type Tweak } from '../state/automation';
 import type { AutoTarget } from '../api/types';
-import { commit, Gesture, wheelEdit } from '../state/edit';
+import { commit, Gesture } from '../state/edit';
 import { findFx, insName, plain, S } from '../state/store';
 import { onFxFrame, tele } from '../state/telemetry';
 import { openMenu, say, U, type PlugWin } from '../state/ui';
@@ -158,16 +158,16 @@ const OWN_MIX = new Set<string>(['reverb', 'delay', 'sat', 'fet', 'half', 'warp'
 function MixControl(props: { fx: Fx }) {
   const target = () => ({ kind: 'mix' as const, fxId: props.fx.id });
   const val = () => autoDisplay(target()) ?? props.fx.mix ?? 1;
-  let g: Gesture | null = null;
-  const op = (v: number) => A.fxOp({ ...plain(findFx(props.fx.id)!.f), mix: Math.round(clamp(v, 0, 1) * 1000) / 1000 });
+  let g: Tweak | null = null;
+  const op = (v: number): Op[] => [A.fxOp({ ...plain(findFx(props.fx.id)!.f), mix: Math.round(clamp(v, 0, 1) * 1000) / 1000 })];
   return (
     <div class="mixctl" title={t('c.fx.mixTip')}>
       <span class="lab">MIX</span>
-      <MiniKnob key={'mix' + props.fx.id} title={t('c.fx.mixKnobTip')} t={val} automated={() => isAutomated(target())}
-        onStart={() => { g = new Gesture('Mix'); }} onChange={t => { g?.update([op(t)]); say(A.fxName(props.fx) + ' · Mix ' + Math.round(t * 100) + '%'); }}
-        onEnd={() => { g?.end(); g = null; }} onReset={() => commit([op(1)], 'Mix')}
-        onWheel={t => wheelEdit('mix' + props.fx.id, 'Mix', [op(t)])}
-        onMenu={(x, y) => paramMenu(x, y, target(), () => commit([op(1)], 'Mix'), FXMETA[props.fx.type].color)} />
+      <MiniKnob key={'mix' + props.fx.id} title={t('c.fx.mixKnobTip')} t={val} automated={() => isAutomated(target())} overridden={() => isOverridden(target())}
+        onStart={() => { g = autoTweak(target(), 'Mix', op); }} onChange={t => { g?.move(t); say(A.fxName(props.fx) + ' · Mix ' + Math.round(t * 100) + '%'); }}
+        onEnd={() => { g?.end(); g = null; }} onReset={() => commit(op(1), 'Mix')}
+        onWheel={t => autoWheel(target(), 'mix' + props.fx.id, 'Mix', t, op)}
+        onMenu={(x, y) => paramMenu(x, y, target(), () => commit(op(1), 'Mix'), FXMETA[props.fx.type].color)} />
       <span class="v">{Math.round(val() * 100)}%</span>
     </div>
   );
@@ -199,21 +199,25 @@ function ParamKnob(props: { fxId: Id; p: ParamDef; ends?: [string, string]; colo
   const target = () => ({ kind: 'fx' as const, fxId: props.fxId, param: props.p.id });
   const val = () => autoDisplay(target()) ?? fx()?.params[props.p.id] ?? props.p.def;
   const p = props.p;
-  let g: Gesture | null = null;
+  let g: Tweak | null = null;
   const reset = () => { const op = setParam(props.fxId, p.id, p.def); if (op) commit([op], tName(p.label)); };
+  const staticOps = (t: number) => { const op = setParam(props.fxId, p.id, knobVal(p, t)); return op ? [op] : null; };
   return (
     <Knob key={props.fxId + p.id} label={tName(p.label)} t={() => clamp(pNorm(p, val()), 0, 1)} ends={props.ends} color={props.color} size={props.size}
       automated={() => isAutomated(target())}
+      overridden={() => isOverridden(target())}
       zero={() => (p.min < 0 && p.max > 0 && !p.log ? pNorm(p, 0) : 0)} text={() => pFmt(p, val())}
-      onStart={() => { g = new Gesture(tName(p.label)); }}
-      onChange={t => { const v = knobVal(p, t); const op = setParam(props.fxId, p.id, v); if (op) g?.update([op]); say(A.fxName(fx()!) + ' · ' + tName(p.label) + ' ' + fmtLong(p, v)); }}
+      onStart={() => { g = autoTweak(target(), tName(p.label), staticOps, { color: props.color }); }}
+      onChange={t => { const v = knobVal(p, t); g?.move(t); say(A.fxName(fx()!) + ' · ' + tName(p.label) + ' ' + fmtLong(p, v)); }}
       onEnd={() => { g?.end(); g = null; }}
       onReset={reset}
       onMenu={(x, y) => paramMenu(x, y, target(), reset, props.color)}
       onWheel={t => {
         // a synced time steps one note value per notch (snapping alone would undo a small move)
         const v = p.unit === 'beat' ? stepBeats(val(), t - pNorm(p, val())) : knobVal(p, t);
-        const op = setParam(props.fxId, p.id, v); if (op) wheelEdit('fx' + props.fxId + p.id, tName(p.label), [op]); say(A.fxName(fx()!) + ' · ' + tName(p.label) + ' ' + fmtLong(p, v));
+        const n = clamp(pNorm(p, v), 0, 1);
+        autoWheel(target(), 'fx' + props.fxId + p.id, tName(p.label), n, t2 => { const op = setParam(props.fxId, p.id, p.unit === 'beat' ? stepBeats(val(), t2 - pNorm(p, val())) : knobVal(p, t2)); return op ? [op] : null; });
+        say(A.fxName(fx()!) + ' · ' + tName(p.label) + ' ' + fmtLong(p, v));
       }} />
   );
 }
@@ -794,6 +798,11 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
         <For each={shown()} fallback={<span class="note">{t('c.fx.noParams')}</span>}>
           {p => {
             const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: p.id };
+            let cap: Tweak | null = null;
+            const done = () => { cap?.end(); cap = null; };
+            // the 1 s param refresh replaces every row: a mid-drag replacement would drop the
+            // pointer-up handler, so the capture closes here instead of leaking the gesture
+            onCleanup(done);
             return (
               <div class="vparam" onContextMenu={e => { e.preventDefault(); e.stopPropagation();
                 if (!props.instrument) paramMenu(e.clientX, e.clientY, target, () => set(p.id, p.def), undefined, { current: p.value, paramLabel: p.name });
@@ -802,9 +811,15 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
                 <span class="ell" style={{ font: '12px var(--sans)', color: 'var(--fg)' }} title={paramTitle(p)}>{p.name}</span>
                 <Show when={p.options?.length} fallback={
                   <Show when={p.toggle} fallback={
-                    <input type="range" min="0" max="1" step={sliderStep(p)} value={p.value} onInput={e => set(p.id, +e.currentTarget.value)}
+                    <input type="range" min="0" max="1" step={sliderStep(p)} value={p.value}
+                      onInput={e => { const v = +e.currentTarget.value; if (cap) cap.move(v); else set(p.id, v); }}
                       onDblClick={() => set(p.id, p.def)} aria-label={p.name}
-                      onPointerDown={e => { if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); } }} />
+                      onPointerDown={e => {
+                        if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); }
+                        else if (!props.instrument && captureArmed()) cap = autoTweak(target, p.name, () => null, { current: p.value, paramLabel: p.name });
+                        else if (e.button === 0 && !props.instrument) noteManualTweak(target); // the tweak wins over the envelope (Ableton's override)
+                      }}
+                      onPointerUp={done} onPointerCancel={done} />
                   }>
                     <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p.value >= 0.5} onChange={e => set(p.id, e.currentTarget.checked ? 1 : 0)} aria-label={p.name} />
                   </Show>

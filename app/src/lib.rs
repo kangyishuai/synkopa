@@ -213,14 +213,16 @@ async fn transport_set(
     rec_audio: Option<bool>,
     rec_notes: Option<bool>,
     rec_quantize: Option<f64>,
+    rec_automation: Option<bool>,
+    rec_auto_latch: Option<bool>,
 ) -> R<wave_engine::TransportDto> {
     let e = app.engine.clone();
     let t = tauri::async_runtime::spawn_blocking(move || {
         if let Some(b) = start_beat {
             e.set_start(b);
         }
-        if rec_audio.is_some() || rec_notes.is_some() {
-            e.set_rec_filter(rec_audio, rec_notes);
+        if rec_audio.is_some() || rec_notes.is_some() || rec_automation.is_some() || rec_auto_latch.is_some() {
+            e.set_rec_filter(rec_audio, rec_notes, rec_automation, rec_auto_latch);
         }
         if let Some(q) = rec_quantize {
             e.set_rec_quantize(q);
@@ -1136,6 +1138,14 @@ async fn plugin_set_param(app: St<'_>, fx_id: u64, id: u32, value: f64) -> R<()>
     app.plugins.set_param(fx_id, id, value)
 }
 
+/// Whether automation `id` drives its target while playing (false = re-enable it): a manual
+/// tweak on an automated control overrides the envelope until re-enabled or stopped.
+#[tauri::command]
+async fn automation_override(app: St<'_>, id: u64, on: bool) -> R<wave_engine::TransportDto> {
+    let e = app.engine.clone();
+    tauri::async_runtime::spawn_blocking(move || e.automation_override(id, on)).await.map_err(es)
+}
+
 // The VST3-era names, kept for scripts and older front ends: same behaviour, except that
 // `vst3_scan` lists only VST3 effects (as a plain array, as before).
 
@@ -1337,6 +1347,7 @@ pub fn run(project_arg: Option<&str>) {
             transport_stop,
             transport_silence,
             transport_set,
+            automation_override,
             telemetry_subscribe,
             watch_fx,
             import_audio,

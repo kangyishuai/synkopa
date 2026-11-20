@@ -7,7 +7,8 @@ Thanks for helping. Pull requests are welcome.
 1. Fork the repo and branch from `main`.
 2. Keep one change per PR. Small PRs get merged faster.
 3. For a new feature or a larger change, open an issue first so we can agree on the direction.
-4. Describe what changed and how you checked it. For UI changes, add a screenshot.
+4. Describe what changed and how you checked it. For UI changes, add a screenshot — or
+   better, a short screen capture (GIF) of the new flow; it is what a reviewer plays first.
 5. Make sure the checks below pass.
 
 An automated review from CodeRabbit appears on your PR. Treat it as suggestions; the maintainer

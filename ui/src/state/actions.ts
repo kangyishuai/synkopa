@@ -167,10 +167,10 @@ export async function toggleRec() {
 // ---- the recording filter (FL's right-click on Record): what a recording captures. A setting of
 // this computer, not of the song: kept in localStorage and handed to the engine at start-up.
 const REC_FILTER_KEY = 'wave.recFilter';
-/** Ticks or unticks one kind; the last one ticked stays on (a recording must capture something). */
+/** Ticks or unticks one kind; one input kind stays on unless automation captures instead. */
 export async function setRecFilter(kind: 'audio' | 'notes', on: boolean) {
   const cur = { audio: S.transport.recAudio, notes: S.transport.recNotes }, next = { ...cur, [kind]: on };
-  if (!next.audio && !next.notes) return say(t('d.act.recFilterLast'));
+  if (!next.audio && !next.notes && !S.transport.recAutomation) return say(t('d.act.recFilterLast'));
   try {
     const tr = await be().transportSet({ recAudio: next.audio, recNotes: next.notes });
     setTransport(tr);
@@ -178,9 +178,20 @@ export async function setRecFilter(kind: 'audio' | 'notes', on: boolean) {
     say(t('d.act.recFilter', { what: recFilterName() }));
   } catch (e) { say(t('d.act.err', { err: String(e) })); }
 }
+/** The recording filter's automation: control tweaks during playback become envelope points. */
+export async function setRecAutomation(on: boolean) {
+  if (!on && !S.transport.recAudio && !S.transport.recNotes) return say(t('d.act.recFilterLast'));
+  try { setTransport(await be().transportSet({ recAutomation: on })); saveRecFilter(); say(t('d.act.recFilter', { what: recFilterName() })); }
+  catch (e) { say(t('d.act.err', { err: String(e) })); }
+}
+/** Automation capture keeps writing the held value after release, until the transport stops. */
+export async function setRecAutoLatch(on: boolean) {
+  try { setTransport(await be().transportSet({ recAutoLatch: on })); saveRecFilter(); say(t(on ? 'd.act.recLatchOn' : 'd.act.recLatchOff')); }
+  catch (e) { say(t('d.act.err', { err: String(e) })); }
+}
 const saveRecFilter = () => {
   const tr = S.transport;
-  try { localStorage.setItem(REC_FILTER_KEY, JSON.stringify({ audio: tr.recAudio, notes: tr.recNotes, quantize: tr.recQuantize })); } catch { /* private window */ }
+  try { localStorage.setItem(REC_FILTER_KEY, JSON.stringify({ audio: tr.recAudio, notes: tr.recNotes, quantize: tr.recQuantize, automation: tr.recAutomation, latch: tr.recAutoLatch })); } catch { /* private window */ }
 };
 /** Input quantize of recorded notes (FL's snap while recording): beats, 0 = as played. */
 export const REC_QUANTIZE = [
@@ -196,17 +207,20 @@ export async function setRecQuantize(beats: number) {
 }
 /** At start-up: the filter last chosen on this computer. */
 export async function restoreRecFilter() {
-  let v: { audio?: unknown; notes?: unknown; quantize?: unknown } | null = null;
+  let v: { audio?: unknown; notes?: unknown; quantize?: unknown; automation?: unknown; latch?: unknown } | null = null;
   try { v = JSON.parse(localStorage.getItem(REC_FILTER_KEY) ?? 'null'); } catch { /* none or unreadable */ }
-  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes)) return;
+  const au = typeof v?.automation === 'boolean' ? v.automation : S.transport.recAutomation;
+  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes || au)) return;
   const q = REC_QUANTIZE.some(x => x.beats === v!.quantize) ? v.quantize as number : 0;
-  if (v.audio === S.transport.recAudio && v.notes === S.transport.recNotes && q === S.transport.recQuantize) return;
-  try { setTransport(await be().transportSet({ recAudio: v.audio, recNotes: v.notes, recQuantize: q })); } catch (e) { console.warn(e); }
+  const latch = typeof v.latch === 'boolean' ? v.latch : S.transport.recAutoLatch;
+  if (v.audio === S.transport.recAudio && v.notes === S.transport.recNotes && q === S.transport.recQuantize && au === S.transport.recAutomation && latch === S.transport.recAutoLatch) return;
+  try { setTransport(await be().transportSet({ recAudio: v.audio, recNotes: v.notes, recQuantize: q, recAutomation: au, recAutoLatch: latch })); } catch (e) { console.warn(e); }
 }
-/** "audio and notes", "audio", "notes": what Record captures. */
+/** "audio and notes", "automation only", "+ automation": what Record captures. */
 export function recFilterName() {
   const a = S.transport.recAudio, n = S.transport.recNotes;
-  return t(a && n ? 'd.act.recWhat.both' : a ? 'd.act.recWhat.audio' : 'd.act.recWhat.notes');
+  const base = a && n ? t('d.act.recWhat.both') : a ? t('d.act.recWhat.audio') : n ? t('d.act.recWhat.notes') : t('d.act.recWhat.none');
+  return S.transport.recAutomation ? base + t('d.act.recWhat.autoSuffix') : base;
 }
 
 export function toggleMonitor() {

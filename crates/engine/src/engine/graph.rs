@@ -111,12 +111,19 @@ impl Engine {
         if d.timeline {
             let gesture_open = c.gesture.is_some();
             let audition = live_audition(c);
-            let Core { project, sources, keys, .. } = c;
+            let Core { project, sources, keys, auto_overrides, .. } = c;
             let stale = gesture_open;
             let mut takes = comp_audio(sources, &project.comps);
             takes.extend(sample_audio(sources, &project.channels));
             let bpm = project.bpm;
-            let tl = build_timeline(project, &mut |clip| sources.clip_play(clip, stale, bpm), &takes, &audition, keys.as_ref());
+            let tl = build_timeline(
+                project,
+                &mut |clip| sources.clip_play(clip, stale, bpm),
+                &takes,
+                &audition,
+                keys.as_ref(),
+                &*auto_overrides,
+            );
             send(c, Cmd::Timeline(Box::new(tl)));
         }
     }
@@ -558,16 +565,21 @@ pub(crate) fn build_timeline(
     takes: &HashMap<Id, Arc<Audio>>,
     audition: &HashMap<Id, Id>,
     keys: Option<&Arc<crate::keys::KeysBank>>,
+    overrides: &HashSet<Id>,
 ) -> Timeline {
     // comps are resolved once each, shared by every clip that plays them
     let spb = 60.0 / p.bpm;
     let comps: HashMap<Id, Arc<crate::comp::CompRt>> =
         p.comps.iter().map(|cp| (cp.id, Arc::new(crate::comp::build(cp, spb, audition.get(&cp.id).copied(), takes)))).collect();
     let (chans, pats) = build_patterns(p, takes, keys);
-    // automation envelopes whose target still exists
+    // automation envelopes whose target still exists and that no manual tweak overrode
+    // (clips referencing a skipped one drop out below: their `auto_idx` entry is missing)
     let mut autos = vec![];
     let mut auto_idx = HashMap::new();
     for a in &p.automations {
+        if overrides.contains(&a.id) {
+            continue;
+        }
         if let Some(target) = resolve_target(p, &a.target) {
             auto_idx.insert(a.id, autos.len());
             autos.push(AutoRt { target, env: a.clone() });
@@ -697,4 +709,54 @@ fn resolve_target(p: &Project, t: &AutoTarget) -> Option<TargetRt> {
         AutoTarget::ClipGain { id } => TargetRt::ClipGain(p.clips.iter().find(|c| c.id == *id && c.kind == ClipKind::Audio)?.id as usize),
         AutoTarget::ClipPan { id } => TargetRt::ClipPan(p.clips.iter().find(|c| c.id == *id && c.kind == ClipKind::Audio)?.id as usize),
     })
+}
+
+#[cfg(test)]
+mod override_timeline_tests {
+    use super::*;
+
+    /// A tweak-overridden automation drops out of the timeline: no envelope, no drives,
+    /// and clips that referenced it have nothing to play.
+    #[test]
+    fn an_overridden_automation_leaves_the_timeline() {
+        let mut p = Project::empty();
+        let track = p.tracks[0].id;
+        let aid: Id = 501;
+        p.automations.push(crate::model::Automation {
+            id: aid,
+            name: "a".into(),
+            color: "#e0a44a".into(),
+            target: AutoTarget::TrackVol { id: track },
+            points: vec![crate::model::AutoPoint::at(0.0, 1.0), crate::model::AutoPoint::at(4.0, 0.0)],
+        });
+        p.clips.push(crate::model::Clip {
+            id: 502,
+            track: 0,
+            start: 0.0,
+            len: 8.0,
+            offset: 0.0,
+            kind: ClipKind::Auto,
+            source: aid,
+            muted: false,
+            gain: 0.0,
+            fade_in: 0.0,
+            fade_out: 0.0,
+            pan: 0.0,
+            norm: false,
+            rev: false,
+            tune: None,
+            stretch: 1.0,
+            resample: false,
+            pitch: 0.0,
+            insert: None,
+            root: 60,
+        });
+        let none: HashSet<Id> = Default::default();
+        let tl = build_timeline(&p, &mut |_| None, &HashMap::new(), &HashMap::new(), None, &none);
+        assert_eq!(tl.autos.len(), 1, "without an override the envelope drives");
+        assert_eq!(tl.drives.len(), 1);
+        let one: HashSet<Id> = [aid].into();
+        let tl = build_timeline(&p, &mut |_| None, &HashMap::new(), &HashMap::new(), None, &one);
+        assert!(tl.autos.is_empty() && tl.drives.is_empty() && tl.clips.is_empty(), "the override drops envelope, clip and drive");
+    }
 }

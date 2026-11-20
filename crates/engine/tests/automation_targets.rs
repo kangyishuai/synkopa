@@ -363,3 +363,52 @@ fn live_playback_before_the_automation_clip_follows_it_on_every_pass() {
         run(&mut rt, 4);
     }
 }
+
+#[test]
+fn a_tweak_overrides_automation_until_re_enabled_or_stopped() {
+    let p = drums_only();
+    let track = p.tracks[0].id;
+    let id: Id = 9400;
+    let env = Automation {
+        id,
+        name: "a".into(),
+        color: "#e0a44a".into(),
+        target: AutoTarget::TrackVol { id: track },
+        points: vec![AutoPoint::at(0.0, 1.0), AutoPoint::at(4.0, 0.0)],
+    };
+    let e = Engine::new(p, Arc::new(NoPlugins));
+    e.apply(&[Op::PutAutomation { automation: env }, Op::PutClips { clips: vec![auto_clip(id + 1, id, 0, 8.0)] }], false, None).unwrap();
+    assert!(e.state().overridden_autos.is_empty(), "nothing is overridden to begin with");
+
+    // the override: the automation stops driving its target (the timeline leaves it out)
+    e.automation_override(id, true);
+    assert_eq!(e.state().overridden_autos, vec![id], "the tweak overrode the envelope");
+    // idempotent, and a stale id is harmless
+    e.automation_override(id, true);
+    e.automation_override(999_999, true);
+    assert_eq!(e.state().overridden_autos, vec![id, 999_999]);
+
+    // re-enable: the envelope drives again
+    e.automation_override(id, false);
+    assert!(e.state().overridden_autos.iter().all(|x| *x == 999_999), "re-enable removed the override");
+
+    // a stopped transport re-arms every automation
+    e.automation_override(id, true);
+    let _ = e.stop();
+    assert!(e.state().overridden_autos.is_empty(), "stop cleared the overrides");
+}
+
+#[test]
+fn the_record_filter_keeps_automation_flags_free_and_one_input_kind_on() {
+    let p = drums_only();
+    let e = Engine::new(p, Arc::new(NoPlugins));
+    let tr = e.set_rec_filter(Some(false), None, Some(false), Some(true));
+    assert!(!tr.rec_automation && tr.rec_auto_latch, "the automation flags move freely");
+    assert!(!tr.rec_audio && tr.rec_notes, "audio off, notes untouched (one input kind still on)");
+    let tr = e.set_rec_filter(Some(false), Some(false), None, None);
+    assert!(!tr.rec_audio && tr.rec_notes, "the last input kind stays on");
+    let tr = e.set_rec_filter(None, None, Some(true), Some(false));
+    assert!(tr.rec_automation && !tr.rec_auto_latch, "the automation flags move back freely");
+    let tr = e.set_rec_filter(Some(false), Some(false), None, None);
+    assert!(!tr.rec_audio && !tr.rec_notes && tr.rec_automation, "with automation capturing, both input kinds may rest");
+}

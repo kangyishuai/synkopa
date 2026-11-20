@@ -444,10 +444,14 @@ export type Op =
 
 export interface TransportDto {
   playing: boolean; rec: boolean; monitor: boolean; metro: boolean; countIn: boolean; startBeat: number;
-  /** The recording filter (right-click on Record): the input's audio becomes takes; keyboard notes a pattern. One stays on. */
+  /** The recording filter (right-click on Record): the input's audio becomes takes; keyboard notes a pattern. One of these two stays on. */
   recAudio: boolean; recNotes: boolean;
   /** Input quantize of recorded notes: starts snap to multiples of this many beats (0 = as played). */
   recQuantize: number;
+  /** The recording filter: control tweaks during playback are captured into automation envelopes. */
+  recAutomation: boolean;
+  /** Automation capture keeps writing the held value after release, until the transport stops (else touch: stop at release). */
+  recAutoLatch: boolean;
 }
 
 export interface StateDto {
@@ -467,6 +471,8 @@ export interface StateDto {
   missing?: Record<string, string>;
   /** Hosted plugins that did not load (not installed, refused; they pass audio through, their saved state is kept): fx id → why. */
   fxErrors?: Record<string, string>;
+  /** Automations a manual tweak overrode while playing (they drive again on re-enable or stop). Live only, not undone. */
+  overriddenAutos?: Id[];
 }
 
 /** `options`: a discrete choice (value = index), shown as buttons instead of a knob. */

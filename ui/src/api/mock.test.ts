@@ -360,10 +360,16 @@ describe('recording in the mock (like the engine)', () => {
       expect(u.clips.some(c => c.kind === 'audio')).toBe(false);
     }
   });
-  it('records nothing with Audio unticked and keeps one kind ticked', async () => {
+  it('records nothing with Audio unticked; one input kind stays on unless automation captures', async () => {
     const be = new MockBackend();
     expect(await be.transportSet({ recAudio: false })).toMatchObject({ recAudio: false, recNotes: true });
-    expect(await be.transportSet({ recNotes: false })).toMatchObject({ recAudio: false, recNotes: true });
+    // automation captures by default, so both input kinds may rest
+    expect(await be.transportSet({ recNotes: false })).toMatchObject({ recAudio: false, recNotes: false, recAutomation: true });
+    // automation off again is refused while it is the only thing capturing: nothing is lost
+    expect(await be.transportSet({ recAutomation: false })).toMatchObject({ recAudio: false, recNotes: false, recAutomation: true });
+    // with an input kind back on, the automation filter may rest
+    expect(await be.transportSet({ recNotes: true })).toMatchObject({ recAudio: false, recNotes: true });
+    expect(await be.transportSet({ recAutomation: false })).toMatchObject({ recAutomation: false, recNotes: true, recAudio: false });
   });
 });
 

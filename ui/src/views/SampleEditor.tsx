@@ -7,9 +7,9 @@ import { baseName, clamp, dbg, dbText, panText } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
 import { envelopeGraph, msText, STAGES, TENSION_KEY, type Bent, type Stage } from '../lib/sampler';
 import * as A from '../state/actions';
-import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, controlMenu, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
 import { openStems } from '../state/stems';
-import { commit, Gesture, wheelEdit } from '../state/edit';
+import { commit, Gesture } from '../state/edit';
 import { audition, chanById, chanOp, chanSource, replaceWithFile } from '../state/pattern';
 import { getPeaks, peakRange, peaksVersion } from '../state/peaks';
 import { insName, plain, S } from '../state/store';
@@ -278,21 +278,23 @@ interface SampleKnobProps {
 }
 
 function SampleKnob(props: SampleKnobProps) {
-  let gesture: Gesture | null = null;
+  let gesture: Tweak | null = null;
   const label = () => t(props.label);
   const reset = () => commit([props.op(props.defaultPosition)], label());
+  const staticOps = (v: number) => [props.op(v)];
   return <Knob key={props.id} color={props.arc} label={label()} title={t(props.title ?? 'd.smp.knob.tip')}
     t={props.position} text={props.display} zero={props.zero == null ? undefined : () => props.zero!}
     automated={() => !!props.target && isAutomated(props.target())}
+    overridden={() => !!props.target && isOverridden(props.target())}
     onMenu={props.target || props.menuTip ? (x, y) => {
       if (props.target) paramMenu(x, y, props.target(), reset, props.color?.());
       else if (props.menuTip) controlMenu(x, y, label(), reset, t(props.menuTip));
     } : undefined}
-    onStart={() => { gesture = new Gesture(label()); }}
-    onChange={v => { gesture?.update([props.op(v)]); say(label() + ' ' + props.display()); }}
+    onStart={() => { gesture = autoTweak(props.target?.() ?? null, label(), staticOps); }}
+    onChange={v => { gesture?.move(v); say(label() + ' ' + props.display()); }}
     onEnd={() => { gesture?.end(); gesture = null; }}
     onReset={reset}
-    onWheel={v => wheelEdit(props.id, label(), [(props.wheelOp ?? props.op)(v)])} />;
+    onWheel={v => autoWheel(props.target?.() ?? null, props.id, label(), v, staticOps)} />;
 }
 
 function FadeKnobs(props: {

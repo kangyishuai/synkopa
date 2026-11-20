@@ -3,12 +3,12 @@
 // waveform (with unison copies), the filter's response, the envelopes and LFO shapes. Edits are
 // `putChannel` (engine fast path, held notes follow).
 import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
-import type { Channel, ParamDef, SynthCatalog } from '../api/types';
+import type { AutoTarget, Channel, ParamDef, SynthCatalog } from '../api/types';
 import { t, tName } from '../lib/i18n';
 import { pFmt, pNorm, pVal } from '../lib/presets';
 import { clampSynth, synthParam, synthValue, withSynthParam, withSynthPreset } from '../lib/synth';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
-import { commit, Gesture, wheelEdit } from '../state/edit';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
+import { commit, Gesture } from '../state/edit';
 import { chanById, chanOp } from '../state/pattern';
 import { S } from '../state/store';
 import { openMenu, say, type MenuItem } from '../state/ui';
@@ -23,6 +23,8 @@ type Ctx = {
   set: (id: string, x: number, label?: string) => void; def: (id: string) => ParamDef | undefined;
   /** Driven by an automation clip. */
   auto: (id: string) => boolean;
+  /** The automation target of a parameter (capture/override look it up). */
+  target: (id: string) => AutoTarget;
   /** The parameter's right-click menu (automate, select its clips, reset to default). */
   menu: (id: string, x: number, y: number) => void;
 };
@@ -57,7 +59,7 @@ function Panel(props: { cat: SynthCatalog; c: Channel }) {
     const d = def(id); if (!d) return;
     paramMenu(x, y, target(id), () => set(id, d.def), ch().color);
   };
-  const ctx: Ctx = { cat: props.cat, ch, v, set, def, auto, menu };
+  const ctx: Ctx = { cat: props.cat, ch, v, set, def, auto, target, menu };
   const presetName = () => ch().synth.preset;
   const list = () => props.cat.presets;
   const load = (name: string) => { commit([chanOp(withSynthPreset(props.cat, ch(), name))], t('b.sp.presetUndo')); say(t('b.sp.presetSay', { name: tName(name) })); };
@@ -229,20 +231,22 @@ function Card(props: { title: string; color: string; class?: string; head?: JSX.
 
 function K(props: { ctx: Ctx; id: string; label: string; color?: string; size?: 'sm' | 'md' }) {
   const d = () => props.ctx.def(props.id);
-  let g: Gesture | null = null;
+  let g: Tweak | null = null;
+  const staticOps = (p: ParamDef, t: number) => [chanOp(withSynthParam(props.ctx.cat, props.ctx.ch(), props.id, pVal(p, t)))];
   return (
     <Show when={d()}>{p => (
       <Knob key={'syn' + props.id} label={props.label} size={props.size ?? 'sm'} color={props.color}
         t={() => pNorm(p(), props.ctx.v(props.id))} text={() => pFmt(p(), props.ctx.v(props.id))}
         zero={() => (p().min < 0 && p().max > 0 && !p().log ? pNorm(p(), 0) : 0)}
         title={t('b.sp.knobTitle', { label: tName(p().label) })}
-        onStart={() => { g = new Gesture(props.label); }}
-        onChange={t => { const ch = props.ctx.ch(); g?.update([chanOp(withSynthParam(props.ctx.cat, ch, props.id, pVal(p(), t)))]); say(props.label + ' ' + pFmt(p(), pVal(p(), t))); }}
+        onStart={() => { g = autoTweak(props.ctx.target(props.id), props.label, t => staticOps(p(), t), { color: props.color }); }}
+        onChange={t => { g?.move(t); say(props.label + ' ' + pFmt(p(), pVal(p(), t))); }}
         onEnd={() => { g?.end(); g = null; }}
         onReset={() => props.ctx.set(props.id, p().def, props.label)}
         automated={() => props.ctx.auto(props.id)}
+        overridden={() => isOverridden(props.ctx.target(props.id))}
         onMenu={(x, y) => props.ctx.menu(props.id, x, y)}
-        onWheel={t => wheelEdit('syn' + props.id, props.label, [chanOp(withSynthParam(props.ctx.cat, props.ctx.ch(), props.id, pVal(p(), t)))])} />
+        onWheel={t => autoWheel(props.ctx.target(props.id), 'syn' + props.id, props.label, t, t2 => staticOps(p(), t2), { color: props.color })} />
     )}</Show>
   );
 }
