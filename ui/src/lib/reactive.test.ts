@@ -289,3 +289,41 @@ describe('effects', () => {
     expect(runs).toBe(2);
   });
 });
+
+// patches/@solidjs__signals@2.0.3.patch. A tracked `arr.map/filter/every/forEach` (and `k in obj`)
+// subscribes to the presence of every index; @solidjs/signals 2.0.3 listed all remaining keys
+// (`Reflect.ownKeys`) each time one of those subscriptions was released, so dropping a computation
+// that had iterated a 2000-note array cost ~2 M key copies: ~100 ms per note-drag frame while the
+// Browser's pattern row (and its preview) was rebuilt. The patch keeps a count instead.
+describe('releasing presence subscriptions is linear (signals patch)', () => {
+  it('disposing a computation that iterated a big store array lists no keys', () => {
+    const N = 5000;
+    const [s] = createStore({ xs: Array.from({ length: N }, (_, i) => ({ v: i })) });
+    let dispose!: () => void;
+    const sum = createRoot(d => { dispose = d; return createMemo(() => s.xs.map(x => x.v).filter(v => v % 2).length); });
+    expect(sum()).toBe(N / 2);
+    const spy = vi.spyOn(Reflect, 'ownKeys');
+    try {
+      dispose();
+      expect(spy.mock.calls.length).toBeLessThan(50);
+    } finally { spy.mockRestore(); }
+  });
+
+  it('presence is still tracked after its subscriptions were released and made again', () => {
+    const [s, set] = createStore<{ m: Record<string, number | undefined> }>({ m: { a: 1 } });
+    const has = createRoot(() => createMemo(() => 'b' in s.m));
+    expect(has()).toBe(false);
+    set('m', 'b', 2);
+    expect(has()).toBe(true);
+    set('m', 'b', undefined);
+    expect(has()).toBe(false);
+    // a fresh reader after the old one let go
+    let dispose!: () => void;
+    const again = createRoot(d => { dispose = d; return createMemo(() => 'a' in s.m && 'b' in s.m); });
+    expect(again()).toBe(false);
+    dispose();
+    const third = createRoot(() => createMemo(() => 'b' in s.m));
+    set('m', 'b', 3);
+    expect(third()).toBe(true);
+  });
+});

@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@solidjs/signals@2.0.3':
+    hash: 11c50963072e0078fec85fc2ed39a4cb1ad0c51b44981b5b542e79b351b23a56
+    path: patches/@solidjs__signals@2.0.3.patch
+
 importers:
 
   .:
@@ -1349,7 +1354,7 @@ snapshots:
       '@solidjs/compiler-wasm32-wasi': 2.0.2
       '@solidjs/compiler-win32-x64-msvc': 2.0.2
 
-  '@solidjs/signals@2.0.3': {}
+  '@solidjs/signals@2.0.3(patch_hash=11c50963072e0078fec85fc2ed39a4cb1ad0c51b44981b5b542e79b351b23a56)': {}
 
   '@solidjs/testing-library@1.0.0-rc.2(@solidjs/web@2.0.3(solid-js@2.0.3))(solid-js@2.0.3)':
     dependencies:
@@ -1719,7 +1724,7 @@ snapshots:
 
   solid-js@2.0.3:
     dependencies:
-      '@solidjs/signals': 2.0.3
+      '@solidjs/signals': 2.0.3(patch_hash=11c50963072e0078fec85fc2ed39a4cb1ad0c51b44981b5b542e79b351b23a56)
       seroval: 1.8.2
       seroval-plugins: 1.8.0(seroval@1.8.2)
 

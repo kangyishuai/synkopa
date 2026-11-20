@@ -2,3 +2,5 @@
 # which broke changelog.test.ts on Windows checkouts.
 *.mjs text eol=lf
 *.sh text eol=lf
+# pnpm applies dependency patches to LF files: a CRLF checkout of the patch would not apply.
+*.patch text eol=lf
