@@ -31,7 +31,7 @@ thin treble tines die quickest, so decay scales with pitch like on a real comb.
 - **Release** (40–3000 ms) — how long a note rings after its key is let go (the tine decays
   naturally while held).
 
-All six are automatable (target kind `musicBox`), and all six work over MIDI/from the CLI:
+All six are automatable (target kind `musicBox`) and editable from the CLI:
 `channels --musicbox`, then `--ch "Music Box" --param ring --value 140`.
 
 ## Tests

@@ -437,14 +437,19 @@ impl VoicePool {
                     spread: ch.mb_spread,
                     release: ch.mb_release,
                 };
-                // the same key struck again: the pin catches the tine and damps it
+                // the same key struck again: the pin catches the tine and damps it — at the new
+                // note's start, not here (the new voice begins after its delay)
                 for v in self.voices.iter_mut().filter(|v| v.alive && v.kind == VoiceKind::MusicBox && v.chan_id == ch.id && v.key == key) {
                     v.held = false;
                     v.sus = false;
-                    v.len = v.len.min(v.t);
+                    v.len = v.len.min(v.t.saturating_add(delay.saturating_sub(v.delay)));
                 }
-                // velocity shapes the timbre (a harder pluck excites the overtones) and the level
-                let level = (0.45 + 0.55 * vel.clamp(0.0, 1.0)) * gain * crate::musicbox::HEADROOM;
+                // velocity is the gain: a zero-velocity note is silent, and above that it shapes
+                // the timbre (a harder pluck excites the overtones) on top of the level
+                if vel <= 0.0 {
+                    return None;
+                }
+                let level = vel.clamp(0.0, 1.0).powf(1.5) * gain * crate::musicbox::HEADROOM;
                 let tine = crate::musicbox::Tine::new(key, vel, &p, self.sr);
                 let i = self.trigger(VoiceKind::MusicBox, dest, idx, ch.id, delay, end, level, 1.0);
                 let v = &mut self.voices[i];

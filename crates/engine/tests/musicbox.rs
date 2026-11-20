@@ -245,3 +245,58 @@ fn a_slide_note_glides_the_tine_to_its_new_key() {
     let after = freq(&x[(1.10 * sr) as usize..(1.40 * sr) as usize]);
     assert!((after - 523.25).abs() < 14.0, "after the glide: {after:.1} Hz");
 }
+
+#[test]
+fn the_body_resonance_stays_bounded_even_on_its_own_pitch() {
+    // F#3 = 185 Hz sits exactly on the first body mode: a sustained note there must pass the
+    // resonator at its own amplitude (a bare (1 − r) feed amplified it ~20x before the gain)
+    let loud = project(vec![note(0.0, 64.0, 54, 1.0)], MusicBoxState { body: 100.0, ..Default::default() });
+    let pk = render(loud).iter().fold(0f32, |a, b| a.max(b.abs()));
+    assert!(pk < 0.8, "F#3 with Body 100 % peaks at {pk:.2}");
+    // and Body 0 stays the dry tine, also bounded
+    let dry = render(project(vec![note(0.0, 64.0, 54, 1.0)], MusicBoxState { body: 0.0, ..Default::default() }));
+    let dpk = dry.iter().fold(0f32, |a, b| a.max(b.abs()));
+    assert!(dpk < 0.8, "dry tine peaks at {dpk:.2}");
+}
+
+#[test]
+fn a_zero_velocity_note_is_silent() {
+    let x = render(project(vec![note(0.0, 8.0, 60, 0.0)], MusicBoxState::default()));
+    assert!(x.iter().all(|v| v.abs() < 1e-9), "a zero-velocity note made sound");
+}
+
+#[test]
+fn a_manual_knob_edit_survives_an_automation_without_clips() {
+    // an envelope that no clip drives owns nothing: after editing ring to 250 the render must
+    // decay like ring 250 (the old carry reinstated the stale runtime value on every rebuild)
+    let base = |ring: f32| {
+        let mut p = project(vec![note(0.0, 64.0, 60, 0.9)], MusicBoxState { ring, ..Default::default() });
+        p.patterns[0].len = 16.0;
+        p.patterns[0].min_len = 16.0;
+        p.clips[0].len = 16.0;
+        p
+    };
+    let auto = Automation {
+        id: 500,
+        name: "R".into(),
+        color: "#fff".into(),
+        target: AutoTarget::MusicBox { chan_id: CH, param: "ring".into() },
+        points: vec![AutoPoint::at(0.0, 0.5)],
+    };
+    let e = Engine::new(base(100.0), Arc::new(NoPlugins));
+    e.apply(&[Op::PutAutomation { automation: auto }], false, None).unwrap();
+    let ch = e.project().channel(CH).unwrap().clone();
+    let edited = Channel { src: ChannelSrc::MusicBox { music_box: MusicBoxState { ring: 250.0, ..Default::default() } }, ..ch };
+    e.apply(&[Op::PutChannel { channel: edited, index: None }], false, None).unwrap();
+    let edited_rms = rms(&render_to(e.project().clone(), 24.0)[150_000..250_000]);
+
+    // control: the same undriven automation without the edit decays like ring 100
+    let control = render_to(base(100.0), 24.0);
+    let control_rms = rms(&control[150_000..250_000]);
+    // and plain ring 250 without any automation decays the same as the edited one
+    let plain = render_to(base(250.0), 24.0);
+    let plain_rms = rms(&plain[150_000..250_000]);
+
+    assert!(edited_rms > control_rms * 2.0, "the edit was ignored: {edited_rms:.5} vs control {control_rms:.5}");
+    assert!((edited_rms - plain_rms).abs() < 1e-4, "the edit changed the sound: {edited_rms:.5} vs plain {plain_rms:.5}");
+}

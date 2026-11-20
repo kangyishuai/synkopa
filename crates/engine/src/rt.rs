@@ -2722,6 +2722,21 @@ fn carry_automated(new: &mut Timeline, old: &Timeline) {
             | TargetRt::MbSpread(i)
             | TargetRt::MbRelease(i) => {
                 let Some(c) = new.chans.get_mut(i) else { continue };
+                // a Music Box envelope with no clips drives nothing: carrying the old runtime
+                // value here would keep overriding a manual knob edit on every rebuild (only a
+                // Drive — automation that actually plays — owns the runtime value)
+                if matches!(
+                    a.target,
+                    TargetRt::MbRing(_)
+                        | TargetRt::MbBrightness(_)
+                        | TargetRt::MbBody(_)
+                        | TargetRt::MbMechanical(_)
+                        | TargetRt::MbSpread(_)
+                        | TargetRt::MbRelease(_)
+                ) && !new.drives.iter().any(|d| d.target == a.target)
+                {
+                    continue;
+                }
                 let Some(o) = old.chans.iter().find(|o| o.id == c.id) else { continue };
                 match a.target {
                     TargetRt::ChanVol(_) => (c.gain, c.gain0) = (o.gain, o.gain0),

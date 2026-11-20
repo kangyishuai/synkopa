@@ -84,7 +84,7 @@ impl Default for Tine {
             tick_lp: 0.0,
             tick_coef: 0.0,
             pan: 0.0,
-            body: [BodyMode { freq: 0.0, r: 0.0, gain: 0.0, s1: 0.0, s2: 0.0 }; 2],
+            body: [BodyMode { freq: 0.0, r: 0.0, a: 0.0, gain: 0.0, s1: 0.0, s2: 0.0 }; 2],
         }
     }
 }
@@ -124,6 +124,11 @@ struct BodyMode {
     freq: f32,
     /// Resonator pole radius: −60 dB after [`BODY_T60`] seconds.
     r: f32,
+    /// Input scaling that makes the resonator's steady-state gain at its own pole exactly 1:
+    /// a note sitting on the mode passes at its own amplitude, not amplified (a bare
+    /// `(1 − r)` leaves a sustained tone amplified by 1/|1 − r·e^(−2jw)| ≈ 1/(2 sin w),
+    /// ~20× at 185 Hz and 48 kHz).
+    a: f32,
     /// Mix of the mode under the dry note.
     gain: f32,
     s1: f32,
@@ -132,16 +137,18 @@ struct BodyMode {
 
 impl BodyMode {
     fn new(freq: f32, gain: f32, sr: f32) -> Self {
-        Self { freq, gain, r: 10f32.powf(-3.0 / (BODY_T60 * sr)), s1: 0.0, s2: 0.0 }
+        let r = 10f32.powf(-3.0 / (BODY_T60 * sr));
+        let w = std::f32::consts::TAU * freq / sr;
+        // |1 − r·e^(−2jw)|: the resonant denominator's remaining factor
+        let k = (1.0 - 2.0 * r * (2.0 * w).cos() + r * r).sqrt();
+        Self { freq, r, a: (1.0 - r) * k, gain, s1: 0.0, s2: 0.0 }
     }
 
-    /// Two-pole resonator: rings at `freq`, fed by the note. The `(1 − r)` input scaling
-    /// normalizes it: at resonance the loop's steady-state gain would otherwise be 1/(1 − r),
-    /// thousands for a slow-decaying mode.
+    /// Two-pole resonator: rings at `freq`, fed by the note at unit steady-state gain.
     fn process(&mut self, x: f32, sr: f32) -> f32 {
         let w = std::f32::consts::TAU * self.freq / sr;
         let c2r = 2.0 * self.r * w.cos();
-        let y = c2r * self.s1 - self.r * self.r * self.s2 + (1.0 - self.r) * x;
+        let y = c2r * self.s1 - self.r * self.r * self.s2 + self.a * x;
         self.s2 = self.s1;
         self.s1 = y;
         y * self.gain
@@ -182,7 +189,9 @@ impl Tine {
         let mut freq = [1.0; PARTIALS];
         let mut sum = 0.0;
         for k in 0..PARTIALS {
-            freq[k] = f0 * PARTIAL_RATIOS[k].min(sr * 0.45);
+            // the bandwidth limit applies to the resulting frequency, not the ratio: C6's
+            // fourth partial is ~36 kHz at 48 kHz and would fold back as garbage
+            freq[k] = (f0 * PARTIAL_RATIOS[k]).min(sr * 0.45);
             let t60_k = t60 / (1.0 + 5.0 * k as f32);
             decay[k] = 10f32.powf(-3.0 / (t60_k.max(0.01) * sr));
             amp[k] = PARTIAL_BASE[k] * b.powf(k as f32);
@@ -308,5 +317,24 @@ mod tests {
         assert!(check(999.0, 45.0, 30.0, 25.0, 35.0, 400.0).is_err());
         assert!(check(100.0, 45.0, 30.0, 25.0, 35.0, f32::NAN).is_err());
         assert!(check(100.0, 45.0, 30.0, 25.0, 35.0, 9999.0).is_err());
+    }
+
+    #[test]
+    fn partials_stay_under_the_bandwidth_limit() {
+        // C7's fourth partial would be ~72 kHz: it must clamp to the rendering bandwidth
+        // instead of folding back as garbage
+        let t = Tine::new(96, 0.8, &Params::default(), 48_000.0);
+        for f in t.freq {
+            assert!(f <= 48_000.0 * 0.45 + 0.01, "partial {f} Hz is above the bandwidth");
+        }
+        // and the body resonator passes a sustained tone at unit gain (the F#3 case)
+        let mut mode = BodyMode::new(BODY_MODES[0], 1.0, 48_000.0);
+        let sr = 48_000.0;
+        let f_in = 185.0_f32;
+        for i in 0..(2.0 * sr) as usize {
+            mode.process((std::f32::consts::TAU * f_in * i as f32 / sr).sin(), sr);
+        }
+        let y = mode.process((std::f32::consts::TAU * f_in * 40000.0 / sr).sin(), sr);
+        assert!((y.abs() - 1.0).abs() < 0.1, "resonator steady-state gain {} at its own pitch", y.abs());
     }
 }
