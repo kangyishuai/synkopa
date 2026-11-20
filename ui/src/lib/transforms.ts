@@ -174,6 +174,97 @@ function euclideanOnsets(k: number, n: number, rotate: number): boolean[] {
   });
 }
 
+/** The arpeggiator's directions and the shortest chop piece / arpeggio step (a 64th), as the engine's. */
+export const ARP_MODES = ['up', 'down', 'upDown', 'random'] as const;
+export const MIN_PIECE = 0.25;
+/** At most this many notes from one chop or arpeggio (the engine's bound). */
+const MAX_MADE = 20000;
+
+/** Notes chop, glue and the arpeggiator leave as they are: step triggers and slide notes (engine `untouched`). */
+const isTrig = (n: Note) => n.trig === true || n.slide === true;
+const f = Math.fround;
+
+/** How many notes `chop` makes (the engine's `chop_count`). */
+function chopCount(notes: readonly Note[], len: number): number {
+  const l = f(Math.max(MIN_PIECE, len));
+  return notes.reduce((s, n) => s + (isTrig(n) || n.len <= f(l + f(1e-4)) ? 1 : Math.ceil(f(f(n.len - f(1e-4)) / l))), 0);
+}
+
+/** FL's chop (engine `transform::chop`). */
+function chopNotes(notes: Note[], len: number): Note[] {
+  const l = f(Math.max(MIN_PIECE, len));
+  const out: Note[] = [];
+  for (const n of notes) {
+    if (isTrig(n) || n.len <= f(l + f(1e-4))) { out.push(n); continue; }
+    const end = f(n.step + n.len);
+    for (let k = 0, s = n.step; s < f(end - f(1e-4)); k++, s = f(n.step + f(k * l))) out.push({ ...n, step: s, len: Math.min(f(end - s), l) });
+  }
+  return out;
+}
+
+/** FL's glue (engine `transform::glue`): notes keep their order, joined ones drop out. */
+function glueNotes(notes: Note[], roots: { id: number; root: number }[]): Note[] {
+  const key = (n: Note) => n.p ?? roots.find(r => r.id === n.ch)?.root ?? 60;
+  const order = notes.map((_, i) => i).filter(i => !isTrig(notes[i]))
+    .sort((a, b) => notes[a].ch - notes[b].ch || key(notes[a]) - key(notes[b]) || notes[a].step - notes[b].step || a - b);
+  const out = notes.map(n => ({ ...n }));
+  const gone = new Set<number>();
+  let cur = -1;
+  for (const j of order) {
+    const c = out[cur];
+    if (cur >= 0 && c.ch === out[j].ch && key(c) === key(out[j]) && out[j].step <= f(f(c.step + c.len) + f(1e-3))) {
+      const end = Math.max(f(c.step + c.len), f(out[j].step + out[j].len));
+      c.len = f(end - c.step);
+      gone.add(j);
+    } else cur = j;
+  }
+  return out.filter((_, i) => !gone.has(i));
+}
+
+/** Held notes grouped by (channel, start), the groups in that order (engine `arp_groups`). */
+function arpGroups(notes: readonly Note[]): number[][] {
+  const groups = new Map<string, number[]>();
+  notes.forEach((n, i) => {
+    if (isTrig(n)) return;
+    const k = `${n.ch}:${n.step}`;
+    const g = groups.get(k); if (g) g.push(i); else groups.set(k, [i]);
+  });
+  return [...groups.entries()].sort(([a], [b]) => {
+    const [ca, sa] = a.split(':').map(Number), [cb, sb] = b.split(':').map(Number);
+    return ca - cb || sa - sb;
+  }).map(([, g]) => g);
+}
+
+function arpCount(notes: readonly Note[], rate: number): number {
+  const r = f(Math.max(MIN_PIECE, rate));
+  return arpGroups(notes).reduce((s, g) => s + Math.ceil(f(Math.max(...g.map(i => notes[i].len)) / r)), 0) + notes.filter(isTrig).length;
+}
+
+/** FL's arpeggiator (engine `transform::arpeggiate`). */
+function arpeggiateNotes(notes: Note[], roots: { id: number; root: number }[], mode: string, rate: number, gate: number, octaves: number, rng: SplitMix64): Note[] {
+  const r = f(Math.max(MIN_PIECE, rate)), gt = f(Math.min(1, Math.max(0.05, gate)));
+  const key = (n: Note) => n.p ?? roots.find(x => x.id === n.ch)?.root ?? 60;
+  const out: Note[] = notes.filter(isTrig).map(n => ({ ...n }));
+  for (const g of arpGroups(notes)) {
+    const keys = [...new Set(g.map(i => key(notes[i])))].sort((a, b) => a - b);
+    let up: [number, number][] = [];
+    for (let o = 0; o < Math.min(4, Math.max(1, octaves)); o++) keys.forEach((k, j) => { if (k + 12 * o <= 127) up.push([k + 12 * o, j]); });
+    const cycle = mode === 'down' ? up.reverse() : mode === 'upDown' && up.length > 2 ? [...up, ...up.slice(1, -1).reverse()] : up;
+    if (!cycle.length) continue;
+    const from = keys.map(k => g.map(i => notes[i]).find(n => key(n) === k) ?? notes[g[0]]);
+    const first = notes[g[0]], start = first.step;
+    const end = f(start + Math.max(...g.map(i => notes[i].len)));
+    const len = f(r * gt);
+    for (let i = 0, t = start; t < f(end - f(1e-4)); i++, t = f(start + f(i * r))) {
+      const [p, j] = mode === 'random' ? cycle[rng.below(cycle.length)] : cycle[i % cycle.length];
+      const v = from[j].v ?? 1, pan = from[j].pan ?? 0;
+      out.push({ ch: first.ch, step: t, len: Math.min(len, f(end - t)), p, ...(v !== 1 ? { v } : {}), trig: false, ...(pan ? { pan } : {}) });
+    }
+    up = [];
+  }
+  return out;
+}
+
 /** One `transformNotes` op against a pattern's notes; mutates `notes` in place. Throws on invalid params. */
 export function applyTransform(notes: Note[], verb: TransformVerb, seed: number, select: TransformSelect | null, roots: { id: number; root: number }[], key: number | null, scale: number, lenSteps: number): void {
   const rng = new SplitMix64(seed);
@@ -195,7 +286,18 @@ export function applyTransform(notes: Note[], verb: TransformVerb, seed: number,
       : notes.map((n, i) => (n.step >= Math.min(select.from, select.to) && n.step < Math.max(select.from, select.to) && (!select.ch || n.ch === select.ch) ? i : -1))
           .filter(i => i >= 0);
   const idx = generative ? notes.map((_, i) => i) : selIdx;
-  const target: Note[] = idx.map(i => structuredClone(notes[i]));
+  let target: Note[] = idx.map(i => structuredClone(notes[i]));
+  if (verb.kind === 'chop' && !(Number.isFinite(verb.len ?? 1) && (verb.len ?? 1) >= MIN_PIECE)) throw new Error('chop len must be at least 0.25 steps (a 64th)');
+  if (verb.kind === 'arpeggiate') {
+    if (!(ARP_MODES as readonly string[]).includes(verb.mode ?? 'up')) throw new Error(`arpeggiate mode must be one of ${ARP_MODES.join(', ')}`);
+    if (!(Number.isFinite(verb.rate ?? 1) && (verb.rate ?? 1) >= MIN_PIECE)) throw new Error('arpeggiate rate must be at least 0.25 steps (a 64th)');
+    const gate = verb.gate ?? 0.9;
+    if (!(Number.isFinite(gate) && gate >= 0.05 && gate <= 1)) throw new Error('arpeggiate gate must be 0.05..1');
+    const oct = verb.octaves ?? 1;
+    if (!(Number.isInteger(oct) && oct >= 1 && oct <= 4)) throw new Error('arpeggiate octaves must be 1..4');
+  }
+  const made = verb.kind === 'chop' ? chopCount(target, verb.len ?? 1) : verb.kind === 'arpeggiate' ? arpCount(target, verb.rate ?? 1) : 0;
+  if (made > MAX_MADE) throw new Error(`that would make ${made} notes (at most ${MAX_MADE}): pick fewer notes or a longer step`);
 
   switch (verb.kind) {
     case 'chord': {
@@ -419,9 +521,13 @@ export function applyTransform(notes: Note[], verb: TransformVerb, seed: number,
     }
   }
 
+  if (verb.kind === 'chop') target = chopNotes(target, verb.len ?? 1);
+  else if (verb.kind === 'glue') target = glueNotes(target, roots);
+  else if (verb.kind === 'arpeggiate') target = arpeggiateNotes(target, roots, verb.mode ?? 'up', verb.rate ?? 1, verb.gate ?? 0.9, verb.octaves ?? 1, rng);
+
   if (!select || generative) {
     notes.splice(0, notes.length, ...target);
-  } else if (verb.kind === 'chord') {
+  } else if (verb.kind === 'chord' || verb.kind === 'chop' || verb.kind === 'glue' || verb.kind === 'arpeggiate') {
     // chord grew its selection (roots stay, tones appended): everything unselected
     // stays, the roots keep their slots and the appended tones follow the target
     const selected = new Set(idx);

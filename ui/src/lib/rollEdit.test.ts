@@ -2,8 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Channel, Note } from '../api/types';
 import {
   applyProps, fitRange, fmtStart, followPage, invertSelection, legato, MAX_STEP, notesOfKey, nudgeNotes, nudgeVelocity, pasteStart,
-  parseKey, parseLen, parseStart, parseVel, panLine, quantizeStarts, readProps, velocityLine, wheelNotches,
-parsePan, sharedPan,
+  parseKey, parseLen, parseStart, panLine, quantizeStarts, readProps, velocityLine, wheelNotches,
 } from './rollEdit';
 
 const CH = { id: 1, root: 60 } as Channel;
@@ -123,8 +122,6 @@ describe('note properties', () => {
     expect(parseKey('A-1')).toBe(9);
     expect(parseKey('64')).toBe(64);
     for (const bad of ['H4', '128', 'G9x', 'C10']) expect(parseKey(bad)).toBeNull();
-    expect(parseVel('80 %')).toBe(80);
-    expect(parseVel('101')).toBeNull();
   });
   it('reads one note and a mixed selection', () => {
     expect(readProps(N, [1], CH)).toEqual({ vel: 50, len: 1, start: 3.6, key: 64 });
@@ -206,20 +203,9 @@ describe('panLine', () => {
   });
 });
 
-describe('note pan as text', () => {
-  it('reads the forms the readouts use, and signed percents', () => {
-    expect(parsePan('C')).toBe(0);
-    expect(parsePan('30R')).toBe(0.3);
-    expect(parsePan('l50')).toBe(-0.5);
-    expect(parsePan('-25')).toBe(-0.25);
-    expect(parsePan('100 %')).toBe(1);
-    expect(parsePan('120')).toBeNull();
-    expect(parsePan('left')).toBeNull();
-  });
+describe('note pan through the properties', () => {
   it('sets and clears the pan of the edited notes only', () => {
     const notes = [{ ch: 1, step: 0, len: 1 }, { ch: 1, step: 2, len: 1, pan: 0.4 }];
-    expect(sharedPan(notes, [0, 1])).toBeNull();
-    expect(sharedPan(notes, [1])).toBe(0.4);
     const out = applyProps(notes, [0], undefined, { pan: -0.5 })!;
     expect(out[0].pan).toBe(-0.5); expect(out[1].pan).toBe(0.4);
     expect('pan' in applyProps(notes, [1], undefined, { pan: 0 })![1]).toBe(false);

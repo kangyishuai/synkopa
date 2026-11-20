@@ -70,8 +70,21 @@ fn headroom(mode: f32) -> f32 {
 
 #[derive(Clone, Copy, Debug)]
 enum Ev {
-    On { key: u8, vel: f32, id: u32, live: bool, pan: f32 },
-    Off { id: u32 },
+    On {
+        key: u8,
+        vel: f32,
+        id: u32,
+        live: bool,
+        pan: f32,
+    },
+    Off {
+        id: u32,
+    },
+    /// A slide note: the sounding notes glide by the distance from the highest to `key`.
+    Slide {
+        key: u8,
+        len: u32,
+    },
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -81,9 +94,15 @@ struct Event {
 }
 
 impl Event {
-    /// Note-offs before note-ons at the same sample (touching notes do not slide).
+    /// Note-offs before note-ons at the same sample (touching notes do not slide), and slide
+    /// notes after the note-ons (a slide bends a note that starts with it).
     fn key(&self) -> (u64, u8) {
-        (self.at, matches!(self.ev, Ev::On { .. }) as u8)
+        let order = match self.ev {
+            Ev::Off { .. } => 0,
+            Ev::On { .. } => 1,
+            Ev::Slide { .. } => 2,
+        };
+        (self.at, order)
     }
 }
 
@@ -287,6 +306,24 @@ impl SynthInst {
         self.dest = Some(dest);
         self.push(Event { at, ev: Ev::On { key, vel, id, live: false, pan } });
         self.push(Event { at: at + len.max(1) as u64, ev: Ev::Off { id } });
+    }
+
+    /// A slide note `delay` samples from now (see [`crate::model::Note::slide`]): the notes
+    /// sounding then glide by the distance from the highest of them to `key` over `len` samples.
+    pub fn slide(&mut self, delay: u32, key: u8, len: u32) {
+        self.push(Event { at: self.now + delay as u64, ev: Ev::Slide { key, len } });
+    }
+
+    fn slide_now(&mut self, key: u8, len: u32) {
+        let sounding = |v: &Voice| v.on && v.fade_step == 0.0 && !v.released();
+        let Some(top) = self.voices[..POLY].iter().filter(|v| sounding(v)).map(|v| v.goal()).max_by(f32::total_cmp) else {
+            return;
+        };
+        let by = key as f32 - top;
+        for v in self.voices[..POLY].iter_mut().filter(|v| sounding(v)) {
+            v.slide_by(by, len as f32);
+        }
+        self.last_st = Some(key as f32);
     }
 
     /// A live key went down; it sounds until [`Self::key_up`] (and the pedal).
@@ -518,6 +555,7 @@ impl SynthInst {
             match e.ev {
                 Ev::On { key, vel, id, live, pan } => self.note_start(key, vel, id, live, pan),
                 Ev::Off { id } => self.note_stop(id),
+                Ev::Slide { key, len } => self.slide_now(key, len),
             }
         }
     }

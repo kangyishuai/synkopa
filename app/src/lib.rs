@@ -806,9 +806,35 @@ async fn project_open(app: St<'_>, handle: AppHandle, path: Option<String>, if_r
     let warnings = tauri::async_runtime::spawn_blocking(move || e.open_at_revision(&p2, Some(revision))).await.map_err(es)?.map_err(es)?;
     app.recovery.clear();
     let mut s = app.settings.lock();
-    s.last_project = Some(path.display().to_string());
+    s.remember(&path.display().to_string());
     s.save();
     Ok(open_reply(app.engine.state(), warnings))
+}
+
+/// File → Open recent: the projects opened or saved lately, newest first, each with whether
+/// the file is still there.
+#[tauri::command]
+async fn recent_projects(app: St<'_>) -> R<Value> {
+    let list = app.settings.lock().recent.clone();
+    let rows: Vec<Value> = list
+        .iter()
+        .map(|p| {
+            let path = std::path::Path::new(p);
+            let name = path.file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.clone());
+            let dir = path.parent().map(|d| d.display().to_string()).unwrap_or_default();
+            json!({ "path": p, "name": name, "dir": dir, "exists": path.is_file() })
+        })
+        .collect();
+    Ok(json!(rows))
+}
+
+/// Takes a project off File → Open recent (`path` absent: clears the list).
+#[tauri::command]
+async fn recent_forget(app: St<'_>, path: Option<String>) -> R<()> {
+    let mut s = app.settings.lock();
+    s.forget(path.as_deref());
+    s.save();
+    Ok(())
 }
 
 #[tauri::command]
@@ -838,7 +864,7 @@ async fn project_save(app: St<'_>, handle: AppHandle, save_as: Option<bool>, ver
     tauri::async_runtime::spawn_blocking(move || e.save(&p2)).await.map_err(es)?.map_err(es)?;
     app.recovery.clear();
     let mut s = app.settings.lock();
-    s.last_project = Some(path.display().to_string());
+    s.remember(&path.display().to_string());
     s.save();
     Ok(json!({ "path": path.display().to_string() }))
 }
@@ -1363,6 +1389,8 @@ pub fn run(project_arg: Option<&str>) {
             project_open,
             take_project_open_requests,
             project_save,
+            recent_projects,
+            recent_forget,
             project_export_zip,
             recovery_write,
             recovery_list,
