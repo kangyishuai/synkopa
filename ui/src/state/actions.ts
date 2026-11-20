@@ -1,5 +1,5 @@
 // Commands shared by the toolbar, keyboard, menus and views.
-import { batch } from 'solid-js';
+import { batch } from '../lib/reactive';
 import { shownFloating } from './winOrder';
 import { be } from '../api/backend';
 import { t, tName } from '../lib/i18n';

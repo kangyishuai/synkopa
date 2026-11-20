@@ -1,7 +1,7 @@
 import '@fontsource-variable/geist';
 import '@fontsource-variable/geist-mono';
 import './styles.css';
-import { render } from 'solid-js/web';
+import { render } from '@solidjs/web';
 import { getBackend } from './api/backend';
 import { onStateEvent } from './state/edit';
 import { replaceState, S, setS } from './state/store';
