@@ -10,7 +10,7 @@ import { t } from '../lib/i18n';
 import { Icon } from './icons';
 import { SWATCHES } from '../lib/color';
 import { INST_ICONS, InstIcon } from './instIcons';
-import { pressKeepsMenu } from './menuPress';
+import { isPointerEvent, pressKeepsMenu } from './menuPress';
 
 /**
  * The one context menu (items are built by whoever opens it).
@@ -28,8 +28,11 @@ export function ContextMenu() {
     // buttons) must not fire on whatever sits under the pointer; `swallowing` resets on the
     // next press, so a stray button's events from another press are never eaten
     let swallowing = false;
-    const release = (e: Event) => {
+    const release = (e: UIEvent) => {
       if (!swallowing) return;
+      // a click synthesized without a press (Enter / Space on the focused control, el.click())
+      // is not part of the dismissed press and reaches it even while the press is swallowed
+      if (!isPointerEvent(e)) return;
       e.preventDefault();
       e.stopPropagation();
     };
@@ -43,16 +46,11 @@ export function ContextMenu() {
       e.stopPropagation();
       swallowing = true;
     };
-    // a key between the absorbed press and its click is a new gesture: keyboard activation
-    // (Enter/Space fires click without a press) must not be eaten by the stale swallow window
-    const rearm = () => { swallowing = false; };
     document.addEventListener('pointerdown', down, true);
-    document.addEventListener('keydown', rearm, true);
     for (const t of ['pointerup', 'click', 'auxclick', 'contextmenu'] as const)
       document.addEventListener(t, release, true);
     onCleanup(() => {
       document.removeEventListener('pointerdown', down, true);
-      document.removeEventListener('keydown', rearm, true);
       for (const t of ['pointerup', 'click', 'auxclick', 'contextmenu'] as const)
         document.removeEventListener(t, release, true);
     });
@@ -64,7 +62,7 @@ export function ContextMenu() {
   );
 }
 
-/** One menu panel; `sub` items open a nested panel on hover. */
+/** One menu panel (`ctxmenu` marks it for the press dismissal; `sub` items open a nested panel on hover). */
 function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolean }) {
   const [open, setOpen] = createSignal<{ i: number; x: number; y: number } | null>(null);
   let el!: HTMLDivElement;
@@ -81,7 +79,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
   const glyph = (it: { label: string; glyph?: MenuGlyph; checked?: boolean }) => it.checked != null ? (it.checked ? CHECK_GLYPH : null) : it.glyph ?? menuGlyph(it.label);
   return (
     <>
-          <div ref={el} class="menu" classList={{ submenu: !!props.sub }} style={{ left: pos().x + 'px', top: pos().y + 'px' }} onPointerDown={e => e.stopPropagation()}>
+          <div ref={el} class="menu ctxmenu" classList={{ submenu: !!props.sub }} style={{ left: pos().x + 'px', top: pos().y + 'px' }} onPointerDown={e => e.stopPropagation()}>
             <For each={props.items}>
               {it => (
                 <Switch>
