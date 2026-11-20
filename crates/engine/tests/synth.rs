@@ -24,6 +24,7 @@ fn synth_channel(id: Id, preset: &str) -> Channel {
         solo: false,
         insert: None,
         root: 60,
+        group: None,
     }
 }
 

@@ -102,6 +102,7 @@ fn project() -> Project {
             solo: false,
             insert: Some(p.inserts[1 + k].id),
             root: 60,
+            group: None,
         });
         for s in 0..8 {
             notes.push(Note::new(id, (s * 4) as f32, 3.0, Some(48 + ((k * 3 + s * 5) % 24) as u8)));

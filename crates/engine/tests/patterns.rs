@@ -222,6 +222,7 @@ fn sampler_channel_plays_its_sample_at_the_note_pitch() {
         solo: false,
         insert: None,
         root: SAMPLE_ROOT,
+        group: None,
     };
     // no master limiter: a clean measurement
     let lim = p.inserts[0].fx.iter().map(|f| Op::RemoveFx { fx_id: f.id });
@@ -438,6 +439,7 @@ fn save_and_open_round_trip() {
         solo: true,
         insert: Some(4),
         root: 57,
+        group: None,
     };
     let mut pat = p.patterns[0].clone();
     pat.swing = 0.4;

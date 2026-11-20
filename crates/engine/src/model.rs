@@ -602,6 +602,9 @@ pub struct Channel {
     /// the sample plays at its original pitch.
     #[serde(default = "sample_root")]
     pub root: u8,
+    /// The Channel Rack filter group it belongs to (FL's filter groups); `None` = unsorted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 fn vol_unity() -> f32 {
@@ -625,6 +628,7 @@ impl Channel {
             solo: false,
             insert: None,
             root: SAMPLE_ROOT,
+            group: None,
         }
     }
     /// A sampler channel playing `source` with the default settings.
