@@ -234,6 +234,7 @@ pub fn layout(notes: &[RecNote], ch: Id, beats_per_bar: f64) -> Option<RecordedC
             p: Some(n.key),
             v: MidiMsg::vel_gain(n.vel),
             trig: Some(false),
+            slide: false,
         })
         .collect();
     Some(RecordedClip { start, len, notes })
@@ -260,6 +261,7 @@ pub fn fold_loop(notes: &[RecNote], ch: Id, la: f64, span: f64) -> Vec<Note> {
                 p: Some(n.key),
                 v: MidiMsg::vel_gain(n.vel),
                 trig: Some(false),
+                slide: false,
             }
         })
         .collect()
@@ -423,7 +425,7 @@ mod tests {
         assert_eq!(c.start, 4.0);
         assert_eq!(c.len, 4.0); // up to 6.25 → 2.25 beats in → one bar
         assert_eq!(c.notes.len(), 2);
-        assert_eq!(c.notes[0], Note { ch: 7, step: 2.0, len: 2.0, p: Some(60), v: 1.0, trig: Some(false), pan: 0.0 });
+        assert_eq!(c.notes[0], Note { ch: 7, step: 2.0, len: 2.0, p: Some(60), v: 1.0, trig: Some(false), pan: 0.0, slide: false });
         assert_eq!(c.notes[1].step, 4.0);
         assert_eq!(c.notes[1].len, 5.0);
         assert!((c.notes[1].v - 64.0 / 127.0).abs() < 1e-6);

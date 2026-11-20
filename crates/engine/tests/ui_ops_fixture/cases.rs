@@ -429,6 +429,95 @@ pub fn cases() -> Vec<Case> {
     // ---- note transforms
     c.push((
         "main",
+        "chop cuts the selected held notes into pieces",
+        vec![Op::TransformNotes {
+            pattern: 20,
+            verb: TransformVerb::Chop { len: 1.5 },
+            seed: None,
+            select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+        }],
+    ));
+    c.push((
+        "main",
+        "chop then glue gives the notes back",
+        vec![
+            Op::TransformNotes {
+                pattern: 20,
+                verb: TransformVerb::Chop { len: 1.5 },
+                seed: None,
+                select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+            },
+            Op::TransformNotes {
+                pattern: 20,
+                verb: TransformVerb::Glue {},
+                seed: None,
+                select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+            },
+        ],
+    ));
+    c.push((
+        "main",
+        "chop without a selection cuts every channel and leaves steps",
+        vec![Op::TransformNotes { pattern: 20, verb: TransformVerb::Chop { len: 1.0 }, seed: None, select: None }],
+    ));
+    c.push((
+        "main",
+        "chop refuses a piece shorter than a 64th",
+        vec![Op::TransformNotes {
+            pattern: 20,
+            verb: TransformVerb::Chop { len: 0.1 },
+            seed: None,
+            select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+        }],
+    ));
+    c.push((
+        "main",
+        "arpeggiate runs chords up and down over two octaves",
+        vec![
+            Op::TransformNotes {
+                pattern: 20,
+                verb: TransformVerb::Chord { harmony: "maj".into() },
+                seed: None,
+                select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+            },
+            Op::TransformNotes {
+                pattern: 20,
+                verb: TransformVerb::Arpeggiate { mode: "upDown".into(), rate: 0.5, gate: 0.5, octaves: 2 },
+                seed: None,
+                select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+            },
+        ],
+    ));
+    c.push((
+        "main",
+        "arpeggiate random is seeded",
+        vec![
+            Op::TransformNotes {
+                pattern: 20,
+                verb: TransformVerb::Chord { harmony: "maj".into() },
+                seed: None,
+                select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+            },
+            Op::TransformNotes {
+                pattern: 20,
+                verb: TransformVerb::Arpeggiate { mode: "random".into(), rate: 1.0, gate: 0.75, octaves: 1 },
+                seed: Some(3),
+                select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+            },
+        ],
+    ));
+    c.push((
+        "main",
+        "arpeggiate refuses an unknown mode",
+        vec![Op::TransformNotes {
+            pattern: 20,
+            verb: TransformVerb::Arpeggiate { mode: "sideways".into(), rate: 1.0, gate: 0.9, octaves: 1 },
+            seed: None,
+            select: Some(TransformSelect::Range { from: 0.0, to: 32.0, ch: Some(31) }),
+        }],
+    ));
+    c.push((
+        "main",
         "strum spreads the selected same-start notes",
         vec![Op::TransformNotes {
             pattern: 20,

@@ -10,7 +10,7 @@ import * as A from '../state/actions';
 import { getPeaks, peakRange, peaksVersion } from '../state/peaks';
 import { S } from '../state/store';
 import { openMenu, say, setU, U } from '../state/ui';
-import { dblCheck, track } from '../ui/drag';
+import { track } from '../ui/drag';
 import { fitCanvas } from '../ui/frameLoop';
 import { dropClipAt, dropPatternsAt, gridPoint } from './Playlist';
 import { rangeSelect, toggleSelect } from '../lib/mixer';
@@ -58,9 +58,8 @@ function pick(kind: ClipKind, ref: Id, name: string, color: string, e: PointerEv
 
 /** The preview key of a project source (library previews use the file path). */
 const srcKey = (id: Id) => 'src:' + id;
-/** Double-click on a project source: hear it alone; again while it plays stops it. */
+/** A press on a project source: hear it alone from the top, every time (as a library file and FL's browser; Esc stops). */
 function previewSource(s: Source) {
-  if (U.previewing && U.previewPath === srcKey(s.id)) { void be().previewStop(); setU('previewPath', null); return; }
   setU('previewPath', srcKey(s.id));
   be().previewSource(s.id).catch(e => { setU('previewPath', null); say(t('d.br.preverr', { err: String(e) })); });
   say(t('d.br.prev', { name: s.name }));
@@ -239,8 +238,8 @@ function AudioTab() {
             {s => (
               <div class="sitem" classList={{ on: U.cur?.kind === 'audio' && U.cur.ref === s.id, playing: U.previewing && U.previewPath === srcKey(s.id) }} title={t('d.br.src.tip')}
                 onPointerDown={e => {
-                  if (e.button === 0 && dblCheck('sitem' + s.id)) { e.preventDefault(); return previewSource(s); }
                   pick('audio', s.id, s.name, s.color, e);
+                  if (e.button === 0) previewSource(s);
                 }}>
                 <div class="row" style={{ gap: '8px' }}>
                   {/* the icon its clips show in the Playlist (guessed from the name), else a sample's */}

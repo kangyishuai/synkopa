@@ -142,6 +142,8 @@ function onKey(e: KeyboardEvent) {
     if (U.settings) return setU('settings', false);
     if (U.exportOpen) return void A.cancelExportOrClose();
     if (U.help) return setU('help', false);
+    // a Browser preview playing: Esc stops it first (wherever the keyboard is), as in the library list
+    if (U.previewing && U.previewPath) { setU('previewPath', null); return void be().previewStop(); }
     const top = topFloating();
     if (NB.open && !top) return closeNotebook();
     if (U.mixView) {

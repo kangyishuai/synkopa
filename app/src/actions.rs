@@ -862,7 +862,7 @@ pub fn schema() -> Value {
             "setLoop": {"loop": {"a": 0, "b": 16}},
             "putAutomation": {"automation": {"id": 0, "name": "Reverb mix", "color": "#e0a44a", "target": {"kind": "fx|mix|insertVol|insertPan|trackVol|chanVol|chanPan|synth|keys|clipGain|clipPan", "fxId": 0, "chanId": 0, "param": "fx: mix or band:<i>:f|g|q; synth: catalog id; keys: release|dynamics", "id": "insert/track/channel/clip id for vol/pan/gain"}, "points": [{"t": 0, "v": 0.2}, {"t": 8, "v": 0.8, "tension": -0.4}, {"t": 12, "v": 0.5, "shape": "hold"}]}},
             "removeAutomation": {"id": 0},
-            "transformNotes": {"pattern": 1, "verb": {"kind": "humanize|quantize|euclidFill|strum|euclidDrums|melody|chord|progression", "timing": 0.3, "velocity": 0.2, "grid": 1, "amount": 1, "scaleAware": false, "ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7, "width": 0.5, "ramp": 0.05, "voices": [{"ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7}], "bars": 2, "density": 0.5, "repeat": 1, "harmony": "diatonic|maj|min|7|maj7|min7", "template": "pop|pop2|minloop|trap|iivI|doowop|andalusian|blues|canon|chance", "voiceLead": true, "degrees": [0, 5, 2, 6]}, "seed": 7, "select": {"kind": "indices|range", "indices": [1, 2], "from": 0, "to": 16, "ch": 0}},
+            "transformNotes": {"pattern": 1, "verb": {"kind": "humanize|quantize|euclidFill|strum|chop|glue|arpeggiate|euclidDrums|melody|chord|progression", "len": 1, "mode": "up|down|upDown|random", "rate": 1, "gate": 0.9, "octaves": 1, "timing": 0.3, "velocity": 0.2, "grid": 1, "amount": 1, "scaleAware": false, "ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7, "width": 0.5, "ramp": 0.05, "voices": [{"ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7}], "bars": 2, "density": 0.5, "repeat": 1, "harmony": "diatonic|maj|min|7|maj7|min7", "template": "pop|pop2|minloop|trap|iivI|doowop|andalusian|blues|canon|chance", "voiceLead": true, "degrees": [0, 5, 2, 6]}, "seed": 7, "select": {"kind": "indices|range", "indices": [1, 2], "from": 0, "to": 16, "ch": 0}},
             "setKey": {"key": 2, "scale": 1},
             "putComp": {"comp": {"id": 0, "name": "Comp 1", "xfade": 0.01, "takes": [{"id": 0, "name": "Take 1", "ref": "source id", "start": 0, "len": 8, "offset": 0}], "regions": [{"take": 0, "from": 0, "to": 4, "xfade": 0.02}]}},
             "removeComp": {"id": 0},
@@ -1184,7 +1184,14 @@ fn pattern_json(p: &wave_engine::Project, pt: &wave_engine::Pattern) -> Value {
             if !simple {
                 row["notes"] = json!(notes
                     .iter()
-                    .map(|n| json!({ "step": n.step, "len": n.len, "p": n.p.unwrap_or(c.root), "v": n.v, "trig": n.trig.unwrap_or(false) }))
+                    .map(|n| {
+                        let mut j =
+                            json!({ "step": n.step, "len": n.len, "p": n.p.unwrap_or(c.root), "v": n.v, "trig": n.trig.unwrap_or(false) });
+                        if n.slide {
+                            j["slide"] = json!(true);
+                        }
+                        j
+                    })
                     .collect::<Vec<_>>());
             }
             row
@@ -1261,14 +1268,18 @@ pub fn pattern(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value> 
             pt.notes.extend(parse_steps(s, vel)?.into_iter().map(|(k, v)| Note { v, ..Note::trigger(ch, k, None) }));
         }
         if let Some(ns) = notes {
-            let list = ns.as_array().ok_or("--notes is a JSON array of {step, len, p?, v?, trig?}")?;
+            let list = ns.as_array().ok_or("--notes is a JSON array of {step, len, p?, v?, trig?, slide?}")?;
             for n in list {
                 let step = opt_f64(n, "step").ok_or("each note needs `step` (16ths)")? as f32;
                 let len = opt_f64(n, "len").unwrap_or(1.0) as f32;
                 let key = arg(n, "p").and_then(as_index).map(|k| k.min(127) as u8);
                 let v = opt_f64(n, "v").unwrap_or(1.0) as f32;
                 let trigger = arg(n, "trig").map(|v| v.as_bool().ok_or("note `trig` must be a boolean")).transpose()?.unwrap_or(false);
-                pt.notes.push(Note { v, trig: Some(trigger), ..Note::new(ch, step, len, key) });
+                let slide = arg(n, "slide").map(|v| v.as_bool().ok_or("note `slide` must be a boolean")).transpose()?.unwrap_or(false);
+                if slide && trigger {
+                    return Err("a slide note is held for its length (the glide time): it cannot be a trigger".into());
+                }
+                pt.notes.push(Note { v, trig: Some(trigger), slide, ..Note::new(ch, step, len, key) });
             }
         }
     }

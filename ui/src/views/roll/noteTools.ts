@@ -9,7 +9,7 @@ import type { Id, TransformSelect, TransformVerb } from '../../api/types';
 import type { TranslationKey } from '../../lib/i18n';
 import { PROGRESSION_TEMPLATES } from '../../lib/transforms';
 
-export type ToolId = 'humanize' | 'quantize' | 'euclid' | 'strum' | 'drums' | 'melody' | 'chord' | 'progression';
+export type ToolId = 'humanize' | 'quantize' | 'euclid' | 'strum' | 'chop' | 'glue' | 'arp' | 'drums' | 'melody' | 'chord' | 'progression';
 
 export type ToolField =
   | { kind: 'num'; label: TranslationKey; def: number; min: number; max: number; step: number }
@@ -19,6 +19,10 @@ export type ToolField =
 export const HARMONY_OPTIONS: { v: string; l: TranslationKey }[] = [
   { v: 'diatonic', l: 'b.pr.chord.diatonic' },
   ...['maj', 'min', '7', 'maj7', 'min7'].map(id => ({ v: id, l: `b.pr.chord.${id}` as TranslationKey })),
+];
+
+export const ARP_OPTIONS: { v: string; l: TranslationKey }[] = [
+  { v: 'up', l: 'b.pr.arp.up' }, { v: 'down', l: 'b.pr.arp.down' }, { v: 'upDown', l: 'b.pr.arp.upDown' }, { v: 'random', l: 'b.pr.arp.random' },
 ];
 
 export const TEMPLATE_OPTIONS: { v: string; l: TranslationKey }[] = [
@@ -39,6 +43,16 @@ export const TOOL_META: Record<ToolId, { label: TranslationKey; icon: string; fi
   ] },
   strum: { label: 'b.pr.tool.strum', icon: 'M4 18h7 M8 12h7 M12 6h7', fields: [
     { kind: 'num', label: 'b.pr.tool.strumA', def: 0.5, min: 0, max: 4, step: 0.05 }, { kind: 'num', label: 'b.pr.tool.strumB', def: 0.05, min: -0.5, max: 0.5, step: 0.01 },
+  ] },
+  chop: { label: 'b.pr.tool.chop', icon: 'M4 12h3 M10.5 12h3 M17 12h3 M8.75 7v10 M15.25 7v10', fields: [
+    { kind: 'num', label: 'b.pr.tool.chopA', def: 1, min: 0.25, max: 8, step: 0.25 },
+  ] },
+  glue: { label: 'b.pr.tool.glue', icon: 'M4 12h16 M8 8l-4 4 4 4 M16 8l4 4-4 4', fields: [] },
+  arp: { label: 'b.pr.tool.arp', icon: 'M4 18h3v-3 M9 15h3v-3 M14 12h3V9 M19 9h1', fields: [
+    { kind: 'select', label: 'b.pr.tool.arpMode', def: 'up', options: ARP_OPTIONS },
+    { kind: 'num', label: 'b.pr.tool.arpRate', def: 1, min: 0.25, max: 8, step: 0.25 },
+    { kind: 'num', label: 'b.pr.tool.arpGate', def: 0.9, min: 0.05, max: 1, step: 0.05 },
+    { kind: 'num', label: 'b.pr.tool.arpOct', def: 1, min: 1, max: 4, step: 1 },
   ] },
   drums: { label: 'b.pr.tool.drums', icon: 'M4 9a8 3 0 1 0 16 0a8 3 0 1 0-16 0 M4 9v7a8 3 0 0 0 16 0V9', fields: [
     { kind: 'num', label: 'b.pr.tool.drumsA', def: 4, min: 1, max: 32, step: 1 }, { kind: 'num', label: 'b.pr.tool.drumsB', def: 16, min: 1, max: 64, step: 1 },
@@ -78,12 +92,16 @@ export function buildTransformOp(
     : id === 'drums' ? { kind: 'euclidDrums', voices: [{ ch: chan, k: Math.max(1, Math.round(num(0, 4))), n: Math.max(1, Math.round(num(1, 16))) }], bars: Math.max(1, Math.round(patLen / 4)) }
     : id === 'melody' ? { kind: 'melody', ch: chan, bars: Math.max(1, Math.round(patLen / 4)), density: Math.min(1, Math.max(0.05, num(0, 0.5))), repeat: Math.max(1, Math.round(num(1, 2))) }
     : id === 'chord' ? { kind: 'chord', harmony: str(0) }
+    : id === 'chop' ? { kind: 'chop', len: Math.max(0.25, num(0, 1)) }
+    : id === 'glue' ? { kind: 'glue' }
+    : id === 'arp' ? { kind: 'arpeggiate', mode: (['up', 'down', 'upDown', 'random'].includes(str(0)) ? str(0) : 'up') as 'up', rate: Math.max(0.25, num(1, 1)),
+      gate: Math.min(1, Math.max(0.05, num(2, 0.9))), octaves: Math.min(4, Math.max(1, Math.round(num(3, 1)))) }
     : { kind: 'progression', ch: chan, bars: Math.min(32, Math.max(1, Math.round(num(1, 4)))), template: str(0), voiceLead: vals[2] !== false, degrees: [] };
   const seed = seedStr.trim() === '' ? undefined : Math.max(0, Math.floor(+seedStr || 0));
   return {
     op: 'transformNotes', pattern: patId, verb,
     ...(seed !== undefined ? { seed } : {}),
-    ...(id === 'humanize' || id === 'quantize' || id === 'strum' || id === 'chord'
+    ...(id === 'humanize' || id === 'quantize' || id === 'strum' || id === 'chord' || id === 'chop' || id === 'glue' || id === 'arp'
       ? sel.size > 0
         ? { select: { kind: 'indices' as const, indices: Array.from(sel).sort((x, y) => x - y) } }
         : { select: { kind: 'range' as const, from: 0, to: 1e9, ch: chan } }
