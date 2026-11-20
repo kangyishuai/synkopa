@@ -1,5 +1,5 @@
 // The command palette (Ctrl+K): a keyboard-first view over the app menus.
-import { fireEvent, render, screen } from '@solidjs/testing-library';
+import { cleanup, fireEvent, render, screen } from '@solidjs/testing-library';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { setU } from '../state/ui';
 import { settle } from '../test/settle';
@@ -108,12 +108,11 @@ describe('Palette', () => {
 
 describe('Palette, mounted while already open', () => {
   it('lists its commands (after the window is rebuilt with the palette open)', () => {
-    setPaletteOpen(false); settle();
-    setPaletteOpen(true); settle();
-    const { unmount } = render(() => <Palette />);
+    cleanup(); // the palette of beforeEach: only the one mounted open below is in the page
+    expect(paletteOpen()).toBe(true);
+    render(() => <Palette />);
     settle();
-    expect(screen.getAllByRole('dialog').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('New project').length).toBeGreaterThan(0);
-    unmount();
+    expect(screen.getByRole('dialog')).toBeTruthy();
+    expect(screen.getAllByRole('option').map(o => o.querySelector('.name')!.textContent)).toContain('New project');
   });
 });
