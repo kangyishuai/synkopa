@@ -8,7 +8,7 @@ import { createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive
 import { be } from '../api/backend';
 import type { Id, Note } from '../api/types';
 import { prefs } from '../state/prefs';
-import { t } from '../lib/i18n';
+import { t, type TranslationKey } from '../lib/i18n';
 import { zoomAround, type ZRange } from '../lib/zoomBar';
 import { ZoomScrollbar } from '../ui/ZoomScrollbar';
 import { drawRuler, rulerCursor, rulerDown, RULER_H, type RulerHost } from '../ui/timeRuler';
@@ -805,12 +805,14 @@ function Roll(props: { z: number; docked?: boolean }) {
       close();
     };
     onMount(() => setTimeout(() => { first.focus(); first.select(); }, 0));
-    const field = (name: 'start' | 'len' | 'key', label: string, tip: string, ref?: (el: HTMLInputElement) => void) => {
+    // the texts are looked up inside the JSX: a `t()` in the call's arguments would make the language
+    // a dependency of the call, and a language switch would build new inputs, dropping what is typed
+    const field = (name: 'start' | 'len' | 'key', label: TranslationKey, tip: TranslationKey, ref?: (el: HTMLInputElement) => void) => {
       // a plain local: the value is written once, so a placeholder update (an edit, a knob turn, the language) keeps what is typed
       const value = shown[name];
       return (
-        <label class="rpf" title={tip}>
-          <span>{label}</span>
+        <label class="rpf" title={t(tip)}>
+          <span>{t(label)}</span>
           <input ref={ref} name={name} value={value} placeholder={value ? '' : t(name === 'len' && pp.idx.every(i => notesRaw()[i]?.trig) ? 'b.pr.trigger' : 'b.pr.pMixed')} spellcheck="false" autocomplete="off" onInput={() => setErr('')} />
         </label>
       );
@@ -839,8 +841,8 @@ function Roll(props: { z: number; docked?: boolean }) {
               onClick={() => setSlide(!allSlide())}><i />{t('b.pr.pSlide')}</button>
           </Show>
         </div>
-        {field('start', t('b.pr.pStart'), t('b.pr.pStartTip'), el => (first = el))}
-        {field('len', t('b.pr.pLen'), t('b.pr.pLenTip'))}
+        {field('start', 'b.pr.pStart', 'b.pr.pStartTip', el => (first = el))}
+        {field('len', 'b.pr.pLen', 'b.pr.pLenTip')}
         <Show when={pp.idx.some(i => notesRaw()[i]?.trig)}>
           <button class="smallbtn" type="button" title={t('b.pr.triggerTip')} onClick={() => {
             const ids = new Set(pp.idx);
@@ -848,7 +850,7 @@ function Roll(props: { z: number; docked?: boolean }) {
             close();
           }}>{t('b.pr.toHeld')}</button>
         </Show>
-        {field('key', t('b.pr.pKey'), t('b.pr.pKeyTip'))}
+        {field('key', 'b.pr.pKey', 'b.pr.pKeyTip')}
         <div class="rpbtns">
           <button class="smallbtn" type="button" title={t('b.pr.pResetTip')} disabled={!changed()} onClick={reset}>{t('b.pr.pReset')}</button>
           <button class="smallbtn primary" type="button" title={t('b.pr.pAcceptTip')} onClick={accept}>{t('b.pr.pAccept')}</button>
