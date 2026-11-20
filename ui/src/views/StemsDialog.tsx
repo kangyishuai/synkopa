@@ -66,8 +66,8 @@ export function StemsDialog() {
                   {(s: StemId) => {
                     const on = () => (mine() ? !!job()?.stems.includes(s) : STEMS.picked.includes(s));
                     return (
-                      <button type="button" class="stem-pick" classList={{ on: on() }} style={{ '--stem': STEM_COLORS[s] }}
-                        aria-pressed={on()} disabled={mine()} title={t(`d.stems.${s}.hint` as 'd.stems.drums.hint')} onClick={() => toggleStem(s)} data-stem={s}>
+                      <button type="button" class={['stem-pick', { on: on() }]} style={{ '--stem': STEM_COLORS[s] }}
+                        aria-pressed={on() ? 'true' : 'false'} disabled={mine()} title={t(`d.stems.${s}.hint` as 'd.stems.drums.hint')} onClick={() => toggleStem(s)} data-stem={s}>
                         <span class="stem-dot" />
                         <span class="stem-name">{t(`d.stems.${s}` as 'd.stems.drums')}</span>
                         <span class="stem-hint">{t(`d.stems.${s}.hint` as 'd.stems.drums.hint')}</span>

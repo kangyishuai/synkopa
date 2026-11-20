@@ -3,7 +3,7 @@
 // Q 2 W 3 E R 5 T 6 Y 7 U I 9 O 0 P [ = ] an octave up (Q = C5). Physical keys (event.code),
 // so the layout does not matter. While it is on, those keys play instead of their shortcuts;
 // PageDown / PageUp move the octave.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Id } from '../api/types';
 import { t } from '../lib/i18n';

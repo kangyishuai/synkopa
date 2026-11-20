@@ -1,5 +1,5 @@
 // Updates and "What's new" for the views: a signal over the UpdateController (state/updateCtl.ts).
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import { t } from '../lib/i18n';
 import { parseChangelog } from '../lib/changelog';

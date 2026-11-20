@@ -1,7 +1,8 @@
 // "Import MIDI": the parts of a .mid file (track × channel) with what each becomes in Synkopa,
 // chosen with checkboxes; optionally the file's tempo. Imports as one new pattern on the
 // Playlist, or — opened from a channel — one part's notes into that channel. One undo step.
-import { createEffect, createSignal, For, on, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { MidiInfo, MidiPart } from '../api/types';
 import { t } from '../lib/i18n';
@@ -23,7 +24,7 @@ export function MidiImport() {
 
   const into = () => U.midiWin?.into ?? null;
   const close = () => setU('midiWin', null);
-  createEffect(on(() => U.midiWin?.path, path => {
+  watch(() => U.midiWin?.path, path => {
     setInfo(null); setErr(null); setPicked(new Set<number>());
     if (!path) return;
     const id = ++req;
@@ -37,7 +38,7 @@ export function MidiImport() {
       setTempo(f.bpm != null && Math.abs(f.bpm - f.projectBpm) > 0.005 && !S.project.clips.length);
       queueMicrotask(() => importBtn?.focus());
     }).catch(e => { if (id === req) setErr(String(e)); });
-  }));
+  });
 
   const toggle = (p: MidiPart) => setPicked(s => {
     if (into()) return new Set([p.index]);
@@ -92,7 +93,7 @@ export function MidiImport() {
                 <ul class="midilist" role={into() ? 'radiogroup' : 'group'}>
                   <For each={f().parts}>
                     {p => (
-                      <li classList={{ off: !picked().has(p.index), empty: !p.notes }}>
+                      <li class={{ off: !picked().has(p.index), empty: !p.notes }}>
                         <label class="row">
                           <input type={into() ? 'radio' : 'checkbox'} name="midipart" checked={picked().has(p.index)} disabled={!p.notes || busy()} onChange={() => toggle(p)} />
                           <span class="midiname" title={p.name}>{p.name}</span>

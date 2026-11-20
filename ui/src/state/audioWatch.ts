@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { AudioConfig, AudioStatus } from '../api/types';
 import { t } from '../lib/i18n';

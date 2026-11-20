@@ -1,7 +1,8 @@
 // "Synkopa did not exit cleanly": the plugins that were loaded when the last session died (one of
 // them may be why). Offered once at start: keep a plugin out of future scans, or let it be —
 // the crash may have had nothing to do with it.
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { PluginCrashSuspect } from '../api/types';
 import { t } from '../lib/i18n';

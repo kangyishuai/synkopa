@@ -2,7 +2,7 @@
 // beside or sharing a strip with another docked panel, or floating. The where is `lib/dock.ts`; this
 // is the doing: the title bar's dock button and right-click menu, the View menu, and dragging a
 // title bar onto the dock guides (Visual Studio's), docked panels included (they float off first).
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { t, type TranslationKey } from '../lib/i18n';
 import { clamp } from '../lib/format';
 import {

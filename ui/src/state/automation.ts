@@ -1,14 +1,14 @@
 import { t as tl } from '../lib/i18n';
 // Automation in the UI: the right-click menu every automatable control shares, creating an
 // automation clip, and the live (automated) value a control shows while the song plays.
-import { createMemo, createRoot, createSignal } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { createMemo, createRoot } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import type { AutoTarget } from '../api/types';
 import { automationSpans, autoValueText, createAutomationOps, denormalize, normalize, parseAutoValue, readTarget, spansValue, targetKey, targetLabel, writeTargetOps } from '../lib/automation';
 import { fmtPos } from '../lib/format';
 import { addFrameTask } from '../ui/frameLoop';
 import { commit } from './edit';
-import { allocId, S } from './store';
+import { allocId, rawOf, S } from './store';
 import { curBeat } from './telemetry';
 import { openMenu, openRename, revealInPlaylist, say, setU, U } from './ui';
 
@@ -95,7 +95,7 @@ export function paramMenu(x: number, y: number, target: AutoTarget, reset: (() =
       const n = parseAutoValue(S.project, S.catalog, target, v.replace(/−/g, '-'));
       if (n == null) { say(tl('a.au.typeBad', { v })); return; }
       // plain objects: ops are cloned on their way to the engine, which a store proxy does not survive
-      const ops = writeTargetOps(unwrap(S.project), target, denormalize(S.project, S.catalog, target, n));
+      const ops = writeTargetOps(rawOf(S.project), target, denormalize(S.project, S.catalog, target, n));
       if (!ops) return;
       commit(ops, label);
       say(label + ' · ' + autoValueText(S.project, S.catalog, target, n));

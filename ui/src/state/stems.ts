@@ -1,7 +1,7 @@
 // "Extract stems" (FL's *Extract stems from sample*): the dialog's open clip, the one job that may run
 // (model download, then the separation, in the background while the musician keeps working) and its
 // last error. The job is not queued behind edits (`enqueue`): it takes minutes and edits must go on.
-import { createStore } from 'solid-js/store';
+import { createStore } from '../lib/reactive';
 import { be } from '../api/backend';
 import { ERR_NO_STEM_MODEL } from '../api/errors';
 import type { Id, StemId, StemModelStatus, StemsProgress } from '../api/types';

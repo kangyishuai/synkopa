@@ -1,7 +1,8 @@
 // "Missing audio": the sources of the open project whose files were moved, renamed or deleted
 // (they play silence). Search a folder (relinks every unambiguous match at once), locate one
 // file, or pick among several found. Every relink is an undo step of the engine.
-import { createEffect, createMemo, createSignal, For, on, Show } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import { createSignal, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Id, RelinkCandidate, RelinkSearch, Source } from '../api/types';
 import { t } from '../lib/i18n';
@@ -24,7 +25,7 @@ export function MissingAudio() {
   const relinkable = () => rows().filter(s => !s.path.startsWith(LIB_SCHEME));
   const close = () => setU('missingOpen', false);
   // a fresh round each time the dialog opens (or another project is loaded under it)
-  createEffect(on(() => [U.missingOpen, S.path], () => { setStatus(null); setCands({}); setNotFound(new Set<Id>()); if (U.missingOpen) queueMicrotask(() => searchBtn?.focus()); }));
+  watch(() => [U.missingOpen, S.path], () => { setStatus(null); setCands({}); setNotFound(new Set<Id>()); if (U.missingOpen) queueMicrotask(() => searchBtn?.focus()); });
 
   const usage = (s: Source) => {
     const clips = S.project.clips.filter(c => c.kind === 'audio' && c.ref === s.id).length;
@@ -99,7 +100,7 @@ export function MissingAudio() {
               <button ref={searchBtn} class="smallbtn primary" disabled={busy() || !relinkable().length} onClick={() => void search()} title={t('d.miss.searchTip')}>{t('d.miss.search')}</button>
               <Show when={status()}>
                 {st => (
-                  <span class="note missstatus" classList={{ warn: st().kind === 'warn', err: st().kind === 'err' }} role="status" title={st().text}>
+                  <span class={['note missstatus', { warn: st().kind === 'warn', err: st().kind === 'err' }]} role="status" title={st().text}>
                     <Show when={st().kind === 'busy'}><span class="spin" /></Show>{st().text}
                   </span>
                 )}
@@ -143,7 +144,7 @@ export function MissingAudio() {
             </ul>
           </Show>
           <div class="row" style={{ 'justify-content': 'flex-end', 'margin-top': '12px' }}>
-            <button class="smallbtn" classList={{ primary: !rows().length }} onClick={close}>{rows().length ? t('d.miss.later') : t('d.miss.done')}</button>
+            <button class={['smallbtn', { primary: !rows().length }]} onClick={close}>{rows().length ? t('d.miss.later') : t('d.miss.done')}</button>
           </div>
         </div>
       </div>

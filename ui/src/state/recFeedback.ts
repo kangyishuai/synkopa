@@ -1,7 +1,8 @@
 // After a recording: say what landed where, select it, and offer to delete it or show its takes
 // (#109/#110). The engine lands a take a moment after Stop, so the project is compared with what
 // it held when the recording began, on each change, until something new shows up.
-import { createEffect, createRoot, on } from 'solid-js';
+import { createRoot } from 'solid-js';
+import { watch } from '../lib/reactive';
 import { t } from '../lib/i18n';
 import { recLanded, recSnapshot, type RecLanded, type RecSnapshot } from '../lib/recLanded';
 import { removeTake } from '../lib/comp';
@@ -17,11 +18,11 @@ const LAND_MS = 4000;
 createRoot(() => {
   let before: RecSnapshot | null = null, waiting: { snap: RecSnapshot; until: number } | null = null;
   const recording = () => S.transport.rec && (U.playing || U.patPlaying);
-  createEffect(on(recording, r => {
+  watch(recording, r => {
     if (r) { before = recSnapshot(S.project); waiting = null; return; }
     if (before) { waiting = { snap: before, until: performance.now() + LAND_MS }; before = null; check(); }
-  }, { defer: true }));
-  createEffect(on(() => S.revision, () => check(), { defer: true }));
+  }, { defer: true });
+  watch(() => S.revision, () => check(), { defer: true });
   function check() {
     if (!waiting) return;
     if (performance.now() > waiting.until) { waiting = null; return; }

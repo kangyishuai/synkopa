@@ -1,6 +1,6 @@
 // Full screen (F11, View menu, Settings → start in full screen). The desktop app asks the
 // window (no taskbar, no frame); in a browser the page's own Fullscreen API stands in.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 
 const [isFullscreen, setIsFullscreen] = createSignal(false);

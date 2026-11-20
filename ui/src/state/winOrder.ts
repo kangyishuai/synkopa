@@ -1,6 +1,6 @@
 // The stack of floating windows (one order for all of them: `UiState.zTop`), the windows that float
 // outside the effect-window layer, and the channel window's place.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import type { Id } from '../api/types';
 import { rackFloating, rollFloating } from './pattern';
 import { docked, tucked, U } from './ui';
