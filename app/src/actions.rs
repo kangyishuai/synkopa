@@ -1184,7 +1184,14 @@ fn pattern_json(p: &wave_engine::Project, pt: &wave_engine::Pattern) -> Value {
             if !simple {
                 row["notes"] = json!(notes
                     .iter()
-                    .map(|n| json!({ "step": n.step, "len": n.len, "p": n.p.unwrap_or(c.root), "v": n.v, "trig": n.trig.unwrap_or(false) }))
+                    .map(|n| {
+                        let mut j =
+                            json!({ "step": n.step, "len": n.len, "p": n.p.unwrap_or(c.root), "v": n.v, "trig": n.trig.unwrap_or(false) });
+                        if n.slide {
+                            j["slide"] = json!(true);
+                        }
+                        j
+                    })
                     .collect::<Vec<_>>());
             }
             row
@@ -1261,14 +1268,18 @@ pub fn pattern(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value> 
             pt.notes.extend(parse_steps(s, vel)?.into_iter().map(|(k, v)| Note { v, ..Note::trigger(ch, k, None) }));
         }
         if let Some(ns) = notes {
-            let list = ns.as_array().ok_or("--notes is a JSON array of {step, len, p?, v?, trig?}")?;
+            let list = ns.as_array().ok_or("--notes is a JSON array of {step, len, p?, v?, trig?, slide?}")?;
             for n in list {
                 let step = opt_f64(n, "step").ok_or("each note needs `step` (16ths)")? as f32;
                 let len = opt_f64(n, "len").unwrap_or(1.0) as f32;
                 let key = arg(n, "p").and_then(as_index).map(|k| k.min(127) as u8);
                 let v = opt_f64(n, "v").unwrap_or(1.0) as f32;
                 let trigger = arg(n, "trig").map(|v| v.as_bool().ok_or("note `trig` must be a boolean")).transpose()?.unwrap_or(false);
-                pt.notes.push(Note { v, trig: Some(trigger), ..Note::new(ch, step, len, key) });
+                let slide = arg(n, "slide").map(|v| v.as_bool().ok_or("note `slide` must be a boolean")).transpose()?.unwrap_or(false);
+                if slide && trigger {
+                    return Err("a slide note is held for its length (the glide time): it cannot be a trigger".into());
+                }
+                pt.notes.push(Note { v, trig: Some(trigger), slide, ..Note::new(ch, step, len, key) });
             }
         }
     }

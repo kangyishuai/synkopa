@@ -4,6 +4,16 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **Slide notes, as in FL Studio.** Turn on Slide in the Piano roll (the glide button next to the
+  tools, or S) and the notes you draw become slide notes: they make no sound of their own, they
+  bend the notes already playing to their key, and their length is the glide time. An 808 can now
+  jump an octave and back in one held note. A slide note shows hollow with an arrowhead; double-click
+  a note to switch Slide on or off. Works on samplers, Synkopa Keys and the Synth; plugin
+  instruments ignore slide notes, so the button is greyed out for them.
+
 ## 0.9.30 — 2026-11-19
 
 ### Added

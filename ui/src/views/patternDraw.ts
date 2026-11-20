@@ -305,6 +305,19 @@ export function drawRoll(g: CanvasRenderingContext2D, W: number, H: number, G: R
     const k = keyOf(n, o.ch), x = rollX(G, n.step), y = rollY(G, k), w = noteWidth(n, G.pps);
     if (x > W || x + w < G.kw || y > H || y + G.rowH < 0) return;
     const sel = o.sel.has(i), v = velOf(n);
+    if (n.slide) {
+      // FL's slide note: a note like the others, darker (it has no sound of its own), with a ramp
+      // triangle at its start (the slide icon)
+      g.fillStyle = sel ? mix(o.ch.color, 40, theme.light ? '#000000' : '#ffffff') : mix(o.ch.color, 38, T.viz);
+      g.beginPath(); rr(g, x, y + 0.5, w, G.rowH - 1, 2.5); g.fill();
+      g.strokeStyle = sel ? T.fgHi : o.ch.color; g.lineWidth = 1;
+      g.beginPath(); rr(g, x + 0.5, y + 1, w - 1, G.rowH - 2, 2.5); g.stroke();
+      const th = G.rowH - 5, tw = Math.min(w - 3, Math.max(5, th * 1.3));
+      g.fillStyle = sel ? T.fgHi : mix(o.ch.color, 70, '#ffffff');
+      g.beginPath(); g.moveTo(x + 2, y + G.rowH - 2.5); g.lineTo(x + 2 + tw, y + G.rowH - 2.5); g.lineTo(x + 2 + tw, y + G.rowH - 2.5 - th); g.closePath(); g.fill();
+      if (w > tw + 26 && G.rowH >= 11) { g.fillStyle = sel ? rgba(T.onFill, 0.9) : T.fgHi; g.fillText(noteName(k), x + 5 + tw, y + G.rowH / 2 + 0.5); }
+      return;
+    }
     g.fillStyle = sel ? mix(o.ch.color, 55, theme.light ? '#000000' : '#ffffff') : mix(o.ch.color, Math.round(45 + 55 * v), T.viz);
     g.beginPath(); rr(g, x, y + 0.5, w, G.rowH - 1, 2.5); g.fill();
     g.strokeStyle = sel ? T.fgHi : rgba('#000000', theme.light ? 0.25 : 0.45); g.lineWidth = 1;
