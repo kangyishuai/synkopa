@@ -106,8 +106,12 @@ const isProxy = (v: unknown): boolean => isObj(v) && !!(v as Record<symbol, unkn
  * index is rebuilt on the first lookup after every edit (a drag frame).
  */
 interface Indexed { r: object; list: string; i: number; sub: string | null; j: number }
-/** Project items by id (ids come from one counter, `nextId`): rebuilt on the first lookup after a change of `M`. */
-let byId: Map<Id, Indexed> | null = null;
+/**
+ * Project items by id: rebuilt on the first lookup after a change of `M`. New ids come from one
+ * counter (`nextId`), but a project can still use one id in several lists (the engine's demo song
+ * numbers its patterns, clips and inserts from 1 each), so an id can hold several places.
+ */
+let byId: Map<Id, Indexed | Indexed[]> | null = null;
 /**
  * Store proxy of a project item → its object in `M`, filled by `rawOf` once the proxy was found at
  * that object's place in `S.project` (so a hit needs no check). Valid while `M` is unchanged: it is
@@ -119,11 +123,15 @@ function mChanged(): void {
   byId = null;
   rawCache = new WeakMap();
 }
-function idIndex(): Map<Id, Indexed> {
+function idIndex(): Map<Id, Indexed | Indexed[]> {
   if (byId) return byId;
-  const m = new Map<Id, Indexed>();
+  const m = new Map<Id, Indexed | Indexed[]>();
   const add = (xs: readonly { id: Id }[] | undefined, list: string, i = -1, sub: string | null = null) => {
-    if (xs) for (let k = 0; k < xs.length; k++) m.set(xs[k].id, sub ? { r: xs[k], list, i, sub, j: k } : { r: xs[k], list, i: k, sub, j: -1 });
+    if (xs) for (let k = 0; k < xs.length; k++) {
+      const e: Indexed = sub ? { r: xs[k], list, i, sub, j: k } : { r: xs[k], list, i: k, sub, j: -1 };
+      const was = m.get(xs[k].id);
+      m.set(xs[k].id, was === undefined ? e : Array.isArray(was) ? (was.push(e), was) : [was, e]);
+    }
   };
   add(M.tracks, 'tracks'); add(M.inserts, 'inserts'); M.inserts.forEach((ins, i) => add(ins.fx, 'inserts', i, 'fx'));
   add(M.patterns, 'patterns'); add(M.sources, 'sources'); add(M.clips, 'clips');
@@ -158,14 +166,13 @@ export function rawOf<T>(x: T): T {
     if ((x as unknown) === S.project) { rawCache.set(x, M); return M as T; }
     const id = (x as Obj).id;
     if (typeof id === 'number') {
-      const e = idIndex().get(id);
-      if (e && Array.isArray(e.r) === Array.isArray(x)) {
-        // the store's own item at that place: certain, and cached
-        if (storeAt(e) === x) { rawCache.set(x, e.r); return e.r as T; }
-        // not where the item is (another store holding a copy, or a mirror out of step): the
-        // check this had before the cache, and never cached
-        if (sameKeys(e.r, x as object)) return e.r as T;
-      }
+      const hit = idIndex().get(id);
+      const es = hit === undefined ? [] : Array.isArray(hit) ? hit : [hit];
+      // the store's own item at one of the id's places: certain, and cached
+      for (const e of es) if (Array.isArray(e.r) === Array.isArray(x) && storeAt(e) === x) { rawCache.set(x, e.r); return e.r as T; }
+      // not where the item is (another store holding a copy, or a mirror out of step): the
+      // check this had before the cache, and never cached
+      for (const e of es) if (Array.isArray(e.r) === Array.isArray(x) && sameKeys(e.r, x as object)) return e.r as T;
     }
     // a list of items with ids (clips, tracks): each from `M`; else one copy (notes, points)
     if (Array.isArray(x) && x.length && typeof (x[0] as Obj | undefined)?.id === 'number') return x.map(rawOf) as T;

@@ -498,6 +498,22 @@ describe('rawOf cache', () => {
     expect(store.rawOf(p1)).toBe(live(p => p.patterns[0]));
   });
 
+  // The engine's demo song numbers patterns, clips and inserts from 1 each: a lookup by id that kept
+  // one place per id copied the whole pattern (2000 notes: ~13 ms per drag frame) on every call.
+  it('ids shared across lists (the demo song): every item is still its live plain object, not a copy', () => {
+    store.replaceState(dto(project({ clips: [clip(1, { track: 0 }), clip(11, { track: 1, start: 4 })] }))); // track, insert, pattern and clip 1
+    const p = store.S.project;
+    for (let k = 0; k < 2; k++) { // the second round is answered by the cache
+      expect(store.rawOf(p.patterns[0])).toBe(live(x => x.patterns[0]));
+      expect(store.rawOf(p.tracks[0])).toBe(live(x => x.tracks[0]));
+      expect(store.rawOf(p.inserts[1])).toBe(live(x => x.inserts[1]));
+      expect(store.rawOf(p.clips[0])).toBe(live(x => x.clips[0]));
+    }
+    store.applyLocal([{ op: 'putPattern', pattern: { ...store.plain(p.patterns[0]), notes: [{ ch: 10, step: 3, len: 1 }] } }]);
+    expect(store.rawOf(store.S.project.patterns[0])).toBe(live(x => x.patterns[0]));
+    expect(store.rawOf(store.S.project.patterns[0]).notes).toEqual([{ ch: 10, step: 3, len: 1 }]);
+  });
+
   it('a copy of an item in another store is never cached as the item', async () => {
     const { createStore } = await import('../lib/reactive');
     store.replaceState(dto(uniq()));
