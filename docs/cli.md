@@ -209,6 +209,7 @@ synkopa channels --keys                              # Synkopa Keys: the sampled
 synkopa channels --ch "Synkopa Keys" --param release --value 600   # its knobs: release (ms), dynamics (%)
 synkopa channels --plugin serum                      # a scanned VST3 instrument (name, start of one, or class id; `synkopa plugins --rescan` first)
 synkopa plugin-params --fx 1007                      # its parameters: a plugin channel's id works wherever an effect id does
+synkopa channels --ch Kick --group Drums             # the Channel Rack filter group ("" = none, unsorted)
 synkopa channels --remove 1004                       # (or a name) — also removes its notes
 synkopa pattern --id 2                               # step strings per channel
 synkopa pattern --id 2 --ch hat --steps "x.x. x.x. x.x5 x.x9"     # replace the hat's notes

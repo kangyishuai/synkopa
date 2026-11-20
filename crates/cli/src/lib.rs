@@ -850,6 +850,9 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
             if let Some(c) = a.get("ch") {
                 args["ch"] = id_or_name(c);
             }
+            if a.has("group") {
+                args["group"] = json!(a.get("group").unwrap_or(""));
+            }
             for k in ["preset", "param"] {
                 if let Some(v) = a.get(k) {
                     args[k] = json!(v);

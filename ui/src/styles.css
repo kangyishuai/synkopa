@@ -1835,3 +1835,8 @@ button.chip { color: var(--fg); }
 .lane.lifted { opacity: .55; outline: 1px dashed var(--blue); outline-offset: -2px; }
 .laneDropLine { position: absolute; left: 0; height: 2px; background: var(--blue); box-shadow: 0 0 0 1px rgba(79, 142, 247, .35); z-index: 6; pointer-events: none; }
 .graphtabs button.off { opacity: .45; }
+/* the Channel Rack's group filter (FL's filter groups), a chip in the window bar */
+.patwin .winhd .groupchip { display: flex; align-items: center; gap: 5px; height: 24px; max-width: 160px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--fg3); font: 600 11px var(--sans); cursor: pointer; }
+.patwin .winhd .groupchip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.patwin .winhd .groupchip:hover { background: var(--bg4); color: var(--fg-hi); }
+.patwin .winhd .groupchip.on { color: var(--blue-hi); background: color-mix(in srgb, var(--blue) 16%, transparent); }

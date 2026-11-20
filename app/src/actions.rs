@@ -853,7 +853,7 @@ pub fn schema() -> Value {
             "removeFx": {"fxId": 0},
             "moveFx": {"fxId": 0, "to": 0},
             "putPattern": {"pattern": {"id": 0, "name": "", "color": "#4f8ef7", "minLen": 4, "swing": 0, "notes": [{"ch": "channel id", "step": 0, "len": 1, "p": 36, "v": 1}]}},
-            "putChannel": {"channel": {"id": 0, "name": "Kick", "color": "#4f8ef7", "kind": "sample|synth|keys", "source": "source id (kind sample)", "sampler": "kind sample, optional: {start, end (0..1 of the file), reverse, norm, semi, fine, env (volume envelope on), delay, attack, hold, decay, release, fadeInMs, fadeOutMs (ms), sustain (0..1), attackTension, decayTension, releaseTension (-1..1), cut (0 = none, 1..8)}", "slices": "kind sample, optional: slice mode, increasing fractions of the file in 0..1 where each slice starts (at most 128); key root plays slice 1, root+1 slice 2, ...; a slice plays to the next at the file's pitch and cuts the one sounding; omit or [] = off", "vol": 0.7937, "pan": 0, "mute": false, "solo": false, "insert": "insert id or null (= the clip's track)", "root": 60}, "index": null},
+            "putChannel": {"channel": {"id": 0, "name": "Kick", "color": "#4f8ef7", "kind": "sample|synth|keys", "source": "source id (kind sample)", "sampler": "kind sample, optional: {start, end (0..1 of the file), reverse, norm, semi, fine, env (volume envelope on), delay, attack, hold, decay, release, fadeInMs, fadeOutMs (ms), sustain (0..1), attackTension, decayTension, releaseTension (-1..1), cut (0 = none, 1..8)}", "slices": "kind sample, optional: slice mode, increasing fractions of the file in 0..1 where each slice starts (at most 128); key root plays slice 1, root+1 slice 2, ...; a slice plays to the next at the file's pitch and cuts the one sounding; omit or [] = off", "vol": 0.7937, "pan": 0, "mute": false, "solo": false, "insert": "insert id or null (= the clip's track)", "root": 60, "group": "Channel Rack filter group, optional (absent = unsorted)"}, "index": null},
             "removeChannel": {"id": 0},
             "removePattern": {"id": 0},
             "putSource": {"source": "rename/recolour an existing source"},
@@ -956,7 +956,7 @@ fn channel_json(p: &wave_engine::Project, c: &wave_engine::Channel) -> Value {
     let mut v = json!({
         "id": c.id, "index": p.channels.iter().position(|x| x.id == c.id), "name": c.name, "kind": kind,
         "volume": if g < 1e-6 { "-inf".to_string() } else { format!("{:+.1} dB", 20.0 * g.log10()) }, "vol": c.vol, "pan": c.pan,
-        "mute": c.mute, "solo": c.solo, "insert": c.insert, "root": c.root,
+        "mute": c.mute, "solo": c.solo, "insert": c.insert, "root": c.root, "group": c.group,
         "notes": p.patterns.iter().map(|pt| pt.notes.iter().filter(|n| n.ch == c.id).count()).sum::<usize>(),
     });
     if let (Value::Object(m), Value::Object(w)) = (&mut v, what) {
@@ -1120,6 +1120,16 @@ pub fn channels(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value>
                 }
             }
         }
+        ops.push(Op::PutChannel { channel: c, index: None });
+    }
+    if let (Some(v), Some(g)) = (arg(a, "ch"), arg(a, "group").and_then(Value::as_str)) {
+        // the Channel Rack filter group ("" = none)
+        let mut c = find_channel(&p, v)?.clone();
+        let g = g.trim();
+        if g.chars().count() > 40 {
+            return Err("a group name has at most 40 characters".into());
+        }
+        c.group = (!g.is_empty()).then(|| g.to_string());
         ops.push(Op::PutChannel { channel: c, index: None });
     }
     if let Some(v) = arg(a, "remove") {

@@ -7,6 +7,11 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Channel groups in the Channel Rack, as FL's filter groups.** Right-click a channel → Group to
+  put it in Drums, Bass or a new group; the filter at the rack's top shows every channel, one group or
+  the unsorted ones (hidden channels keep playing). Channels added while a group is shown join it, and
+  a group can be renamed or ungrouped from the filter. `synkopa channels --ch Kick --group Drums`
+  does the same from the command line.
 - **Pan and shift per step in the Channel Rack's graph editor**, as in FL Studio. Next to
   Velocity and Key, Pan places each step left or right, and Shift starts a step a little later
   inside its cell, for pushed hats, flams and hand-made swing. Alt+click puts a step back.

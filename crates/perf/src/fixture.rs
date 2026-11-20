@@ -267,6 +267,7 @@ pub fn build_song(dir: &Path) -> Project {
             solo: false,
             insert: Some(inserts[k % SONG_TRACKS]),
             root: SAMPLE_ROOT,
+            group: None,
         });
         synths.push(id);
     }
@@ -285,6 +286,7 @@ pub fn build_song(dir: &Path) -> Project {
             solo: false,
             insert: Some(inserts[14 + k % (SONG_TRACKS - 14)]),
             root: SAMPLE_ROOT,
+            group: None,
         });
         samplers.push(id);
     }
@@ -545,6 +547,7 @@ pub fn build(spec: &Spec, dir: &Path) -> Project {
             solo: false,
             insert: None,
             root: SAMPLE_ROOT,
+            group: None,
         });
     }
 

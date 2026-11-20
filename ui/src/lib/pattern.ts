@@ -147,6 +147,7 @@ export function applyPatternOp(p: Project, op: Op, strict: boolean, adopt: <T ex
       if (!(c.vol >= 0 && c.vol <= 1)) fail('channel vol is a fader position 0..1');
       if (!(c.pan >= -1 && c.pan <= 1)) fail('channel pan must be -1..1');
       if (c.root > 127) fail('channel root must be 0..127');
+      if (c.group != null && (!c.group.trim() || [...c.group].length > 40)) fail('channel group: 1..40 characters (absent = unsorted)');
       if (c.kind === 'sample') {
         if (!p.sources.some(s => s.id === c.source)) fail(`no source with id ${c.source}`);
         const e = samplerError(c.sampler); if (e) fail(e);

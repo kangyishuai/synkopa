@@ -17,13 +17,15 @@ import { commit, Gesture } from '../state/edit';
 import {
   addBar, RACK_MIN_W, STEP_W, audition, chanById, chanKindLabel, chanOp, channels, closeRack, curPat, openRoll, patOp, playStep, putNotes, RACK_LEFT, RACK_ROW,
   rackFront, rackPlaceFor, removeBar, selChan, selectChannel, selectChannelRange, toggleChannelSelected, isChannelSelected, stepPattern, toggleChanMute, toggleChanSolo,
+  rackChannels, rackFilter, setRackFilter,
 } from '../state/pattern';
 import { arrVersion, S } from '../state/store';
 import { ensurePluginScan } from '../state/pluginScan';
-import { say, setU, U } from '../state/ui';
+import { openMenu, openRename, say, setU, U, type MenuItem } from '../state/ui';
 import { edgeScroller, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
+import { cleanGroup, fullIndexFor, rackGroups } from '../lib/rackGroups';
 import { LANE_ICONS, LaneSwitch } from '../ui/LaneSwitch';
 import { T } from '../ui/theme';
 import { channelIcon, InstIcon } from '../ui/instIcons';
@@ -53,7 +55,8 @@ function Rack(props: { z: number; docked?: boolean }) {
   let gridWrap!: HTMLDivElement, cv!: HTMLCanvasElement, head!: HTMLCanvasElement, graphCv!: HTMLCanvasElement, graphWrap!: HTMLDivElement;
   const ptM = createMemo(() => curPat()!);
   const pt = () => ptM();
-  const chans = () => channels();
+  /** The rows the rack shows: every channel, or the group the filter picks. */
+  const chans = () => rackChannels();
   const selCh = () => selChan();
   const size = useSize(() => gridWrap);
   const graphSize = useSize(() => graphWrap);
@@ -274,7 +277,9 @@ function Rack(props: { z: number; docked?: boolean }) {
     ]);
   };
   const moveChannelTo = (c: Channel, to: number) => {
-    commit([chanOp(c, {}, to)], t('b.rk.gestMove'));
+    // `to` is a row of the shown rack; filtered, it lands next to the shown channel it now sits by
+    const full = fullIndexFor(channels().map(x => x.id), chans().map(x => x.id), c.id, to);
+    commit([chanOp(c, {}, full)], t('b.rk.gestMove'));
     say(t('b.rk.moved', { name: c.name, n: to + 1, of: chans().length }));
     const top = to * RACK_ROW, h = size().h;
     if (top < scroll().y) setScroll(s => ({ ...s, y: top }));
@@ -373,6 +378,30 @@ function Rack(props: { z: number; docked?: boolean }) {
     if (e.altKey) return;
     if (e.key.toLowerCase() === 'g') { e.preventDefault(); e.stopPropagation(); toggleGraph(); }
   };
+  /** FL's filter-group menu: All, each group, the unsorted channels; rename or ungroup the shown group. */
+  const groupFilterMenu = (x: number, y: number) => {
+    const all = channels(), groups = rackGroups(all), f = rackFilter(), unsorted = all.filter(c => !c.group).length;
+    const items: MenuItem[] = [
+      { t: 'item', label: t('b.rk.groupAllN', { n: all.length }), checked: f == null, act: () => setRackFilter(null) },
+      ...groups.map((g): MenuItem => ({ t: 'item', label: `${g.name} (${g.n})`, checked: f === g.name, act: () => setRackFilter(g.name) })),
+    ];
+    if (groups.length) items.push({ t: 'item', label: t('b.rk.groupNoneN', { n: unsorted }), checked: f === '', disabled: !unsorted, act: () => setRackFilter('') });
+    else items.push({ t: 'sec', label: t('b.rk.groupHint') });
+    if (f) {
+      const members = all.filter(c => c.group === f);
+      items.push({ t: 'sep' },
+        { t: 'item', label: t('b.rk.groupRename', { name: f }), act: () => openRename(x, y, f, v => {
+          const g = cleanGroup(v); if (!g || g === f) return;
+          commit(members.map(c => chanOp(c, { group: g })), t('b.rk.groupRenameGest'));
+          setRackFilter(g); say(t('b.rk.groupRenamed', { from: f, to: g }));
+        }) },
+        { t: 'item', label: t('b.rk.groupUngroup', { name: f }), title: t('b.rk.groupUngroupTip'), act: () => {
+          commit(members.map(c => chanOp(c, { group: undefined })), t('b.rk.groupUngroupGest'));
+          setRackFilter(null); say(t('b.rk.groupUngrouped', { name: f, n: members.length }));
+        } });
+    }
+    openMenu(x, y, items);
+  };
   const notesCount = createMemo(() => { arrVersion(); return unwrap(pt()).notes.length; });
   // Shift+wheel over the title bar: previous / next pattern (FL). A plain wheel does nothing here, so
   // scrolling the channel list and drifting onto the title bar no longer switches the pattern
@@ -392,6 +421,12 @@ function Rack(props: { z: number; docked?: boolean }) {
         <span class="tile" style={{ width: '20px', height: '20px', background: pt().color + '2e', color: pt().color }}><Icon d={RACK_ICON} size={12} /></span>
         <span class="wintitle">Channel rack</span>
         <PatternChip pat={pt()} />
+        <button class="chip groupchip" classList={{ on: rackFilter() != null }} title={t('b.rk.groupTip')} aria-haspopup="menu"
+          onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); groupFilterMenu(r.left, r.bottom + 4); }}>
+          <Icon d="M3 5h18l-7 8v6l-4 2v-8z" size={11} />
+          <span>{rackFilter() == null ? t('b.rk.groupAll') : rackFilter() === '' ? t('b.rk.groupNone') : rackFilter()}</span>
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
+        </button>
         <div class="bars" title={t('b.rk.barsTitle')}>
           <button disabled={pt().len <= 4} onClick={() => removeBar(pt())} title={t('b.pm.removeBarTitle')}>−</button>
           <span class="mono">{barsText(pt().len / 4)}</span>
