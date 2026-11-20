@@ -610,6 +610,10 @@ synkopa plugin-load-anyway --fx 1210               # load a plugin Synkopa's saf
 synkopa auto-add --fx 1210 --param 42 --points "0:0.2,8:0.8" --name "Reverb decay"
                 # automate a hosted plugin parameter: an envelope plus the
                 # playlist clip that plays it; ids come from context.nextId
+synkopa auto-add --target insertVol --id 3 --points "0:0.2,8:0.8"
+synkopa auto-add --target mix --fx 1210 --value 0.4
+                # the same for an insert/track/channel fader or pan (--target
+                # insertVol|insertPan|trackVol|chanVol|chanPan --id, or mix --fx)
 ```
 
 ## Notes (deterministic transforms and generators)
