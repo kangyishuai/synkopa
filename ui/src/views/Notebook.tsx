@@ -6,7 +6,8 @@ import { t as tl } from '../lib/i18n';
 // marks, the bar being played. The textarea's own glyphs are transparent so only the mirror's
 // show. Both use the same font and line height. Without wrap long lines scroll sideways; with
 // wrap (Alt+Z) both wrap identically and the gutter / syllable rows take each line's measured height.
-import { createEffect, createMemo, createSignal, For, Index, on, onCleanup, onMount, Show, untrack } from 'solid-js';
+import { createMemo, For, Show, untrack } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive';
 import type { Id, LyricPage } from '../api/types';
 import { clamp } from '../lib/format';
 import { barOfBeat, beatOfBar, lastWord, lineBars, lineOfBar, pageBarRange, rhymeGroups, syllables } from '../lib/notebook';
@@ -37,7 +38,7 @@ const [liveBar, setLiveBar] = createSignal<number | null>(null);
 export function NotebookHost() {
   // restore unsaved text once per loaded project, then track the saved baseline
   let lastPath: string | null | undefined;
-  createEffect(() => {
+  effect(() => {
     const path = S.path, dirty = S.dirty;
     if (path !== lastPath) {
       const first = lastPath === undefined;
@@ -79,7 +80,7 @@ function NotebookWindow() {
   // ------------------------------------------------ text in / out
   const scrollMemo = new Map<Id, number>();
   let shownId: Id | null = null;
-  createEffect(() => {
+  effect(() => {
     const pg = page();
     const id = pg?.id ?? null;
     const t = pg ? (pendingText(pg.id) ?? pg.text) : '';
@@ -120,7 +121,7 @@ function NotebookWindow() {
     if (!NB.wrap || !mirror) { if (rowH()) setRowH(null); return; }
     setRowH(Array.from(mirror.children, c => (c as HTMLElement).offsetHeight));
   };
-  createEffect(() => { lines(); void NB.wrap; void NB.font; void G().w; queueMicrotask(measureRows); });
+  effect(() => { lines(); void NB.wrap; void NB.font; void G().w; queueMicrotask(measureRows); });
   const lineTop = (ln: number) => {
     const el = NB.wrap ? mirror?.children[ln] as HTMLElement | undefined : undefined;
     return PAD_T + (el ? el.offsetTop : ln * LH());
@@ -131,12 +132,12 @@ function NotebookWindow() {
   const range = () => { const pg = page(); return pg ? pageBarRange({ text: text(), startBar: pg.startBar }) : [1, 0]; };
 
   // ------------------------------------------------ teleprompter
-  createEffect(on(curLine, ln => {
+  watch(curLine, ln => {
     if (ln < 0 || performance.now() - lastUser < HANDS_OFF_MS) return;
     const top = lineTop(ln) - (scroller.clientHeight - lineHt(ln)) / 2;
     // reading, not typing: line starts in view
     scroller.scrollTo({ top: Math.max(0, top), ...(document.activeElement === ta ? {} : { left: 0 }), behavior: 'smooth' });
-  }));
+  });
 
   // ------------------------------------------------ caret follow (the textarea never scrolls itself)
   let measure: CanvasRenderingContext2D | null = null;
@@ -194,7 +195,7 @@ function NotebookWindow() {
   const goBar = (bar: number) => { A.seek(beatOfBar(bar)); say(tl('a.nb.bar', { n: bar })); };
 
   return (
-    <div class="win nbwin" classList={{ wrap: NB.wrap }} style={{ left: G().x + 'px', top: G().y + 'px', width: G().w + 'px', height: G().h + 'px', 'z-index': NB.front ? 46 : 44, '--nb-font': NB.font + 'px', '--nb-lh': LH() + 'px' }}
+    <div class={['win nbwin', { wrap: NB.wrap }]} style={{ left: G().x + 'px', top: G().y + 'px', width: G().w + 'px', height: G().h + 'px', 'z-index': NB.front ? 46 : 44, '--nb-font': NB.font + 'px', '--nb-lh': LH() + 'px' }}
       data-notebook>
       <div class="winhd" onPointerDown={move}>
         <span class="tile" style={{ width: '20px', height: '20px', background: 'color-mix(in srgb, var(--blue) 18%, transparent)', color: 'var(--blue)' }}><Icon d={NOTEBOOK_ICON} size={12} /></span>
@@ -203,8 +204,8 @@ function NotebookWindow() {
           <span class="sub">{range()[1] >= range()[0] ? tl('a.nb.bars', { a: range()[0], b: range()[1] }) : tl('a.nb.noBars')}</span>
         </Show>
         <div style={{ flex: 1 }} />
-        <Show when={pages().length}><button class="nb-tog" classList={{ on: NB.rhymes }} title={tl('a.nb.rhymesTip')} onClick={() => { setNB('rhymes', !NB.rhymes); savePrefs(); }}>{tl('a.nb.rhymes')}</button></Show>
-        <Show when={pages().length}><button class="nb-tog" classList={{ on: NB.wrap }} title={tl('a.nb.wrapTip')} onClick={toggleWrap}>{tl('a.nb.wrap')}</button></Show>
+        <Show when={pages().length}><button class={['nb-tog', { on: NB.rhymes }]} title={tl('a.nb.rhymesTip')} onClick={() => { setNB('rhymes', !NB.rhymes); savePrefs(); }}>{tl('a.nb.rhymes')}</button></Show>
+        <Show when={pages().length}><button class={['nb-tog', { on: NB.wrap }]} title={tl('a.nb.wrapTip')} onClick={toggleWrap}>{tl('a.nb.wrap')}</button></Show>
         <button class="closebtn" title={tl('a.nb.close')} onClick={closeNotebook}>×</button>
       </div>
       <div class="nb-top">
@@ -219,31 +220,31 @@ function NotebookWindow() {
       </Show>
       </div>
       <Show when={!page()}><Empty /></Show>
-      <div ref={scroller} class="nb-scroll" classList={{ hidden: !page() }} onWheel={onWheel} onPointerDown={touched}>
+      <div ref={scroller} class={['nb-scroll', { hidden: !page() }]} onWheel={onWheel} onPointerDown={touched}>
         <div class="nb-grid" style={{ 'padding-bottom': Math.max(24, viewH() / 2) + 'px', 'padding-top': PAD_T + 'px' }}>
           <div class="nb-gutter">
-            <Index each={bars()}>{(b, i) => (
-              <div class="nb-row" classList={{ cur: i === curLine(), hdr: b() == null }} style={rowStyle(i)}>
+            <For each={bars()} keyed={false}>{(b, i) => (
+              <div class={['nb-row', { cur: i === curLine(), hdr: b() == null }]} style={rowStyle(i)}>
                 <Show when={b() != null}>
-                  <button class="nb-num" tabIndex={-1} title={tl('a.nb.playheadTo', { n: b()! })} onClick={() => goBar(b()!)}>{b()}</button>
+                  <button class="nb-num" tabindex={-1} title={tl('a.nb.playheadTo', { n: b()! })} onClick={() => goBar(b()!)}>{b()}</button>
                 </Show>
               </div>
-            )}</Index>
+            )}</For>
           </div>
           <div class="nb-body">
             <div ref={mirror} class="nb-mirror" aria-hidden="true">
-              <Index each={lines()}>{(l, i) => <MirrorLine text={l()} hdr={bars()[i] == null} cur={i === curLine()} group={groups().get(i)} />}</Index>
+              <For each={lines()} keyed={false}>{(l, i) => <MirrorLine text={l()} hdr={bars()[i] == null} cur={i === curLine()} group={groups().get(i)} />}</For>
             </div>
-            <textarea ref={ta} class="nb-ta" wrap={NB.wrap ? 'soft' : 'off'} maxLength={50000} spellcheck={false} autocapitalize="off" autocomplete="off"
+            <textarea ref={ta} class="nb-ta" wrap={NB.wrap ? 'soft' : 'off'} maxlength={50000} spellcheck="false" autocapitalize="off" autocomplete="off"
               placeholder={tl('a.nb.placeholder')}
               onInput={onInput} onKeyDown={onKey} onBlur={flushNotebook} onPointerUp={keepCaretVisible}
               onScroll={() => { if (ta.scrollTop || ta.scrollLeft) { ta.scrollTop = 0; ta.scrollLeft = 0; } }} />
           </div>
           <div class="nb-syll">
-            <Index each={lines()}>{(l, i) => {
+            <For each={lines()} keyed={false}>{(l, i) => {
               const n = () => (bars()[i] == null ? 0 : syllables(l()));
-              return <div class="nb-row" classList={{ cur: i === curLine(), hdr: bars()[i] == null }} style={rowStyle(i)}><Show when={n() > 0}>{n()}</Show></div>;
-            }}</Index>
+              return <div class={['nb-row', { cur: i === curLine(), hdr: bars()[i] == null }]} style={rowStyle(i)}><Show when={n() > 0}>{n()}</Show></div>;
+            }}</For>
           </div>
         </div>
       </div>
@@ -260,7 +261,7 @@ function MirrorLine(props: { text: string; hdr: boolean; cur: boolean; group: nu
     return [t.slice(0, w.from), t.slice(w.from, w.to), t.slice(w.to)] as const;
   };
   return (
-    <div class="nb-row" classList={{ cur: props.cur, hdr: props.hdr }}>
+    <div class={['nb-row', { cur: props.cur, hdr: props.hdr }]}>
       <Show when={parts()} fallback={props.text || '​'}>
         {p => <>{p()[0]}<span class="nb-rhyme" style={{ '--rc': RHYME[props.group! % RHYME.length] }}>{p()[1]}</span>{p()[2]}</>}
       </Show>
@@ -325,12 +326,12 @@ function Tabs() {
   return (
     <div class="nb-tabs" ref={strip}>
       <For each={pages()}>{(pg, i) => (
-        <div class="nb-tab" classList={{ on: pg.id === curPage()?.id, dropL: drop() === i(), dropR: drop() === pages().length && i() === pages().length - 1 }}
+        <div class={['nb-tab', { on: pg.id === curPage()?.id, dropL: drop() === i(), dropR: drop() === pages().length && i() === pages().length - 1 }]}
           onPointerDown={e => down(e, pg)} onDblClick={() => setEditing(pg.id)} onContextMenu={e => menu(e, pg)}
           title={tl('a.nb.tabTip', { name: pg.name, bar: pg.startBar })}>
           <Show when={live(pg)}><span class="nb-live" /></Show>
           <Show when={editing() === pg.id} fallback={<span class="nb-tabname">{pg.name}</span>}>
-            <input class="nb-rename" value={pg.name} maxLength={80} ref={el => queueMicrotask(() => { el.focus(); el.select(); })}
+            <input class="nb-rename" value={pg.name} maxlength={80} ref={el => queueMicrotask(() => { el.focus(); el.select(); })}
               onPointerDown={e => e.stopPropagation()}
               onKeyDown={e => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') { e.currentTarget.value = pg.name; e.currentTarget.blur(); } }}
               onBlur={e => { renamePage(pg.id, e.currentTarget.value); setEditing(null); }} />

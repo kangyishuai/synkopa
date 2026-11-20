@@ -12,7 +12,8 @@ import type { TranslationKey } from '../lib/i18n';
 import { isTypingKey } from '../state/typingKeys';
 import { setNoteClip } from '../state/noteClipboard';
 import { sungToPattern } from '../lib/vocalNotes';
-import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import { captureOn, createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Clip, ClipTune, F0ModelStatus, Melody, MelodyChannel, Op, PitchAnalysis, PitchTarget, RefTune, TuneEdit } from '../api/types';
 import { clamp, dbg, dbText, fmtPos } from '../lib/format';
@@ -78,7 +79,7 @@ function PitchBody(props: { clipId: number }) {
     setAn(null); setErr(null);
     be().pitchAnalyze(props.clipId).then(a => { anCache.set(k, a); if (anKey() === k) { setAn(a); fitView(a); } }).catch(e => setErr(String(e?.message ?? e)));
   };
-  createEffect(() => { anKey(); load(); });
+  effect(() => { anKey(); load(); });
 
   // ---- editor state
   const tuneFx = () => { const tr = S.project.tracks[c().track]; return S.project.inserts.find(m => m.id === tr?.insert)?.fx.find(f => f.type === 'tune'); };
@@ -136,7 +137,7 @@ function PitchBody(props: { clipId: number }) {
     // the stored melody too: Apply, Update and undo change it without touching the piano roll
     applied()?.melody ?? null]);
   let melTimer = 0;
-  createEffect(on(melKey, () => {
+  watch(melKey, () => {
     clearTimeout(melTimer);
     melTimer = window.setTimeout(() => {
       be().melodyChannels(props.clipId).then(setMelodies).catch(() => setMelodies([]));
@@ -145,7 +146,7 @@ function PitchBody(props: { clipId: number }) {
       if (!m) { setMelStale(null); return; }
       be().melodyReference(props.clipId, m.channel, m.span).then(r => setMelStale(JSON.stringify(r.melody.notes) === JSON.stringify(m.notes) ? null : r.melody)).catch(() => setMelStale(null));
     }, 250);
-  }));
+  });
   onCleanup(() => clearTimeout(melTimer));
   const useMelody = (channel: number, span?: [number, number] | null) =>
     be().melodyReference(props.clipId, channel, span)
@@ -175,15 +176,15 @@ function PitchBody(props: { clipId: number }) {
     else if (melodies()[0]) void useMelody(melodies()[0].channel);
   };
   // the Piano roll's "vocal reference" button opens the editor with a melody request
-  createEffect(on(() => U.pitchEd?.melody, req => {
+  watch(() => U.pitchEd?.melody, req => {
     if (!req) return;
     setU('pitchEd', ed => ed && { ...ed, melody: undefined });
     void useMelody(req.channel, req.span);
-  }));
+  });
   // an undo/redo of Apply brings the stored parameters back into the panel
-  createEffect(on(() => JSON.stringify(applied()), () => { const a = applied(); if (a) { setDraft({ ...DEFAULT_REF, ...a }); setMode(1); } }, { defer: true }));
+  watch(() => JSON.stringify(applied()), () => { const a = applied(); if (a) { setDraft({ ...DEFAULT_REF, ...a }); setMode(1); } }, { defer: true });
   let tgtSeq = 0, tgtTimer = 0;
-  createEffect(() => {
+  effect(() => {
     const d = draft(), m = mode(), a = an();
     JSON.stringify(c().tune?.notes ?? null); key(); scale();
     clearTimeout(tgtTimer);
@@ -248,7 +249,7 @@ function PitchBody(props: { clipId: number }) {
   // ---- drawing
   const layer = new Layer();
   let dirty = true;
-  createEffect(() => {
+  effect(() => {
     viewV(); sel(); hover(); tool(); key(); scale(); marq(); pencilLive(); an(); peaksVersion(); edited(); themeVersion(); lang(); activeTarget(); lowRuns();
     JSON.stringify(c().tune ?? null); c().offset; c().len; c().stretch; c().gain; S.project.bpm; src()?.color; S.project.loop?.a; S.project.loop?.b; U.start;
     dirty = true;
@@ -697,8 +698,8 @@ function PitchBody(props: { clipId: number }) {
   // over the plugin / Channel Rack / Piano roll layer when it was used after them
   void theme; void fonts;
   return (
-    <div ref={root} tabIndex={0} class="win pitchwin" style={{ left: E().x + 'px', top: E().y + 'px', width: E().w + 'px', height: E().h + 'px', 'z-index': outerZ(E().z) }}
-      onKeyDown={onKey} on:pointerdown={{ capture: true, handleEvent: () => A.pitchFront() }} data-pitched>
+    <div ref={[e => (root = e), captureOn('pointerdown', () => A.pitchFront())]} tabindex={0} class="win pitchwin" style={{ left: E().x + 'px', top: E().y + 'px', width: E().w + 'px', height: E().h + 'px', 'z-index': outerZ(E().z) }}
+      onKeyDown={onKey} data-pitched>
       <div class="winhd" onPointerDown={e => moveWindow(e, () => E(), (x, y) => setU('pitchEd', ed => ed && { ...ed, x, y }))}>
         <span class="tile" style={{ width: '20px', height: '20px', background: FXMETA.tune.color + '26', color: FXMETA.tune.color }}><Icon d={FXMETA.tune.icon} size={13} /></span>
         <span class="title">{t('d.pitch.title')}</span>
@@ -709,8 +710,8 @@ function PitchBody(props: { clipId: number }) {
         <span onPointerDown={e => e.stopPropagation()}>
           <Segmented small options={[t('d.pitch.mode.manual'), t('d.pitch.mode.ref')]} value={mode} pick={pickMode} color={FXMETA.tune.color} title={t('d.pitch.mode.tip')} />
         </span>
-        <button class="smallbtn" classList={{ playing: U.playing }} title={t('d.pitch.play.tip')} onPointerDown={e => e.stopPropagation()} onClick={() => void A.toggleSong()}>{U.playing ? t('d.pitch.stop') : t('d.pitch.play')}</button>
-        <button class="smallbtn" classList={{ playing: previewing() }} title={t('d.pitch.solo.tip')} onPointerDown={e => e.stopPropagation()} onClick={solo}>{previewing() ? t('d.pitch.stop') : t('d.pitch.solo')}</button>
+        <button class={['smallbtn', { playing: U.playing }]} title={t('d.pitch.play.tip')} onPointerDown={e => e.stopPropagation()} onClick={() => void A.toggleSong()}>{U.playing ? t('d.pitch.stop') : t('d.pitch.play')}</button>
+        <button class={['smallbtn', { playing: previewing() }]} title={t('d.pitch.solo.tip')} onPointerDown={e => e.stopPropagation()} onClick={solo}>{previewing() ? t('d.pitch.stop') : t('d.pitch.solo')}</button>
         <button class="iconbtn" title={t('d.pitch.fit.tip')} onPointerDown={e => e.stopPropagation()} onClick={() => fitView()}><Icon d="M4 9V4h5 M20 9V4h-5 M4 15v5h5 M20 15v5h-5" size={13} /></button>
         <PitchCorrectButton insert={() => S.project.tracks[c().track]?.insert ?? null} keyScale={() => ({ key: key(), scale: scale() })} />
         <button class="closebtn" title={t('d.pitch.close')} onClick={A.closePitchEditor}>×</button>
@@ -718,7 +719,7 @@ function PitchBody(props: { clipId: number }) {
       <div class="ptools">
         <div class="seg tools">
           <For each={TOOLS}>{tl => (
-            <button classList={{ on: tool() === tl.id }} title={t(tl.label) + ' (' + tl.key + ') — ' + t(tl.tip)} onClick={() => setTool(tl.id)}>
+            <button class={{ on: tool() === tl.id }} title={t(tl.label) + ' (' + tl.key + ') — ' + t(tl.tip)} onClick={() => setTool(tl.id)}>
               <Icon d={tl.icon} size={14} />
             </button>
           )}</For>
@@ -774,7 +775,7 @@ function PitchBody(props: { clipId: number }) {
               <span class="refnote warn">{t('d.pitch.mel.changed')}</span>
               <button class="smallbtn" title={t('d.pitch.mel.update.tip')} onClick={updateMelody}>{t('d.pitch.mel.update')}</button>
             </Show>
-            <span class="refnote" classList={{ err: !!tgtErr() || !!target()?.reason }} title={refStatus()}>{refStatus()}</span>
+            <span class={['refnote', { err: !!tgtErr() || !!target()?.reason }]} title={refStatus()}>{refStatus()}</span>
           </Show>
           <span class="reflegend"><i style={{ background: 'var(--fg4)' }} />{t('d.pitch.legend.orig')} <i class="dash" />{t('d.pitch.legend.ref')} <i style={{ background: FXMETA.tune.color }} />{t('d.pitch.legend.out')}</span>
           <Show when={model()}>{m => (

@@ -1,5 +1,5 @@
-import { createEffect, createMemo, createSignal, For, Match, onCleanup, onMount, Show, Switch } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { createMemo, For, Match, Show, Switch } from 'solid-js';
+import { createSignal, createStore, effect, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Channel, ClipKind, Id, Kit, LibFile, LibraryProgress, Pattern, Source } from '../api/types';
 import { clamp, fmtBytes, baseName } from '../lib/format';
@@ -94,7 +94,7 @@ export function importAt(paths: string[], x: number, y: number, alt = false) {
 
 function Thumb(props: { src: Source }) {
   let cv!: HTMLCanvasElement;
-  createEffect(() => {
+  effect(() => {
     peaksVersion();
     const pk = getPeaks(props.src.id); if (!pk || !cv) return;
     const W = cv.clientWidth || 180, H = 14, dpr = window.devicePixelRatio || 1;
@@ -156,7 +156,7 @@ function PatPreview(props: { pat: Pattern; chans: Map<Id, Channel> }) {
     g.globalAlpha = 1;
     return cv.toDataURL();
   });
-  return <img ref={el} class="pprev" src={src() || undefined} alt="" draggable={false} />;
+  return <img ref={el} class="pprev" src={src() || undefined} alt="" draggable="false" />;
 }
 
 /**
@@ -202,7 +202,7 @@ function PatternsTab() {
       <div class="plist">
         <For each={S.project.patterns}>
           {p => (
-            <div class="pitem" classList={{ on: U.patSel.length ? U.patSel.includes(p.id) : U.cur?.kind === 'pat' && U.cur.ref === p.id }} title={t('d.br.pat.tip')} style={{ '--c': p.color }}
+            <div class={['pitem', { on: U.patSel.length ? U.patSel.includes(p.id) : U.cur?.kind === 'pat' && U.cur.ref === p.id }]} title={t('d.br.pat.tip')} style={{ '--c': p.color }}
               onContextMenu={e => { e.preventDefault(); patternItemMenu(p, e.clientX, e.clientY); }}
               onPointerDown={e => pressPattern(p, e)}>
               <div class="prow">
@@ -237,7 +237,7 @@ function AudioTab() {
         <div style={{ display: 'flex', 'flex-direction': 'column', padding: '4px 0' }}>
           <For each={list()}>
             {s => (
-              <div class="sitem" classList={{ on: U.cur?.kind === 'audio' && U.cur.ref === s.id, playing: U.previewing && U.previewPath === srcKey(s.id) }} title={t('d.br.src.tip')}
+              <div class={['sitem', { on: U.cur?.kind === 'audio' && U.cur.ref === s.id, playing: U.previewing && U.previewPath === srcKey(s.id) }]} title={t('d.br.src.tip')}
                 onPointerDown={e => {
                   if (e.button === 0 && dblCheck('sitem' + s.id)) { e.preventDefault(); return previewSource(s); }
                   pick('audio', s.id, s.name, s.color, e);
@@ -466,7 +466,7 @@ export function osDrop(paths: string[], x: number, y: number, alt: boolean) {
 }
 
 const Chev = (props: { open: boolean }) => (
-  <svg class="chev" classList={{ open: props.open }} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
+  <svg class={['chev', { open: props.open }]} width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7" /></svg>
 );
 const Glyph = (props: { g: MenuGlyph; size: number }) => (
   <svg width={props.size} height={props.size} viewBox={props.g.vb} fill="currentColor" aria-hidden="true"><path fill-rule={props.g.eo ? 'evenodd' : 'nonzero'} d={props.g.d} /></svg>
@@ -475,7 +475,7 @@ const Glyph = (props: { g: MenuGlyph; size: number }) => (
 function FileRow(props: { f: LibFile; sub: boolean }) {
   const f = props.f, color = GROUP_COLOR.get(f.group);
   return (
-    <div class="fitem" data-path={f.path} classList={{ playing: U.previewing && U.previewPath === f.path, sel: lib.sel === f.path, sub: props.sub }} title={t('d.br.file.tip')}
+    <div class={['fitem', { playing: U.previewing && U.previewPath === f.path, sel: lib.sel === f.path, sub: props.sub }]} data-path={f.path} title={t('d.br.file.tip')}
       onContextMenu={e => { e.preventDefault(); setLib('sel', f.path); openMenu(e.clientX, e.clientY, [{ t: 'title', label: f.name }, { t: 'item', label: t('d.br.addsampler'), title: t('d.br.addsampler.tip'), act: () => void addSamplerFiles([f]) }], 90); }}
       onPointerDown={e => {
         if (e.button !== 0) return;
@@ -495,7 +495,7 @@ function GroupHead(props: { k: string; g: { name: string; total: number }; open:
   const key = () => props.k + '|' + props.g.name;
   const choices = () => (searching() ? 'sopen' : 'gopen');
   return (
-    <div class="grow" role="button" aria-expanded={props.open} title={t('d.br.group.tip', { n: props.g.total })} style={{ '--c': GROUP_COLOR.get(props.g.name) ?? 'var(--fg3)' }}
+    <div class="grow" role="button" aria-expanded={props.open ? 'true' : 'false'} title={t('d.br.group.tip', { n: props.g.total })} style={{ '--c': GROUP_COLOR.get(props.g.name) ?? 'var(--fg3)' }}
       onClick={() => { setLib(choices(), key(), !props.open); if (!searching()) saveBrowserOpen(); }}>
       <Chev open={props.open} />
       <span class="gico"><Glyph g={libGroupGlyph(props.g.name)} size={11} /></span>
@@ -526,7 +526,7 @@ function FileList(props: { k: string }) {
     const [i0, i1] = windowRange(f, -off, listEl.clientHeight - off);
     setWin({ f, i0, i1 });
   };
-  createEffect(recompute);
+  effect(recompute);
   onMount(() => {
     reveals[props.k] = path => {
       const f = flat(), i = f.findIndex(it => it.kind === 'frow' && it.f?.path === path);
@@ -537,7 +537,7 @@ function FileList(props: { k: string }) {
     onCleanup(() => delete reveals[props.k]);
   });
   // the keyboard walk reads the model; a fresh list or a new open/search state rebuilds it
-  createEffect(() => { flats[props.k] = flat(); bumpWalk(1); });
+  effect(() => { flats[props.k] = flat(); bumpWalk(1); });
   onCleanup(() => delete flats[props.k]);
   const slice = () => { const w = win(); return w ? w.f.slice(w.i0, w.i1 + 1) : []; };
   return (
@@ -605,7 +605,7 @@ function LibraryTab() {
   });
   // The keyboard walk: every drawn file in row order — the standard library, then the open
   // kits, then the open folders. `walkTick` covers a list's model changing (load, open, search).
-  createEffect(() => {
+  effect(() => {
     walkTick();
     const out: { f: LibFile; k: string }[] = [];
     const push = (k: string) => { for (const it of flats[k] ?? []) if (it.kind === 'frow' && it.f) out.push({ f: it.f, k }); };
@@ -628,7 +628,7 @@ function LibraryTab() {
               const prog = () => lib.progress[k.id], key = 'k:' + k.id;
               return (
                 <div class="kit">
-                  <div class="top" classList={{ can: k.installed && !searching() }} role={k.installed ? 'button' : undefined} aria-expanded={k.installed ? isOpen(key) : undefined} onClick={() => k.installed && !searching() && toggleOpen(key)}>
+                  <div class={['top', { can: k.installed && !searching() }]} role={k.installed ? 'button' : undefined} aria-expanded={k.installed ? (isOpen(key) ? 'true' : 'false') : undefined} onClick={() => k.installed && !searching() && toggleOpen(key)}>
                     <Show when={k.installed} fallback={<span style={{ width: '12px', flex: 'none' }} />}><Chev open={isOpen(key)} /></Show>
                     <span class="nm ell">{k.name}</span>
                     <Show when={!k.installed && !prog()}><button class="smallbtn primary" onClick={e => { e.stopPropagation(); install(k); }}>{t('d.br.install')}</button></Show>
@@ -660,7 +660,7 @@ function LibraryTab() {
     <>
       <div class="bsearch" title={t('d.br.search.tip')}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="M20 20l-3.6-3.6" /></svg>
-        <input ref={searchEl} type="text" spellcheck={false} autocomplete="off" value={lib.q} placeholder={t('d.br.search')} aria-label={t('d.br.search')}
+        <input ref={searchEl} type="text" spellcheck="false" autocomplete="off" value={lib.q} placeholder={t('d.br.search')} aria-label={t('d.br.search')}
           onInput={e => setQuery(e.currentTarget.value)}
           onKeyDown={e => {
             if (e.key === 'Escape') { e.stopPropagation(); if (lib.q) setQuery(''); else e.currentTarget.blur(); }
@@ -668,13 +668,13 @@ function LibraryTab() {
           }} />
         <Show when={lib.q}><button class="xbtn" title={t('d.br.search.clear')} aria-label={t('d.br.search.clear')} onClick={() => { setQuery(''); searchEl?.focus(); }}>×</button></Show>
       </div>
-      <div class="scroll" ref={listEl} tabIndex={0} onKeyDown={onListKey}>
+      <div class="scroll" ref={listEl} tabindex={0} onKeyDown={onListKey}>
         <div ref={contentEl}>
         <Show when={lib.error}><div class="bnote" style={{ color: 'var(--danger)' }}>{lib.error}</div></Show>
         <Show when={nothing()}><div class="bnote">{t('d.br.nomatch', { q: lib.q.trim() })}</div></Show>
         <Show when={searchTruncated()}><div class="bnote">{t('d.br.searchtrunc')}</div></Show>
         <Show when={stdShown()}>
-          <div class="bhead tog" role="button" aria-expanded={secOpen('std')} title={t('d.br.sec.tip')} onClick={() => toggleSec('std')}>
+          <div class="bhead tog" role="button" aria-expanded={secOpen('std') ? 'true' : 'false'} title={t('d.br.sec.tip')} onClick={() => toggleSec('std')}>
             <Chev open={secOpen('std')} />
             <span class="ell" style={{ 'text-transform': 'uppercase' }}>{t('d.br.stdlib')}</span>
             <Show when={lib.files[STD]}>{f => <span class="hmeta">{searching() ? `${matchCount(STD)} / ${f().length}` : f().length}</span>}</Show>
@@ -686,7 +686,7 @@ function LibraryTab() {
         {/* installed kits sit in the list like the library's own groups: no section header */}
         <For each={mine()}>{kitRow}</For>
         <Show when={!searching() || folders().length}>
-          <div class="bhead top tog" role="button" aria-expanded={secOpen('folders')} title={t('d.br.sec.tip')} onClick={() => toggleSec('folders')}>
+          <div class="bhead top tog" role="button" aria-expanded={secOpen('folders') ? 'true' : 'false'} title={t('d.br.sec.tip')} onClick={() => toggleSec('folders')}>
             <Chev open={secOpen('folders')} />
             <span class="ell">{t('d.br.folders')}</span>
             <button class="linkbtn add" onClick={e => { e.stopPropagation(); void addFolder(); }} title={t('d.br.addfolder.tip')}>{t('d.br.add')}</button>
@@ -695,7 +695,7 @@ function LibraryTab() {
           <For each={folders()} fallback={<div class="bnote">{t('d.br.addown')}</div>}>
             {f => (
               <>
-                <div class="folder" role="button" aria-expanded={isOpen('f:' + f)} onClick={() => !searching() && toggleOpen('f:' + f)} title={f}>
+                <div class="folder" role="button" aria-expanded={isOpen('f:' + f) ? 'true' : 'false'} onClick={() => !searching() && toggleOpen('f:' + f)} title={f}>
                   <Chev open={isOpen('f:' + f)} />
                   <span class="ell" style={{ flex: 1 }}>{baseName(f) || f}</span>
                   <button class="xbtn" title={t('d.br.rmfolder')} onClick={e => { e.stopPropagation(); void removeFolder(f); }}>×</button>
@@ -709,8 +709,8 @@ function LibraryTab() {
         <div class="bnote">{t('d.br.libnote')}</div>
         {/* kits not downloaded yet: used once in a while, so they wait behind one row at the end of the list */}
         <Show when={!searching() && avail().length}>
-          <button class="bmore" aria-expanded={moreOpen()} aria-label={t('d.br.more')} title={t('d.br.more')} onClick={() => setMoreOpen(v => !v)}>
-            <span class="plus" classList={{ open: moreOpen() }}>+</span>
+          <button class="bmore" aria-expanded={moreOpen() ? 'true' : 'false'} aria-label={t('d.br.more')} title={t('d.br.more')} onClick={() => setMoreOpen(v => !v)}>
+            <span class={['plus', { open: moreOpen() }]}>+</span>
           </button>
           <Show when={moreOpen()}><For each={avail()}>{kitRow}</For></Show>
         </Show>
@@ -732,7 +732,7 @@ export function Browser() {
     <>
       <div class="browser" style={{ width: U.pickW + 'px' }}>
         <div class="btabs">
-          <For each={BROWSER_TABS}>{k => <button classList={{ on: U.browserTab === k }} onClick={() => setU('browserTab', k)}>{t(`d.br.tab.${k}`)}</button>}</For>
+          <For each={BROWSER_TABS}>{k => <button class={{ on: U.browserTab === k }} onClick={() => setU('browserTab', k)}>{t(`d.br.tab.${k}`)}</button>}</For>
         </div>
         <Switch fallback={<LibraryTab />}>
           <Match when={U.browserTab === 'patterns'}><PatternsTab /></Match>
