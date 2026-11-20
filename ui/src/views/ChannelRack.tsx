@@ -32,8 +32,7 @@ import { channelIcon, InstIcon } from '../ui/instIcons';
 import { MiniKnob, NumField, parseNum } from '../ui/Knob';
 import { PanelFrame, WinControls } from './PanelFrame';
 import { paneDock } from '../state/docking';
-import { pickFreeInsert, wheelInsert } from '../ui/InsertPicker';
-import { showInsert } from '../state/mixView';
+import { insertBoxClick, wheelInsert } from '../ui/InsertPicker';
 import { toggleChannelWindow } from './ChannelWindow';
 import { drawKeyGraph, drawLane, drawRack, drawRackHead, type RackGeo, laneColor } from './patternDraw';
 import { addChannelMenu, chanMenu, chanInsertChoice, insertMenu, insLabel, insTitle, patGeom, PatternChip, useDataVersion, useSize } from './patternShared';
@@ -493,16 +492,10 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
   const sel = () => isChannelSelected(c().id);
   const anySolo = () => channels().some(x => x.solo);
   let vg: Tweak | null = null, pg: Tweak | null = null;
-  // one click opens the insert menu, a double-click goes to that insert in the mixer instead
-  let insTimer = 0;
-  onCleanup(() => clearTimeout(insTimer));
-  const insClick = (e: MouseEvent) => {
-    // FL: a double-click on a channel without its own insert gives it a free one (named and coloured after it)
-    if (insTimer) { clearTimeout(insTimer); insTimer = 0; if (c().insert == null) pickFreeInsert(chanInsertChoice(live())); else showInsert(c().insert); return; }
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    insTimer = window.setTimeout(() => { insTimer = 0; insertMenu(c(), r.left, r.bottom + 2); }, 250);
-  };
   const live = () => chanById(c().id) ?? c();
+  // one click opens the insert menu; a double-click gives a channel without its own insert a free
+  // one (FL, named and coloured after it), else goes to that insert in the mixer
+  const insClick = insertBoxClick(() => chanInsertChoice(live()), r => insertMenu(c(), r.left, r.bottom + 2));
   const volOp = (v: number) => chanOp(live(), { vol: Math.round(clamp(v, 0, 1) * 10000) / 10000 });
   const volT = () => ({ kind: 'chanVol' as const, id: c().id }), panT = () => ({ kind: 'chanPan' as const, id: c().id });
   const panOp = (v: number) => chanOp(live(), { pan: Math.round(clamp(v * 2 - 1, -1, 1) * 100) / 100 });
