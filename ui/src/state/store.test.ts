@@ -106,6 +106,55 @@ describe('replaceState (a whole state from the engine)', () => {
     expect(store.arrVersion()).toBe(a0 + 1);
   });
 
+  it('an identical state (our own edit, echoed) bumps nothing and tells no arrangement listener', () => {
+    store.replaceState(dto(project()));
+    settle();
+    const heard: unknown[] = [];
+    store.onArrangementChange(ops => heard.push(ops));
+    const p0 = store.projVersion(), a0 = store.arrVersion(), c10 = clipById(10), rawClips = store.rawOf(store.S.project).clips;
+    const r = runs(() => store.S.project.clips.length + store.S.project.inserts.length);
+    store.replaceState(dto(project(), { revision: 2, dirty: true }));
+    settle();
+    expect([store.projVersion(), store.arrVersion(), r.n]).toEqual([p0, a0, 1]);
+    expect(heard).toEqual([]);
+    expect(clipById(10)).toBe(c10);
+    // the plain mirror keeps its objects too: what a canvas read from it before stays current
+    expect(store.rawOf(store.S.project).clips).toBe(rawClips);
+    expect([store.S.revision, store.S.dirty]).toEqual([2, true]); // the meta fields still land
+    r.dispose();
+  });
+
+  it('a state that changes only the mixer, the notebook or the loop is not an arrangement change', () => {
+    store.replaceState(dto(project()));
+    settle();
+    const heard: unknown[] = [];
+    store.onArrangementChange(ops => heard.push(ops));
+    const i1 = store.S.project.inserts[1], rawClips = store.rawOf(store.S.project).clips;
+    const p0 = store.projVersion(), a0 = store.arrVersion();
+    const next = project({ loop: { a: 0, b: 4 }, nextId: 101 });
+    next.inserts[1] = { ...ins(1), vol: 0.5, name: 'Bass' };
+    store.replaceState(dto(next, { revision: 2 }));
+    settle();
+    expect(store.S.project.inserts[1]).toBe(i1); // merged in place
+    expect([i1.vol, i1.name]).toEqual([0.5, 'Bass']);
+    expect(store.S.project.loop).toEqual({ a: 0, b: 4 });
+    expect(store.projVersion()).toBe(p0 + 1);
+    expect(store.arrVersion()).toBe(a0);
+    expect(heard).toEqual([]);
+    expect(store.rawOf(store.S.project).inserts[1].vol).toBe(0.5);
+    expect(store.rawOf(store.S.project).clips).toBe(rawClips);
+  });
+
+  it('a project field the engine no longer sends is removed', () => {
+    store.replaceState(dto(project({ automations: [{ id: 70, name: 'A', color: '#fff', target: { kind: 'insertVol', id: 1 }, points: [] } as never] })));
+    settle();
+    const a0 = store.arrVersion();
+    store.replaceState(dto(project(), { revision: 2 }));
+    settle();
+    expect('automations' in store.S.project).toBe(false);
+    expect(store.arrVersion()).toBe(a0 + 1);
+  });
+
   it('tells arrangement listeners, with null ops and the project as it was', () => {
     store.replaceState(dto(project()));
     const seen: [unknown, number][] = [];
@@ -405,7 +454,9 @@ describe('rawOf cache', () => {
     expect(store.rawOf(c)).toBe(next.clips[1]);
     expect(store.rawOf(c).start).toBe(5);
     expect(store.rawOf(proj)).not.toBe(beforeProject);
-    expect(store.rawOf(proj)).toBe(next);
+    // the new state's objects where it changed something (fields it left as they were keep theirs)
+    expect(store.rawOf(proj)).toEqual(next);
+    expect(store.rawOf(proj).clips).toBe(next.clips);
   });
 
   it('stays the live object through a run of edits and states, for every item kind it indexes', () => {

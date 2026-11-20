@@ -67,9 +67,9 @@ function stretchStatus(dto: StateDto): Record<string, string> {
 const [projVersion, setProjVersion] = createSignal(0);
 export { projVersion };
 /**
- * Like `projVersion`, but not bumped by local edits that only touch the mixer or the notebook
- * (effects, inserts, lyrics): the arrangement canvases (playlist, pattern editor) skip a full
- * redraw when an effect is added, bypassed or tweaked.
+ * Like `projVersion`, but not bumped by changes (local edits or engine states) that only touch the
+ * mixer, the notebook or the loop range (effects, inserts, lyrics): the arrangement canvases
+ * (playlist, pattern editor) skip a full redraw when an effect is added, bypassed or tweaked.
  */
 const [arrVersion, setArrVersion] = createSignal(0);
 export { arrVersion };
@@ -271,18 +271,31 @@ function setMeta(dto: StateDto) {
   setLive('fxErrors', dto.fxErrors ?? {});
 }
 
+/** Project fields no arrangement canvas draws from (what `NOT_ARRANGEMENT` ops change, and the id counter). */
+const NOT_ARRANGEMENT_KEYS = new Set<string>(['inserts', 'notebook', 'loop', 'nextId'] satisfies (keyof Project)[]);
+
 export function replaceState(dto: StateDto) {
-  tellArrangement(null);
+  const old = M as unknown as Obj, next = dto.project as unknown as Obj;
+  // Most engine states are the reply to an edit already applied here, or carry only a mixer change:
+  // only the fields that differ are merged and announced, so the arrangement canvases are not
+  // redrawn in full (and nothing re-runs) for a state that does not change what they draw.
+  const changed: string[] = [];
+  for (const k of new Set([...Object.keys(old), ...Object.keys(next)])) if (old[k] !== next[k] && !same(old[k], next[k])) changed.push(k);
+  const arrangement = changed.some(k => !NOT_ARRANGEMENT_KEYS.has(k));
+  if (arrangement) tellArrangement(null);
   // a relink (or its undo) gives a source other audio under the same id: its waveform is redrawn
   const was = new Map(M.sources.map(s => [s.id, s.path]));
   for (const s of dto.project.sources) { const p = was.get(s.id); if (p != null && p !== s.path) dropSourcePeaks(s.id); }
-  const prev = M;
   mChanged();
-  M = dto.project;
+  // `M` keeps its own objects where nothing changed: what was read from it (a canvas's lookup
+  // tables, kept while `arrVersion` holds) stays current, and the previous project is not kept alive
+  const kept: Obj = { ...next };
+  for (const k of Object.keys(old)) if (!changed.includes(k)) kept[k] = old[k];
+  M = kept as unknown as Project;
   batch(() => {
-    setS(d => { mergeInto(d as unknown as Obj, 'project', prev, M); });
+    if (changed.length) setS(d => { const p = d.project as unknown as Obj; for (const k of changed) mergeInto(p, k, old[k], next[k]); });
     mChanged(); // nothing cached while the store was half merged
-    bumpProject();
+    if (changed.length) bumpProject(arrangement);
     setMeta(dto);
   });
   localNext = Math.max(localNext, dto.project.nextId);
