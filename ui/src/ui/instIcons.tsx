@@ -85,7 +85,7 @@ export function sampleIcon(s: { name: string; path?: string | null }): string | 
   return libIcon(s.path) ?? guessIcon(s.name);
 }
 
-type ChannelKind = 'sample' | 'synth' | 'keys' | 'plugin';
+type ChannelKind = 'sample' | 'synth' | 'keys' | 'musicbox' | 'plugin';
 type ChannelLike = { name: string; kind: ChannelKind; source?: number };
 /** A source by id (a sample channel's sample), for icons read from what the sample is. */
 export type SourceOf = (id: number) => { name: string; path: string } | undefined;
@@ -100,6 +100,7 @@ export function channelIcon(c: ChannelLike, src?: SourceOf): string {
   const i = libIcon(s?.path) ?? guessIcon(c.name) ?? (s ? guessIcon(s.name) : null);
   if (i) return i;
   if (c.kind === 'keys') return 'piano';
+  if (c.kind === 'musicbox') return 'synth';
   return c.kind === 'synth' || c.kind === 'plugin' ? 'synth' : 'sample';
 }
 

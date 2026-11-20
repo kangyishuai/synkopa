@@ -2,7 +2,7 @@
 // as the engine does, the value of an envelope at a beat, which clip drives a target at the
 // playhead, and the ops that create a new automation clip ("Automatyzuj na playliście").
 import { t as tl, tName } from './i18n';
-import { CLIP_GAIN_DB, KEYS_DYNAMICS, KEYS_RELEASE, type AutoPoint, type AutoTarget, type CurveShape, type Automation, type Catalog, type Channel, type Clip, type Id, type Op, type Project, type Track } from '../api/types';
+import { CLIP_GAIN_DB, KEYS_DYNAMICS, KEYS_RELEASE, MB_RELEASE, type AutoPoint, type AutoTarget, type CurveShape, type Automation, type Catalog, type Channel, type Clip, type Id, type Op, type Project, type Track } from '../api/types';
 import { insertTrackOps } from './clipOps';
 import { synthParam } from './synth';
 import { dbText, hzText, panText, volText } from './format';
@@ -32,6 +32,7 @@ export function targetKey(t: AutoTarget): string {
     case 'chanPan': return 'cp:' + t.id;
     case 'synth': return 'sy:' + t.chanId + ':' + t.param;
     case 'keys': return 'ky:' + t.chanId + ':' + t.param;
+    case 'musicBox': return 'mb:' + t.chanId + ':' + t.param;
     case 'plugin': return 'pl:' + t.fxId + ':' + t.paramId;
     case 'clipGain': return 'cg:' + t.id;
     case 'clipPan': return 'cpn:' + t.id;
@@ -40,6 +41,14 @@ export function targetKey(t: AutoTarget): string {
 
 const chanOf = (p: Project, id: Id): Channel | undefined => p.channels?.find(c => c.id === id);
 const clipOf = (p: Project, id: Id) => p.clips.find(c => c.id === id && c.kind === 'audio');
+
+/** Music Box knobs: release is logarithmic ms, the rest linear %. */
+function musicBoxNorm(t: Extract<AutoTarget, { kind: 'musicBox' }>, x: number): number {
+  return t.param === 'release' ? lg(x, MB_RELEASE.min, MB_RELEASE.max) : lin(x, 0, 100);
+}
+function musicBoxDenorm(t: Extract<AutoTarget, { kind: 'musicBox' }>, v: number): number {
+  return t.param === 'release' ? ex(v, MB_RELEASE.min, MB_RELEASE.max) : unlin(v, 0, 100);
+}
 
 function fxOf(p: Project, id: Id) {
   for (const m of p.inserts) { const f = m.fx.find(x => x.id === id); if (f) return { m, f }; }
@@ -54,6 +63,7 @@ export function normalize(p: Project, cat: Catalog | null, t: AutoTarget, x: num
     case 'insertPan': case 'chanPan': case 'clipPan': return c01((x + 1) / 2);
     case 'clipGain': return lin(x, CLIP_GAIN_DB.min, CLIP_GAIN_DB.max);
     case 'keys': return t.param === 'release' ? lg(x, KEYS_RELEASE.min, KEYS_RELEASE.max) : lin(x, KEYS_DYNAMICS.min, KEYS_DYNAMICS.max);
+    case 'musicBox': return musicBoxNorm(t, x);
     case 'synth': {
       const d = cat && synthParam(cat.synth, t.param);
       if (!d) return c01(x);
@@ -78,6 +88,7 @@ export function denormalize(p: Project, cat: Catalog | null, t: AutoTarget, v: n
     case 'insertPan': case 'chanPan': case 'clipPan': return v * 2 - 1;
     case 'clipGain': return unlin(v, CLIP_GAIN_DB.min, CLIP_GAIN_DB.max);
     case 'keys': return t.param === 'release' ? ex(v, KEYS_RELEASE.min, KEYS_RELEASE.max) : unlin(v, KEYS_DYNAMICS.min, KEYS_DYNAMICS.max);
+    case 'musicBox': return musicBoxDenorm(t, v);
     case 'synth': {
       const d = cat && synthParam(cat.synth, t.param);
       if (!d) return v;
@@ -108,6 +119,7 @@ export function readTarget(p: Project, t: AutoTarget): number | null {
     case 'clipGain': return clipOf(p, t.id)?.gain ?? null;
     case 'clipPan': return clipOf(p, t.id)?.pan ?? null;
     case 'keys': { const c = chanOf(p, t.chanId); return c?.kind === 'keys' ? c.keys[t.param] : null; }
+    case 'musicBox': { const c = chanOf(p, t.chanId); return c?.kind === 'musicbox' ? c.musicBox[t.param] : null; }
     case 'synth': {
       const c = chanOf(p, t.chanId); if (c?.kind !== 'synth') return null;
       // null for a parameter the patch leaves out: it plays its default (`createAutomationOps` reads it)
@@ -153,6 +165,7 @@ export function writeTargetOps(p: Project, t: AutoTarget, x: number): Op[] | nul
       return c ? [{ op: 'putClips', clips: [{ ...c, [t.kind === 'clipGain' ? 'gain' : 'pan']: x }] }] : null;
     }
     case 'keys': return chan(t.chanId, c => (c.kind === 'keys' ? { ...c, keys: { ...c.keys, [t.param]: x } } : null));
+    case 'musicBox': return chan(t.chanId, c => (c.kind === 'musicbox' ? { ...c, musicBox: { ...c.musicBox, [t.param]: x } } : null));
     case 'synth': return chan(t.chanId, c => (c.kind === 'synth' ? { ...c, synth: { ...c.synth, params: { ...c.synth.params, [t.param]: x } } } : null));
     case 'fx': {
       const b = parseBandParam(t.param);
@@ -308,6 +321,7 @@ export function targetLabel(p: Project, cat: Catalog | null, t: AutoTarget, para
     case 'chanVol': return (chanOf(p, t.id)?.name ?? '?') + ' · ' + tl('a.au.vol');
     case 'chanPan': return (chanOf(p, t.id)?.name ?? '?') + ' · ' + tl('a.au.pan');
     case 'keys': return (chanOf(p, t.chanId)?.name ?? '?') + ' · ' + tl(t.param === 'release' ? 'b.kp.release' : 'b.kp.dynamics');
+    case 'musicBox': return (chanOf(p, t.chanId)?.name ?? '?') + ' · ' + tl(t.param === 'release' ? 'b.mb.release' : t.param === 'ring' ? 'b.mb.ring' : t.param === 'brightness' ? 'b.mb.brightness' : t.param === 'body' ? 'b.mb.body' : t.param === 'mechanical' ? 'b.mb.mechanical' : 'b.mb.spread');
     case 'synth': return (chanOf(p, t.chanId)?.name ?? '?') + ' · ' + tName((cat && synthParam(cat.synth, t.param)?.label) ?? t.param);
     case 'clipGain': case 'clipPan': {
       const c = clipOf(p, t.id), src = c && p.sources.find(s => s.id === c.ref);
@@ -339,6 +353,7 @@ export function autoValueText(p: Project, cat: Catalog | null, t: AutoTarget, v:
     case 'mix': return Math.round(x * 100) + '%';
     case 'synth': { const d = cat && synthParam(cat.synth, t.param); return d ? pFmt(d, x) : Math.round(v * 100) + '%'; }
     case 'keys': return t.param === 'release' ? Math.round(x) + ' ms' : Math.round(x) + '%'; // release is in ms, dynamics in percent (KEYS_RELEASE, KEYS_DYNAMICS)
+    case 'musicBox': return t.param === 'release' ? Math.round(x) + ' ms' : Math.round(x) + '%'; // release ms, the rest percent (MB_RELEASE, MB_*)
     case 'plugin': return Math.round(x * 100) + '%';
     case 'fx': {
       const b = parseBandParam(t.param);
@@ -376,6 +391,7 @@ export function parseAutoValue(p: Project, cat: Catalog | null, t: AutoTarget, t
     }
     case 'mix': return c01(x / 100);
     case 'keys': if (t.param !== 'release') return c01(x / 100); break;
+    case 'musicBox': if (t.param !== 'release') return c01(x / 100); break;
   }
   return normalize(p, cat, t, x);
 }
