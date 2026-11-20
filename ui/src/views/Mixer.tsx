@@ -13,6 +13,7 @@ import { PanelFrame, WinControls } from './PanelFrame';
 import { presetInfo } from '../lib/presets';
 import * as A from '../state/actions';
 import { MuteSolo } from '../ui/MuteSolo';
+import { PanelBoundary } from '../ui/PanelBoundary';
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
 import { MiniKnob } from '../ui/Knob';
@@ -674,8 +675,10 @@ export function MixDockPane() {
       {/* on a side edge the mixer is narrow and tall: the effect chain goes under the strips */}
       <div class={['mixer docked', { side: findPane(U.dock, 'mix')?.edge !== 'bottom' }]}>
         <Show when={!U.mixView}>
-          <Strips full={false} />
-          <FxChain />
+          <PanelBoundary name={tr('c.mv.mixer')}>
+            <Strips full={false} />
+            <FxChain />
+          </PanelBoundary>
         </Show>
       </div>
     </div>
@@ -689,8 +692,10 @@ export function MixerWindow(props: { z: number }) {
       front={mixFront} onHeadDbl={toggleMixView} head={<MixHead />} controls={<MixControls />}>
       <div class="mixer floating">
         <Show when={!U.mixView}>
-          <Strips full={false} />
-          <FxChain />
+          <PanelBoundary name={tr('c.mv.mixer')}>
+            <Strips full={false} />
+            <FxChain />
+          </PanelBoundary>
         </Show>
       </div>
     </PanelFrame>
@@ -703,8 +708,10 @@ export function MixView() {
     <div class="mixview" role="region" aria-label={tr('c.mv.title')}>
       <MixBar />
       <div class="mixer full">
-        <Strips full />
-        <FxChain />
+        <PanelBoundary name={tr('c.mv.mixer')}>
+          <Strips full />
+          <FxChain />
+        </PanelBoundary>
       </div>
     </div>
   );
