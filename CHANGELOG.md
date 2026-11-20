@@ -7,6 +7,9 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Pan and shift per step in the Channel Rack's graph editor**, as in FL Studio. Next to
+  Velocity and Key, Pan places each step left or right, and Shift starts a step a little later
+  inside its cell, for pushed hats, flams and hand-made swing. Alt+click puts a step back.
 - **Drag a track header to reorder Playlist tracks.** Grab a track's header and drag it up or down;
   a line shows where it lands and the view scrolls at its edges. The track takes its clips, name,
   colour, volume, routing and takes along, in one undo step; Esc puts it back.

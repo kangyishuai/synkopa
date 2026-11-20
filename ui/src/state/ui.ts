@@ -113,7 +113,7 @@ export interface UiState {
   /** The floating Mixer's place (used while it is not docked; `mixMin`: closed). */
   mixWin: PatWin;
   /** The Channel Rack's graph editor (per-step velocity / key of the selected channel) is shown. */
-  rackGraph: 'vel' | 'key' | null;
+  rackGraph: 'vel' | 'key' | 'pan' | 'shift' | null;
   /** True while the engine loops a pattern on its own (telemetry `patBeat` ≥ 0). */
   patPlaying: boolean;
   /** track id → take lanes expanded */

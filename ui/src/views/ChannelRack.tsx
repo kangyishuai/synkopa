@@ -9,7 +9,7 @@ import { unwrap } from 'solid-js/store';
 import { t } from '../lib/i18n';
 import { TOTAL_BEATS, VOL_UNITY, type Channel } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
-import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setStep, setVelAt, stepsOf, type ChannelClip } from '../lib/pattern';
+import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setPanAt, setShiftAt, setStep, setVelAt, shiftOf, MAX_SHIFT, stepsOf, type ChannelClip } from '../lib/pattern';
 import { moveIndex, rackMoveIndex } from '../lib/rack';
 import { noteName } from '../lib/pitch';
 import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
@@ -24,6 +24,7 @@ import { say, setU, U } from '../state/ui';
 import { edgeScroller, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
+import { T } from '../ui/theme';
 import { channelIcon, InstIcon } from '../ui/instIcons';
 import { MiniKnob, NumField, parseNum } from '../ui/Knob';
 import { PanelFrame, WinControls } from './PanelFrame';
@@ -96,6 +97,8 @@ function Rack(props: { z: number; docked?: boolean }) {
     const p = unwrap(pt()), notes = c ? p.notes.map((n, i) => ({ n, i })).filter(x => x.n.ch === c.id) : [];
     const roll = !!c && rollRows().has(c.id);
     if (mode === 'vel') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: laneColor('vel'), cells: !roll, beatGap: true, muted: !!c?.mute });
+    else if (mode === 'pan') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: laneColor('pan'), cells: !roll, beatGap: true, muted: !!c?.mute || !panPlays(), value: n => ((n.pan ?? 0) + 1) / 2, bipolar: true });
+    else if (mode === 'shift') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: T.amber, cells: true, beatGap: true, muted: !!c?.mute || roll, value: n => shiftOf(n) / MAX_SHIFT });
     else drawKeyGraph(g, w, h, { cw: G.cw, sx: G.sx, steps: G.steps, notes, color: c?.color ?? '#4f8ef7', root: c?.root ?? 60, span: KEY_SPAN, off: roll });
   });
   // playhead column: only when the step changes
@@ -158,22 +161,37 @@ function Rack(props: { z: number; docked?: boolean }) {
     const d = (e.deltaY || e.deltaX);
     setScroll(s => horiz ? { ...s, x: clamp(s.x + d, 0, m.x) } : { ...s, y: clamp(s.y + d * 0.6, 0, m.y) });
   };
-  // graph editor: drag across the steps to draw values
+  /** The selected channel plays a note's own pan (plugin instruments do not). */
+  const panPlays = () => selCh()?.kind !== 'plugin';
+  // graph editor: drag across the steps to draw values; Alt+click resets a step (FL)
   const graphDown = (e: PointerEvent) => {
     const c = selCh(), mode = graph(); if (!c || !mode || e.button !== 0) return;
     e.preventDefault();
     const roll = rollRows().has(c.id);
     if (mode === 'key' && roll) { say(t('b.rk.keyRoll', { name: c.name })); return; }
+    if (mode === 'shift' && roll) { say(t('b.rk.shiftRoll', { name: c.name })); return; }
+    if (mode === 'pan' && !panPlays()) { say(t('b.rk.panPlugin', { name: c.name })); return; }
+    if (e.altKey && mode !== 'key') {
+      const G0 = geo(), r0 = graphCv.getBoundingClientRect(), s = stepAt(e.clientX - r0.left + G0.sx, G0.cw), ns = unwrap(pt()).notes;
+      const out = mode === 'vel' ? setVelAt(ns, c.id, s, 1) : mode === 'pan' ? setPanAt(ns, c.id, s, 0) : setShiftAt(ns, c.id, s, 0);
+      commit([putNotes(pt(), out)], t('b.rk.resetStep'));
+      say(t('b.rk.resetStepDone', { name: c.name, n: s + 1 }));
+      return;
+    }
     const G = geo(), r = graphCv.getBoundingClientRect();
     const at = (ev: PointerEvent) => ({ s: stepAt(ev.clientX - r.left + G.sx, G.cw), f: clamp(1 - (ev.clientY - r.top - 6) / (r.height - 9), 0, 1) });
-    const g = new Gesture(mode === 'vel' ? 'Velocity' : t('b.rk.keyGest'));
+    const g = new Gesture(mode === 'vel' ? 'Velocity' : mode === 'pan' ? t('b.rk.panGest') : mode === 'shift' ? t('b.rk.shiftGest') : t('b.rk.keyGest'));
     let notes = unwrap(pt()).notes, last = at(e);
     const keyFor = (f: number) => clamp(Math.round(c.root - KEY_SPAN + f * 2 * KEY_SPAN), 0, 127);
     const apply = (s: number, f: number) => {
       if (mode === 'key') { notes = setKeyAt(notes, c, s, keyFor(f)); return; }
+      if (mode === 'pan') { notes = setPanAt(notes, c.id, s, f * 2 - 1); return; }
+      if (mode === 'shift') { notes = setShiftAt(notes, c.id, s, f * MAX_SHIFT); return; }
       notes = roll ? notes.map(n => n.ch === c.id && Math.floor(n.step + 1e-3) === s ? { ...n, v: Math.round(f * 100) / 100 } : n) : setVelAt(notes, c.id, s, f);
     };
-    const tell = (f: number) => say(c.name + ' · ' + (mode === 'vel' ? 'velocity ' + Math.round(f * 100) + '%' : noteName(keyFor(f))));
+    const tell = (f: number) => say(c.name + ' · ' + (mode === 'vel' ? 'velocity ' + Math.round(f * 100) + '%'
+      : mode === 'pan' ? 'pan ' + panText(Math.abs(f * 2 - 1) < 0.03 ? 0 : f * 2 - 1)
+      : mode === 'shift' ? t('b.rk.shiftSay', { pct: Math.round(f * MAX_SHIFT * 100) }) : noteName(keyFor(f))));
     apply(last.s, last.f);
     g.update([putNotes(pt(), notes)]);
     tell(last.f);
@@ -414,6 +432,8 @@ function Rack(props: { z: number; docked?: boolean }) {
               <div class="seg graphtabs">
                 <button classList={{ on: graph() === 'vel' }} onClick={() => setU('rackGraph', 'vel')}>{t('b.rk.vel')}</button>
                 <button classList={{ on: graph() === 'key' }} onClick={() => setU('rackGraph', 'key')}>{t('b.rk.key')}</button>
+                <button classList={{ on: graph() === 'pan', off: !panPlays() }} title={panPlays() ? t('b.rk.panTip') : t('b.rk.panPlugin', { name: selCh()?.name ?? '' })} onClick={() => setU('rackGraph', 'pan')}>{t('b.rk.pan')}</button>
+                <button classList={{ on: graph() === 'shift' }} title={t('b.rk.shiftTip')} onClick={() => setU('rackGraph', 'shift')}>{t('b.rk.shift')}</button>
               </div>
               <div class="lanetitle"><span class="ell" style={{ color: selCh()?.color ?? 'var(--fg3)' }}>{selCh()?.name ?? '—'}</span></div>
             </div>

@@ -294,6 +294,29 @@ export function setVelAt(notes: readonly Note[], ch: Id, s: number, v: number): 
   return notes.map(n => n.ch === ch && n.step >= s - EPS && n.step < s + 1 - EPS ? { ...n, v: vv } : n);
 }
 
+/** The latest a step may be shifted inside its cell (FL's graph editor Shift), in steps. */
+export const MAX_SHIFT = 0.9;
+/** How far into its cell a note starts (0 = on the grid), in steps. */
+export const shiftOf = (n: Note) => Math.max(0, n.step - Math.floor(n.step + EPS));
+
+/** Set the pan (−1 left … 1 right) of the channel's notes that start in cell [s, s+1); centre clears it. */
+export function setPanAt(notes: readonly Note[], ch: Id, s: number, pan: number): Note[] {
+  const p = Math.round(Math.min(1, Math.max(-1, pan)) * 100) / 100;
+  return notes.map(n => {
+    if (n.ch !== ch || n.step < s - EPS || n.step >= s + 1 - EPS) return n;
+    const { pan: _p, ...rest } = n;
+    return Math.abs(p) < 0.03 ? rest : { ...rest, pan: p };
+  });
+}
+
+/** Shift the channel's notes in cell [s, s+1) to start `shift` steps (0 … MAX_SHIFT) after the cell's start. */
+export function setShiftAt(notes: readonly Note[], ch: Id, s: number, shift: number): Note[] {
+  const d = Math.round(Math.min(MAX_SHIFT, Math.max(0, shift)) * 100) / 100;
+  // an old step without the trigger flag becomes an explicit trigger: off the grid, a plain note
+  // would turn the row into a Piano roll row (`isRollRow`)
+  return notes.map(n => (n.ch === ch && n.step >= s - EPS && n.step < s + 1 - EPS ? { ...n, step: s + d, ...(d > 0 && n.trig == null ? { trig: true } : {}) } : n));
+}
+
 // ---------------------------------------------------------------- piano roll
 
 /**

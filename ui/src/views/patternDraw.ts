@@ -116,9 +116,12 @@ export function drawRackHead(g: CanvasRenderingContext2D, W: number, H: number, 
 /** One velocity bar per note of the selected channel. `x0`: where step 0 is (px), `cw` px per step. */
 export function drawLane(g: CanvasRenderingContext2D, W: number, H: number, o: {
   x0: number; cw: number; sx: number; steps: number; notes: { n: Note; i: number }[]; color: string; sel?: Set<number>; cells: boolean; muted: boolean; beatGap?: boolean;
+  /** What a bar shows, 0..1 (default: the velocity); `bipolar` bars grow from the centre line (pan). */
+  value?: (n: Note) => number; bipolar?: boolean;
 }) {
   g.clearRect(0, 0, W, H);
   const top = 6, bh = H - top - 3;
+  const valueOf = o.value ?? velOf, mid = top + bh / 2;
   const px = (s: number) => (o.beatGap ? stepX(s, o.cw) : s * o.cw);
   const endX = Math.min(W, o.x0 + (o.beatGap ? gridW(o.steps, o.cw) : o.steps * o.cw) - o.sx);
   g.fillStyle = T.vizPanel; g.fillRect(0, 0, W, H);
@@ -126,20 +129,29 @@ export function drawLane(g: CanvasRenderingContext2D, W: number, H: number, o: {
   g.fillStyle = T.vizGrid2;
   for (const f of [0.25, 0.5, 0.75]) g.fillRect(o.x0, Math.round(top + bh * (1 - f)) + 0.5, endX - o.x0, 1);
   g.fillStyle = T.vizAxis; g.fillRect(o.x0, top, endX - o.x0, 1);
+  if (o.bipolar) {
+    g.fillRect(o.x0, Math.round(mid) + 0.5, endX - o.x0, 1);
+  }
   const spans = o.cells ? stepSpans(o.notes.map(x => x.n)) : [];
   o.notes.forEach(({ n, i }, k) => {
-    const v = velOf(n);
-    const x = o.x0 + px(n.step) - o.sx, cw = o.cw * (spans[k] ?? 1);
+    const v = valueOf(n);
+    // in cells a bar stays in its step's column, wherever in the cell the note starts (its shift)
+    const x = o.x0 + px(o.cells ? Math.floor(n.step + 1e-3) : n.step) - o.sx, cw = o.cw * (spans[k] ?? 1);
     const w = o.cells ? Math.max(2, cw - 6) : Math.max(3, Math.min(8, n.len * o.cw - 2));
     const bx = o.cells ? x + (cw - w) / 2 : x;
     if (bx > W || bx + w < o.x0 - 4) return;
     const sel = !!o.sel?.has(i);
-    const y = top + bh * (1 - v);
+    const y = top + bh * (1 - v), base = o.bipolar ? mid : top + bh;
     g.fillStyle = rgba(o.color, (o.muted ? 0.35 : 0.75) * (sel ? 1.25 : 1));
-    g.fillRect(bx, y, w, top + bh - y);
+    g.fillRect(bx, Math.min(y, base), w, Math.max(1, Math.abs(base - y)));
     g.fillStyle = sel ? T.fgHi : mix(o.color, 60, T.fgHi);
     g.fillRect(bx, y - 1, w, 2);
   });
+  // which way is which, over the bars (the first step's bar sits right under the labels)
+  if (o.bipolar) {
+    g.fillStyle = T.fgHi; g.font = MONO8; g.textAlign = 'right'; g.textBaseline = 'middle';
+    g.fillText('R', endX - 4, top + 7); g.fillText('L', endX - 4, top + bh - 6);
+  }
 }
 
 /** The colour of the Piano roll lane's handles: one per target, so the lane says what it edits. */
