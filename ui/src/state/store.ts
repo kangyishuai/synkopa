@@ -129,7 +129,8 @@ export function rawOf<T>(x: T): T {
       const r = idIndex().get(id);
       if (r && Array.isArray(r) === Array.isArray(x) && sameKeys(r, x as object)) return r as T;
     }
-    if (Array.isArray(x)) return x.map(rawOf) as T;
+    // a list of items with ids (clips, tracks): each from `M`; else one copy (notes, points)
+    if (Array.isArray(x) && x.length && typeof (x[0] as Obj | undefined)?.id === 'number') return x.map(rawOf) as T;
     return snapshot(x);
   });
 }
