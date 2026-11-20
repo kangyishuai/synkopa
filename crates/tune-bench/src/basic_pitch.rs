@@ -54,7 +54,7 @@ pub struct BasicPitch {
 impl BasicPitch {
     pub fn load(model: &Path) -> Result<Self, String> {
         let fail = |e: String| format!("Basic Pitch model {}: {e}", model.display());
-        let env = ort::init().build().map_err(|e| fail(e.to_string()))?;
+        let env = wave_rmvpe::ort_env().map_err(fail)?;
         let threads = std::thread::available_parallelism().map(|n| n.get().min(8)).unwrap_or(4);
         let mut b = ort::session::Session::builder(&env)
             .map_err(|e| fail(e.to_string()))?

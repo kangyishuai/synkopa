@@ -91,7 +91,7 @@ impl Separator {
     /// Load an export of `scripts/export-htdemucs-onnx.py`. `threads` = 0 picks one per core (≤ 8).
     pub fn load(model: &Path, threads: usize) -> Result<Self, String> {
         let fail = |e: String| format!("stem model could not be loaded: {e}");
-        let env = wave_rmvpe::ort_init().map_err(fail)?.build().map_err(|e| fail(e.to_string()))?;
+        let env = wave_rmvpe::ort_env().map_err(fail)?;
         let threads = match threads {
             0 => std::thread::available_parallelism().map(|n| n.get().min(8)).unwrap_or(4),
             n => n,

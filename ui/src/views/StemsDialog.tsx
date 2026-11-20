@@ -39,77 +39,79 @@ export function StemsDialog() {
   const stageText = () => { const j = job(); return j ? t(STAGE_KEY[j.stage], { pct: pct(j.frac) }) : ''; };
   // the download and the separation fill one bar each; the other stages are short, shown as an indeterminate sliver
   const barFrac = () => { const j = job(); return !j ? 0 : j.stage === 'download' || j.stage === 'separate' ? j.frac : j.stage === 'place' ? 1 : 0.02; };
+  const failed = () => !!STEMS.error && STEMS.errorClip === clip()?.id && !mine();
 
   return (
     <>
       <Show when={clip()}>
         {c => (
           <div class="overlay" onPointerDown={closeStems}>
-            <div class="dialog" style={{ width: 'min(480px, 92vw)' }} onPointerDown={e => e.stopPropagation()} data-stems-dialog
-              onKeyDown={e => { if (e.key === 'Enter' && !mine()) { e.preventDefault(); go(); } }}>
-              <div class="hd">
-                <span class="ell" title={src()?.name}>{t('d.stems.title', { name: src()?.name ?? '' })}</span>
-                <button onClick={closeStems} title={t('d.stems.close')}>×</button>
+            <div class="dialog stemsdlg" role="dialog" aria-labelledby="stems-title" onPointerDown={e => e.stopPropagation()} data-stems-dialog
+              onKeyDown={e => {
+                if (e.key === 'Escape') { e.preventDefault(); closeStems(); }
+                else if (e.key === 'Enter' && !mine() && !(e.target instanceof HTMLButtonElement)) { e.preventDefault(); go(); }
+              }}>
+              <div class="stems-hd">
+                <div class="stems-hd-txt">
+                  <span id="stems-title" class="stems-title">{t('d.stems.title')}</span>
+                  <span class="stems-sub">
+                    <span class="ell" title={src()?.name}>{src()?.name}</span>
+                    <span class="mono stems-len">{t('d.stems.length', { len: fmtSpan(audioS()), eta: fmtEta(stemsEta(audioS())) })}</span>
+                  </span>
+                </div>
+                <button class="stems-x" onClick={closeStems} title={t('d.stems.close')} aria-label={t('d.stems.close')}>×</button>
               </div>
-              <div style={{ display: 'flex', 'flex-direction': 'column', gap: '12px' }}>
-                <div style={{ display: 'grid', 'grid-template-columns': '1fr 1fr', gap: '6px' }} role="group">
-                  <For each={STEM_IDS}>
-                    {(s: StemId) => {
-                      const on = () => STEMS.picked.includes(s);
-                      return (
-                        <label class="stem-pick" classList={{ on: on() }} title={t(`d.stems.${s}.hint` as 'd.stems.drums.hint')}
-                          style={{ display: 'flex', 'align-items': 'center', gap: '8px', padding: '7px 9px', border: '1px solid var(--line)', 'border-radius': '6px', background: on() ? 'var(--bg1)' : 'transparent', cursor: mine() ? 'default' : 'pointer', opacity: mine() && !job()?.stems.includes(s) ? 0.45 : 1 }}>
-                          <input type="checkbox" checked={mine() ? job()!.stems.includes(s) : on()} disabled={mine()} onChange={() => toggleStem(s)} data-stem={s} />
-                          <span style={{ width: '8px', height: '18px', 'border-radius': '2px', background: STEM_COLORS[s], 'flex-shrink': 0 }} />
-                          <span style={{ display: 'flex', 'flex-direction': 'column', 'min-width': 0 }}>
-                            <span style={{ 'font-weight': 600 }}>{t(`d.stems.${s}` as 'd.stems.drums')}</span>
-                            <span class="ell" style={{ 'font-size': '10px', color: 'var(--fg4)' }}>{t(`d.stems.${s}.hint` as 'd.stems.drums.hint')}</span>
-                          </span>
-                        </label>
-                      );
-                    }}
-                  </For>
-                </div>
-                <div class="note" style={{ display: 'flex', 'flex-direction': 'column', gap: '4px' }}>
-                  <span class="mono" style={{ color: 'var(--fg3)' }}>{t('d.stems.length', { len: fmtSpan(audioS()), eta: fmtEta(stemsEta(audioS())) })}</span>
-                  <span>{t('d.stems.what')}</span>
-                  <Show when={stretched()}><span>{t('d.stems.stretchNote')}</span></Show>
-                  <Show when={c().tune?.notes?.length}><span>{t('d.stems.tuneNote')}</span></Show>
-                  <Show when={!S.path}><span>{t('d.stems.unsavedNote')}</span></Show>
-                </div>
-                <Show when={needModel() && !mine()}>
-                  <div class="note" style={{ padding: '8px 10px', background: 'var(--bg1)', border: '1px solid var(--line)', 'border-radius': '6px' }}>
-                    <div>{t('d.stems.modelNeeded', { size: size() })}</div>
-                    <div class="mono sel-text" style={{ 'font-size': '10px', color: 'var(--fg4)', 'margin-top': '3px' }}>{t('d.stems.license')}: {STEMS.model?.licenseUrl}</div>
-                  </div>
-                </Show>
-                <Show when={STEMS.error && STEMS.errorClip === c().id && !mine()}>
-                  <div class="note err" role="alert" data-stems-error>{STEMS.error}</div>
-                </Show>
-                <Show when={mine()}>
-                  <div style={{ display: 'flex', 'flex-direction': 'column', gap: '6px' }} data-stems-progress>
-                    <div class="row" style={{ 'justify-content': 'space-between' }}>
-                      <span>{stageText()}</span>
-                    </div>
-                    <div style={{ height: '6px', background: 'var(--bg1)', border: '1px solid var(--line)', 'border-radius': '3px', overflow: 'hidden' }}
-                      role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(barFrac() * 100)}>
-                      <div style={{ height: '100%', width: barFrac() * 100 + '%', background: 'var(--blue)', transition: 'width 0.3s' }} />
-                    </div>
-                  </div>
-                </Show>
-                <div class="row" style={{ gap: '8px', 'justify-content': 'flex-end' }}>
-                  <Show when={mine()} fallback={
-                    <>
-                      <button class="smallbtn" style={{ height: '28px', padding: '0 12px' }} onClick={closeStems}>{t('d.stems.close')}</button>
-                      <button class="smallbtn primary" style={{ height: '28px', padding: '0 12px' }} disabled={!!blocked() || STEMS.model == null} title={blocked() ?? ''} onClick={go} data-stems-go>
-                        {STEMS.error && STEMS.errorClip === c().id ? t('d.stems.retry') : label()}
+              <div class="stems-picks" role="group" aria-label={t('d.stems.title')}>
+                <For each={STEM_IDS}>
+                  {(s: StemId) => {
+                    const on = () => (mine() ? !!job()?.stems.includes(s) : STEMS.picked.includes(s));
+                    return (
+                      <button type="button" class="stem-pick" classList={{ on: on() }} style={{ '--stem': STEM_COLORS[s] }}
+                        aria-pressed={on()} disabled={mine()} title={t(`d.stems.${s}.hint` as 'd.stems.drums.hint')} onClick={() => toggleStem(s)} data-stem={s}>
+                        <span class="stem-dot" />
+                        <span class="stem-name">{t(`d.stems.${s}` as 'd.stems.drums')}</span>
+                        <span class="stem-hint">{t(`d.stems.${s}.hint` as 'd.stems.drums.hint')}</span>
                       </button>
-                    </>
-                  }>
-                    <button class="smallbtn" style={{ height: '28px', padding: '0 12px' }} title={t('d.stems.backgroundTip')} onClick={closeStems}>{t('d.stems.background')}</button>
-                    <button class="smallbtn" style={{ height: '28px', padding: '0 12px' }} onClick={cancelStems} disabled={job()?.stage === 'place'} data-stems-cancel>{t('d.stems.cancel')}</button>
-                  </Show>
+                    );
+                  }}
+                </For>
+              </div>
+              <Show when={mine()} fallback={
+                <ul class="stems-notes">
+                  <li>{t('d.stems.what')}</li>
+                  <Show when={stretched()}><li>{t('d.stems.stretchNote')}</li></Show>
+                  <Show when={c().tune?.notes?.length}><li>{t('d.stems.tuneNote')}</li></Show>
+                  <Show when={!S.path}><li>{t('d.stems.unsavedNote')}</li></Show>
+                </ul>
+              }>
+                <div class="stems-progress" data-stems-progress>
+                  <span>{stageText()}</span>
+                  <div class="stems-bar" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(barFrac() * 100)}>
+                    <div style={{ width: barFrac() * 100 + '%' }} />
+                  </div>
                 </div>
+              </Show>
+              <Show when={needModel() && !mine()}>
+                <div class="stems-box">
+                  <span>{t('d.stems.modelNeeded', { size: size() })}</span>
+                  <span class="mono sel-text stems-lic ell" title={STEMS.model?.licenseUrl}>{t('d.stems.license')}: {STEMS.model?.licenseUrl?.replace(/^https?:\/\//, '')}</span>
+                </div>
+              </Show>
+              <Show when={failed()}>
+                <div class="stems-box err" role="alert" data-stems-error>{STEMS.error}</div>
+              </Show>
+              <div class="stems-foot">
+                <Show when={mine()} fallback={
+                  <>
+                    <button class="smallbtn" onClick={closeStems}>{t('d.stems.close')}</button>
+                    <button class="smallbtn primary" disabled={!!blocked() || STEMS.model == null} title={blocked() ?? ''} onClick={go} data-stems-go>
+                      {failed() ? t('d.stems.retry') : label()}
+                    </button>
+                  </>
+                }>
+                  <button class="smallbtn" title={t('d.stems.backgroundTip')} onClick={closeStems}>{t('d.stems.background')}</button>
+                  <button class="smallbtn" onClick={cancelStems} disabled={job()?.stage === 'place'} data-stems-cancel>{t('d.stems.cancel')}</button>
+                </Show>
               </div>
             </div>
           </div>
