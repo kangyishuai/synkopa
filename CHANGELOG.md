@@ -4,6 +4,13 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Changed
+- **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
+  from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
+  stops a preview wherever the keyboard is.
+
 ## 0.9.30 — 2026-11-19
 
 ### Added
