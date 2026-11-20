@@ -37,6 +37,9 @@ shown in the app after an update and is published as the release notes (see
   instruments ignore slide notes, so the button is greyed out for them.
 
 ### Changed
+- **The clip menu says what Rename and the colours change.** "Rename pattern…" (sample, automation) and
+  "Colour of the pattern · 3 clips" make clear that every clip of it follows; the tooltip points to
+  Make unique for changing one copy only.
 - **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
   from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
   stops a preview wherever the keyboard is.
