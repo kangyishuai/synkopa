@@ -67,14 +67,29 @@ pub fn ort_library() -> Option<PathBuf> {
 }
 
 #[cfg(target_os = "linux")]
-pub fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
+fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
     let lib = ort_library().ok_or("ONNX Runtime is not installed with this build of Synkopa (libonnxruntime.so.1)")?;
     ort::init_from(&lib).map_err(|e| format!("{}: {e}", lib.display()))
 }
 
 #[cfg(not(target_os = "linux"))]
-pub fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
+fn ort_init() -> Result<ort::environment::EnvironmentBuilder, String> {
     Ok(ort::init())
+}
+
+/// The process's one ONNX Runtime environment, shared by every model (RMVPE, stems, …).
+/// `ort` lets a process build an environment only once, ever (dropping it does not
+/// allow a second one), so it is built on first use and kept for the process's life.
+/// A failed build is not cached, so a later call can retry.
+pub fn ort_env() -> Result<ort::environment::Environment, String> {
+    static ENV: Mutex<Option<ort::environment::Environment>> = Mutex::new(None);
+    let mut slot = ENV.lock();
+    if let Some(env) = slot.as_ref() {
+        return Ok(env.clone());
+    }
+    let env = ort_init()?.build().map_err(|e| e.to_string())?;
+    *slot = Some(env.clone());
+    Ok(env)
 }
 
 pub struct Rmvpe {
@@ -86,7 +101,7 @@ pub struct Rmvpe {
 impl Rmvpe {
     pub fn load(model: &Path) -> Result<Self, String> {
         let fail = |e: String| format!("RMVPE model could not be loaded: {e}");
-        let env = ort_init().map_err(fail)?.build().map_err(|e| fail(e.to_string()))?;
+        let env = ort_env().map_err(fail)?;
         let threads = std::thread::available_parallelism().map(|n| n.get().min(8)).unwrap_or(4);
         let mut b = ort::session::Session::builder(&env)
             .map_err(|e| fail(e.to_string()))?
@@ -293,6 +308,16 @@ pub fn resample(x: &[f32], from: f32, to: f32) -> Vec<f32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// `ort` refuses a second environment per process; every model load must share one,
+    /// or extracting stems after a tune (or twice) fails.
+    #[test]
+    fn the_ort_environment_is_shared_across_loads() {
+        let Ok(a) = ort_env() else { return }; // no ONNX Runtime library in this build
+        drop(a);
+        ort_env().expect("a second load reuses the environment");
+        ort_env().expect("and a third");
+    }
 
     #[test]
     fn resampling_keeps_a_tone() {
