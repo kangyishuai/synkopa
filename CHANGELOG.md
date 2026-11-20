@@ -4,6 +4,17 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **Chop, glue and arpeggiate in the Piano roll, as in FL Studio.** Ctrl+U chops the selected
+  notes (or every note of the channel) into pieces one snap step long, for rolls, stutters and
+  hi-hat or 808 rhythms; Ctrl+G glues touching notes of the same key back into one. The
+  arpeggiator (Alt+A, or Tools → Arpeggiate) turns chords into a run of their notes up, down,
+  up and down or at random, with the step, note length and octave range you choose; Alt+U opens
+  the chop tool with a piece length of your choice. Each is one undo step, and the same tools
+  work from the command line (`synkopa notes chop|glue|arp`).
+
 ## 0.9.30 — 2026-11-19
 
 ### Added

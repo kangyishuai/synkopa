@@ -140,6 +140,40 @@ pub enum TransformVerb {
         #[serde(default)]
         degrees: Vec<u8>,
     },
+    /// FL's chop: held notes longer than `len` steps are cut into pieces `len` long (the
+    /// last piece keeps the remainder). Step triggers stay as they are.
+    Chop {
+        #[serde(default = "one_f")]
+        len: f32,
+    },
+    /// FL's glue: held notes of the same channel and key that touch or overlap become one
+    /// note (the first one's velocity and pan), the reverse of chop.
+    Glue {},
+    /// FL's arpeggiator: the notes that start together (a chord, per channel) become a
+    /// sequence of their keys, one every `rate` steps for as long as the chord lasts, each
+    /// `gate` of a step long, over `octaves` octaves. `mode`: up, down, upDown or random.
+    Arpeggiate {
+        #[serde(default = "arp_up")]
+        mode: String,
+        #[serde(default = "one_f")]
+        rate: f32,
+        #[serde(default = "arp_gate")]
+        gate: f32,
+        #[serde(default = "one_u")]
+        octaves: u32,
+    },
+}
+
+/// The arpeggiator's directions.
+pub const ARP_MODES: [&str; 4] = ["up", "down", "upDown", "random"];
+/// The shortest chop piece / arpeggio step (a 64th).
+pub const MIN_PIECE: f32 = 0.25;
+
+fn arp_up() -> String {
+    "up".into()
+}
+fn arp_gate() -> f32 {
+    0.9
 }
 
 fn half() -> f32 {
@@ -203,6 +237,149 @@ pub fn quantize(notes: &mut [Note], grid: f32, amount: f32, key_scale: Option<(u
             n.p = Some(snap_midi(midi, key, mask));
         }
     }
+}
+
+/// How many notes [`chop`] makes of `notes` (for a bound checked before anything allocates).
+pub fn chop_count(notes: &[Note], len: f32) -> usize {
+    let len = len.max(MIN_PIECE);
+    notes.iter().map(|n| if n.trig == Some(true) || n.len <= len + 1e-4 { 1 } else { ((n.len - 1e-4) / len).ceil() as usize }).sum()
+}
+
+/// FL's chop (see [`TransformVerb::Chop`]). The pieces of a note follow each other where
+/// the note was.
+pub fn chop(notes: &mut Vec<Note>, len: f32) {
+    let len = len.max(MIN_PIECE);
+    let mut out = Vec::with_capacity(chop_count(notes, len));
+    for n in notes.drain(..) {
+        if n.trig == Some(true) || n.len <= len + 1e-4 {
+            out.push(n);
+            continue;
+        }
+        let end = n.step + n.len;
+        let mut k = 0u32;
+        let mut s = n.step;
+        while s < end - 1e-4 {
+            out.push(Note { step: s, len: (end - s).min(len), ..n.clone() });
+            k += 1;
+            s = n.step + k as f32 * len;
+        }
+    }
+    *notes = out;
+}
+
+/// FL's glue (see [`TransformVerb::Glue`]). A note that starts at (or within a 1/1000 step of)
+/// the end of the one before it on the same channel and key, or inside it, joins it; the
+/// rest keep their order.
+pub fn glue(notes: &mut Vec<Note>, roots: &[(Id, u8)]) {
+    let key = |n: &Note| n.p.unwrap_or_else(|| roots.iter().find(|(id, _)| *id == n.ch).map(|(_, r)| *r).unwrap_or(60));
+    let mut order: Vec<usize> = (0..notes.len()).filter(|&i| notes[i].trig != Some(true)).collect();
+    order.sort_by(|&a, &b| {
+        let (x, y) = (&notes[a], &notes[b]);
+        x.ch.cmp(&y.ch).then(key(x).cmp(&key(y))).then(x.step.total_cmp(&y.step)).then(a.cmp(&b))
+    });
+    let mut gone = vec![false; notes.len()];
+    let mut cur: Option<usize> = None;
+    for &j in &order {
+        match cur {
+            Some(c)
+                if notes[c].ch == notes[j].ch
+                    && key(&notes[c]) == key(&notes[j])
+                    && notes[j].step <= notes[c].step + notes[c].len + 1e-3 =>
+            {
+                let end = (notes[c].step + notes[c].len).max(notes[j].step + notes[j].len);
+                notes[c].len = end - notes[c].step;
+                gone[j] = true;
+            }
+            _ => cur = Some(j),
+        }
+    }
+    let mut i = 0;
+    notes.retain(|_| {
+        i += 1;
+        !gone[i - 1]
+    });
+}
+
+/// One cycle of an arpeggio over `keys` (ascending, distinct) and `octaves` octaves, in
+/// `mode`'s order (random: the pool it draws from): each entry is the key and which of
+/// `keys` it comes from.
+fn arp_cycle(keys: &[u8], mode: &str, octaves: u32) -> Vec<(u8, usize)> {
+    let mut up: Vec<(u8, usize)> = vec![];
+    for o in 0..octaves.clamp(1, 4) {
+        for (j, &k) in keys.iter().enumerate() {
+            let p = k as u32 + 12 * o;
+            if p <= 127 {
+                up.push((p as u8, j));
+            }
+        }
+    }
+    match mode {
+        "down" => up.into_iter().rev().collect(),
+        "upDown" if up.len() > 2 => {
+            let back: Vec<(u8, usize)> = up[1..up.len() - 1].iter().rev().copied().collect();
+            up.into_iter().chain(back).collect()
+        }
+        _ => up,
+    }
+}
+
+/// How many notes [`arpeggiate`] makes of `notes` (a bound checked before anything allocates).
+pub fn arpeggiate_count(notes: &[Note], rate: f32) -> usize {
+    let rate = rate.max(MIN_PIECE);
+    arp_groups(notes)
+        .iter()
+        .map(|g| {
+            let dur = g.iter().map(|&i| notes[i].len).fold(0f32, f32::max);
+            (dur / rate).ceil() as usize
+        })
+        .sum::<usize>()
+        + notes.iter().filter(|n| n.trig == Some(true)).count()
+}
+
+/// Held notes grouped by (channel, start), the groups in that order (as [`chord`] does).
+fn arp_groups(notes: &[Note]) -> Vec<Vec<usize>> {
+    let mut groups: std::collections::BTreeMap<(Id, u32), Vec<usize>> = std::collections::BTreeMap::new();
+    for (i, n) in notes.iter().enumerate() {
+        if n.trig != Some(true) {
+            groups.entry((n.ch, n.step.to_bits())).or_default().push(i);
+        }
+    }
+    // f32 bits sort like the values for the non-negative steps notes have
+    groups.into_values().collect()
+}
+
+/// FL's arpeggiator (see [`TransformVerb::Arpeggiate`]). Step triggers stay as they are;
+/// the arpeggios follow them, group by group.
+#[allow(clippy::too_many_arguments)]
+pub fn arpeggiate(notes: &mut Vec<Note>, roots: &[(Id, u8)], mode: &str, rate: f32, gate: f32, octaves: u32, rng: &mut SplitMix64) {
+    let rate = rate.max(MIN_PIECE);
+    let gate = gate.clamp(0.05, 1.0);
+    let key = |n: &Note| n.p.unwrap_or_else(|| roots.iter().find(|(id, _)| *id == n.ch).map(|(_, r)| *r).unwrap_or(60));
+    let mut out: Vec<Note> = notes.iter().filter(|n| n.trig == Some(true)).cloned().collect();
+    for g in arp_groups(notes) {
+        let mut keys: Vec<u8> = g.iter().map(|&i| key(&notes[i])).collect();
+        keys.sort_unstable();
+        keys.dedup();
+        let cycle = arp_cycle(&keys, mode, octaves);
+        if cycle.is_empty() {
+            continue;
+        }
+        // a key plays at the velocity and pan of the (first) note of its key; an octave copy too
+        let from: Vec<&Note> = keys.iter().map(|&k| g.iter().map(|&i| &notes[i]).find(|n| key(n) == k).unwrap_or(&notes[g[0]])).collect();
+        let first = &notes[g[0]];
+        let start = first.step;
+        let end = start + g.iter().map(|&i| notes[i].len).fold(0f32, f32::max);
+        let len = rate * gate;
+        let mut i = 0u32;
+        let mut t = start;
+        while t < end - 1e-4 {
+            let (p, j) = if mode == "random" { cycle[rng.below(cycle.len())] } else { cycle[i as usize % cycle.len()] };
+            out.push(Note { ch: first.ch, step: t, len: len.min(end - t), p: Some(p), v: from[j].v, trig: Some(false), pan: from[j].pan });
+            i += 1;
+            t = start + i as f32 * rate;
+        }
+    }
+    *notes = out;
 }
 
 /// [`pitch::snap`] limited to MIDI keys: the nearest in-scale key within 0..=127 (ties
@@ -1075,5 +1252,92 @@ mod tests {
         assert_eq!(mp, [57, 57, 57, 59, 59, 59, 62, 65, 64, 62, 64, 64, 62, 62, 62, 62]);
         let ms: Vec<f32> = m.iter().map(|n| n.step).collect();
         assert_eq!(ms, [1.0, 2.0, 3.0, 5.0, 8.0, 10.0, 12.0, 15.0, 17.0, 18.0, 19.0, 21.0, 24.0, 26.0, 28.0, 31.0]);
+    }
+}
+
+#[cfg(test)]
+mod chop_glue_arp {
+    use super::*;
+
+    fn held(ch: Id, step: f32, len: f32, p: u8) -> Note {
+        Note::new(ch, step, len, Some(p))
+    }
+    const ROOTS: &[(Id, u8)] = &[(1, 60), (2, 48)];
+
+    #[test]
+    fn chop_cuts_held_notes_into_pieces_and_keeps_the_remainder_and_steps() {
+        let mut n = vec![held(1, 0.0, 4.0, 60), held(1, 8.0, 2.5, 62), Note::trigger(1, 12.0, None), held(1, 14.0, 1.0, 64)];
+        chop(&mut n, 1.0);
+        let got: Vec<(f32, f32, Option<u8>)> = n.iter().map(|x| (x.step, x.len, x.p)).collect();
+        assert_eq!(
+            got,
+            vec![
+                (0.0, 1.0, Some(60)),
+                (1.0, 1.0, Some(60)),
+                (2.0, 1.0, Some(60)),
+                (3.0, 1.0, Some(60)),
+                (8.0, 1.0, Some(62)),
+                (9.0, 1.0, Some(62)),
+                (10.0, 0.5, Some(62)),
+                (12.0, 1.0, None),
+                (14.0, 1.0, Some(64)),
+            ]
+        );
+        assert_eq!(chop_count(&[held(1, 0.0, 4.0, 60), held(1, 8.0, 2.5, 62), Note::trigger(1, 12.0, None)], 1.0), 8);
+        // a piece is never shorter than a 64th
+        let mut n = vec![held(1, 0.0, 1.0, 60)];
+        chop(&mut n, 0.01);
+        assert_eq!(n.len(), 4);
+    }
+
+    #[test]
+    fn glue_undoes_chop_and_joins_only_the_same_key_on_the_same_channel() {
+        let orig = vec![held(1, 0.0, 4.0, 60), held(1, 4.0, 4.0, 62), held(2, 0.0, 2.0, 60)];
+        let mut n = orig.clone();
+        chop(&mut n, 1.0);
+        assert_eq!(n.len(), 10);
+        glue(&mut n, ROOTS);
+        assert_eq!(n, orig);
+        // overlapping notes join into the longest end; a gap keeps them apart; the root key counts
+        let mut n = vec![held(1, 0.0, 3.0, 60), held(1, 2.0, 4.0, 60), held(1, 7.0, 1.0, 60), Note::new(1, 8.0, 1.0, None)];
+        glue(&mut n, ROOTS);
+        let got: Vec<(f32, f32)> = n.iter().map(|x| (x.step, x.len)).collect();
+        assert_eq!(got, vec![(0.0, 6.0), (7.0, 2.0)]);
+    }
+
+    #[test]
+    fn arpeggiate_plays_a_chord_up_down_and_up_down_across_its_length() {
+        let chord = || vec![held(1, 0.0, 4.0, 64), held(1, 0.0, 4.0, 60), held(1, 0.0, 4.0, 67)];
+        let keys = |mode: &str, octaves: u32| {
+            let mut n = chord();
+            arpeggiate(&mut n, ROOTS, mode, 1.0, 0.5, octaves, &mut SplitMix64::new(1));
+            n.iter().map(|x| x.p.unwrap()).collect::<Vec<_>>()
+        };
+        assert_eq!(keys("up", 1), vec![60, 64, 67, 60]);
+        assert_eq!(keys("down", 1), vec![67, 64, 60, 67]);
+        assert_eq!(keys("upDown", 2), vec![60, 64, 67, 72]);
+        let mut n = chord();
+        arpeggiate(&mut n, ROOTS, "upDown", 0.5, 1.0, 1, &mut SplitMix64::new(1));
+        assert_eq!(n.iter().map(|x| x.p.unwrap()).collect::<Vec<_>>(), vec![60, 64, 67, 64, 60, 64, 67, 64]);
+        // one note every `rate` steps, `gate` of it long, never past the chord's end
+        let mut n = vec![held(1, 2.0, 2.5, 60), held(1, 2.0, 2.5, 64)];
+        arpeggiate(&mut n, ROOTS, "up", 1.0, 0.75, 1, &mut SplitMix64::new(1));
+        let got: Vec<(f32, f32)> = n.iter().map(|x| (x.step, x.len)).collect();
+        assert_eq!(got, vec![(2.0, 0.75), (3.0, 0.75), (4.0, 0.5)]);
+    }
+
+    #[test]
+    fn arpeggiate_random_is_seeded_and_keeps_velocity_steps_and_other_channels() {
+        let mut a =
+            vec![held(1, 0.0, 8.0, 60), Note { v: 0.5, ..held(1, 0.0, 8.0, 67) }, held(2, 0.0, 2.0, 40), Note::trigger(1, 4.0, None)];
+        let mut b = a.clone();
+        arpeggiate(&mut a, ROOTS, "random", 1.0, 0.9, 1, &mut SplitMix64::new(9));
+        arpeggiate(&mut b, ROOTS, "random", 1.0, 0.9, 1, &mut SplitMix64::new(9));
+        assert_eq!(a, b);
+        // the trigger stays, channel 2's single note repeats on its own, channel 1 has 8 steps
+        assert_eq!(a.iter().filter(|n| n.trig == Some(true)).count(), 1);
+        assert_eq!(a.iter().filter(|n| n.ch == 2).count(), 2);
+        assert_eq!(a.iter().filter(|n| n.ch == 1 && n.trig != Some(true)).count(), 8);
+        assert!(a.iter().filter(|n| n.p == Some(67)).all(|n| n.v == 0.5));
     }
 }
