@@ -23,7 +23,8 @@ describe('synth channels', () => {
     expect(c.synth.preset).toBe('808 Deep');
     expect(c.root).toBe(36);
     const blank = newSynthChannel(cat, 8, null);
-    if (blank.kind === 'synth') expect(blank.synth.params).toEqual(synthDefaults(cat));
+    if (blank.kind !== 'synth') throw new Error('kind');
+    expect(blank.synth.params).toEqual(synthDefaults(cat));
   });
 
   it('a knob clamps, keeps the other values and drops the preset name', () => {
@@ -36,7 +37,8 @@ describe('synth channels', () => {
     expect(clampSynth(synthParam(cat, 'o1_wave')!, 2.6)).toBe(3);
     expect(synthValue(cat, { preset: null, params: {} }, 'amp_s')).toBe(synthParam(cat, 'amp_s')!.def);
     const e = withSynthPreset(cat, d, 'Supersaw Hymn');
-    if (e.kind === 'synth') expect(e.synth).toEqual(presetState(cat, 'Supersaw Hymn'));
+    if (e.kind !== 'synth') throw new Error('kind');
+    expect(e.synth).toEqual(presetState(cat, 'Supersaw Hymn'));
   });
 
   it('putChannel validates synth parameters like the engine', () => {

@@ -108,10 +108,12 @@ describe('automation of channels, synth and Keys parameters, and audio clips', (
     // every track is busy from bar 7 on (FL-style arrangement); bars 1-6 are free below track 0
     p.clips.push(clip(0, 0, 64));
     for (let t = 1; t < p.tracks.length; t++) p.clips.push(clip(t, 24, 24));
-    expect(trackForAutomation(p, 0, 24)).toBe(p.tracks.length > 1 ? 1 : p.tracks.length);
+    expect(p.tracks.length).toBeGreaterThan(2); // the demo song
+    expect(trackForAutomation(p, 0, 24)).toBe(1);
     expect(trackForAutomation(p, 20, 8)).toBe(p.tracks.length); // overlaps everything: a new track
     // an armed track is never picked
-    if (p.tracks.length > 1) { p.tracks[1].arm = true; expect(trackForAutomation(p, 0, 24)).toBe(p.tracks.length > 2 ? 2 : p.tracks.length); }
+    p.tracks[1].arm = true;
+    expect(trackForAutomation(p, 0, 24)).toBe(2);
     const r = createAutomationOps(p, cat, targets[2], 'x', '#fff', 20, 8, () => next++);
     expect(r.track).toBe(p.tracks.length);
     expect(applyAll(p, r.ops).tracks.length).toBe(p.tracks.length + 1);

@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockBackend } from '../api/mock';
+import { syncEngine } from '../test/engine';
 
 // MIDI files against the mock backend, which imports like app/src/midi_actions.rs: one
 // pattern with drum samplers (rooted at their GM key) and pitched channels, one undo step.
@@ -14,14 +15,15 @@ let mock: MockBackend;
 let A: typeof import('./actions');
 let store: typeof import('./store');
 let ui: typeof import('./ui');
-const settle = () => new Promise(r => setTimeout(r, 30));
-const sync = async () => { await settle(); store.replaceState(await mock.getState()); };
+let edit: typeof import('./edit');
+const sync = () => syncEngine(mock, store, edit);
 const FILE = 'C:\\Music\\Groove.mid';
 
 beforeEach(async () => {
   vi.resetModules();
   const backend = await import('../api/backend');
   mock = (await backend.getBackend()) as MockBackend;
+  edit = await import('./edit');
   A = await import('./actions');
   store = await import('./store');
   ui = await import('./ui');

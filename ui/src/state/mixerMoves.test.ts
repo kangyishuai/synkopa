@@ -1,5 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockBackend } from '../api/mock';
+import { t } from '../lib/i18n';
+import { syncEngine } from '../test/engine';
 
 // Dragging effects between mixer inserts, and per-sample mixer routing, against the mock backend.
 vi.mock('../ui/Confirm', () => ({ confirmUnsaved: async () => 'discard', confirmRecover: async () => 'later' }));
@@ -15,13 +17,14 @@ let mock: MockBackend;
 let A: typeof import('./actions');
 let store: typeof import('./store');
 let ui: typeof import('./ui');
-const settle = () => new Promise(r => setTimeout(r, 30));
-const sync = async () => { await settle(); store.replaceState(await mock.getState()); };
+let edit: typeof import('./edit');
+const sync = () => syncEngine(mock, store, edit);
 
 beforeEach(async () => {
   vi.resetModules();
   const backend = await import('../api/backend');
   mock = (await backend.getBackend()) as MockBackend;
+  edit = await import('./edit');
   A = await import('./actions');
   store = await import('./store');
   ui = await import('./ui');
@@ -70,8 +73,10 @@ describe('effects dragged between mixer inserts', () => {
 
 describe('a sample plays into its own mixer insert', () => {
   it('is rejected for an insert that does not exist and cleared when its insert is removed', async () => {
-    const c = store.S.project.clips.find(x => x.kind === 'audio');
-    if (!c) return;
+    await mock.importAudio({ paths: ['C:\loops\pad.wav'], track: 0, beat: 0 });
+    await sync();
+    const c = store.S.project.clips.find(x => x.kind === 'audio')!;
+    expect(c).toBeDefined();
     const target = store.S.project.inserts.find(m => m.id !== 0)!;
     await expect(mock.applyOps([{ op: 'putClips', clips: [{ ...store.plain(c), insert: 987654 }] }])).rejects.toThrow();
     await mock.applyOps([{ op: 'putClips', clips: [{ ...store.plain(c), insert: target.id }] }]);
@@ -103,6 +108,7 @@ describe('export in place', () => {
     const spy = vi.spyOn(mock, 'exportInPlace');
     await A.exportInPlace();
     expect(spy).not.toHaveBeenCalled();
+    expect(ui.U.readout).toBe(t('d.act.inPlaceNone'));
   });
 });
 
@@ -129,9 +135,8 @@ describe('working in the playlist lights SONG', () => {
     let frames = 0;
     await mock.subscribeTelemetry(b => { if (dec.decode(b)) frames++; });
     await mock.patternPlay(pt.id);
-    await new Promise(r => setTimeout(r, 80));
+    await vi.waitFor(() => expect(dec.frame.ins.get(0)?.l ?? 0).toBeGreaterThan(0));
     expect(frames).toBeGreaterThan(0);
-    expect(dec.frame.ins.get(0)!.l).toBeGreaterThan(0);
     expect(dec.frame.ins.get(trackIns)?.l ?? 0).toBe(0);
     await mock.patternPlay(null);
   });

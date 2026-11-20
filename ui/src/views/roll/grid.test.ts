@@ -3,7 +3,7 @@
 // no DOM, no backend, exactly the seam the refactor (deep-5) was after.
 import { describe, expect, it } from 'vitest';
 import type { Channel, Note, Op, Pattern } from '../../api/types';
-import { noteAt, noteWidth, snapStep } from '../../lib/pattern';
+import { noteAt, noteWidth } from '../../lib/pattern';
 import { chordPitches } from '../../lib/transforms';
 import { rollDown, rollMove } from './grid';
 import { KW, type Mods, type Pt, type RollCtx, type RollMove, type Tool } from './types';
@@ -172,7 +172,9 @@ describe('draw tool', () => {
   it('Alt places the note free of the grid', () => {
     const c = makeCtx([]);
     down(c, 0, at(4.4, 60), { alt: true });
-    expect(notesOf(c.rec.gestures[0])[0].step).toBeCloseTo(snapStep(4.4, 0, true), 5);
+    const step = notesOf(c.rec.gestures[0])[0].step;
+    expect(step).toBeGreaterThan(4.3); // not snapped to step 4
+    expect(step).toBeLessThan(4.45);
   });
 
   it('a new note past the end grows the pattern and says so', () => {
@@ -264,7 +266,7 @@ describe('stamp tool', () => {
     expect(c.rec.commits[0].notes.filter(n => n.ch === CH.id)).toEqual(pitches.map(p => ({ ch: CH.id, step: 4, len: 2, p: p, trig: false })));
     expect(c.rec.sels.at(-1)).toEqual([0, 1, 2]);
     expect(c.rec.auditions.map(a => a.key)).toEqual(pitches);
-    expect(c.rec.says.some(s => s.includes('m'))).toBe(true);
+    expect(c.rec.says.at(-1)).toBe('Stamped Cm');
   });
 
   it('re-stamping a step replaces that chord only; other steps and channels stay', () => {
@@ -332,7 +334,7 @@ describe('modifiers and the shared chain', () => {
     expect(c.rec.sels.at(-1)).toEqual([]); // the clone had selected the copy; the click toggles it off
   });
 
-  it('Shift+drag on empty adds a marquee to the selection; a click without moving keeps the clone pending', () => {
+  it('Shift+drag on empty adds a marquee to the selection', () => {
     const c = makeCtx([note(4, 60), note(8, 62)]);
     down(c, 0, at(1, 40), { shift: true });
     c.drag()?.move(mv(c, at(15, 70)));

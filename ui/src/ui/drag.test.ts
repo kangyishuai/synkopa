@@ -1,57 +1,80 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { dblCheck, dragCursor, fineMul, resetDblCheck, track } from './drag';
+// @vitest-environment jsdom
+// The pointer-drag helpers every control and canvas view uses, on a real (jsdom) window and root.
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { dblCheck, dragCursor, fineMul, panDrag, resetDblCheck, track, trackFrame } from './drag';
 
-// a minimal DOM: the root element's classes and custom properties, and window listeners
-const cls = new Set<string>(), props = new Map<string, string>();
-const listeners = new Map<string, (e: unknown) => void>();
-// every listener ever added (dblCheck's capture listeners stay for the life of the page)
-const all: { k: string; f: (e: unknown) => void }[] = [];
-vi.stubGlobal('document', {
-  documentElement: {
-    classList: { add: (c: string) => cls.add(c), remove: (c: string) => cls.delete(c) },
-    style: { setProperty: (k: string, v: string) => props.set(k, v), removeProperty: (k: string) => props.delete(k) },
-  },
-});
-vi.stubGlobal('window', {
-  addEventListener: (k: string, f: (e: unknown) => void) => { listeners.set(k, f); all.push({ k, f }); },
-  removeEventListener: (k: string) => listeners.delete(k),
-});
-beforeEach(() => { cls.clear(); props.clear(); listeners.clear(); });
+const root = document.documentElement;
+const fire = (type: string, init: PointerEventInit = {}) => window.dispatchEvent(new PointerEvent(type, { bubbles: true, ...init }));
+afterEach(() => { fire('pointerup'); dragCursor(null); });
 
 describe('drag cursor', () => {
   it('forces the drag cursor on the whole page, and releases it', () => {
     dragCursor('grabbing');
-    expect(cls.has('dragcur')).toBe(true);
-    expect(props.get('--drag-cursor')).toBe('grabbing');
+    expect(root.classList.contains('dragcur')).toBe(true);
+    expect(root.style.getPropertyValue('--drag-cursor')).toBe('grabbing');
     dragCursor(null);
-    expect(cls.has('dragcur')).toBe(false);
-    expect(props.has('--drag-cursor')).toBe(false);
-  });
-  it('shows a closed hand for the whole of a grab drag, released on pointerup', () => {
-    const up = vi.fn();
-    track(() => {}, up, 'grabbing');
-    expect(props.get('--drag-cursor')).toBe('grabbing');
-    listeners.get('pointerup')!({});
-    expect(cls.has('dragcur')).toBe(false);
-    expect(up).toHaveBeenCalledOnce();
-  });
-  it('releases it when the pointer is cancelled', () => {
-    track(() => {}, null, 'grabbing');
-    listeners.get('pointercancel')!({});
-    expect(cls.has('dragcur')).toBe(false);
+    expect(root.classList.contains('dragcur')).toBe(false);
+    expect(root.style.getPropertyValue('--drag-cursor')).toBe('');
   });
   it('leaves the cursor alone for a drag that names none', () => {
     track(() => {});
-    expect(cls.has('dragcur')).toBe(false);
+    expect(root.classList.contains('dragcur')).toBe(false);
+  });
+});
+
+describe('track', () => {
+  it('follows moves until the release, then stops listening and releases the cursor', () => {
+    const move = vi.fn(), up = vi.fn();
+    track(move, up, 'grabbing');
+    expect(root.classList.contains('dragcur')).toBe(true);
+    fire('pointermove', { clientX: 5 });
+    fire('pointerup');
+    fire('pointermove', { clientX: 9 });
+    expect(move).toHaveBeenCalledOnce();
+    expect(up).toHaveBeenCalledOnce();
+    expect(root.classList.contains('dragcur')).toBe(false);
+  });
+  it('a cancelled pointer ends it too, once', () => {
+    const up = vi.fn();
+    track(() => {}, up, 'grabbing');
+    fire('pointercancel');
+    fire('pointerup');
+    expect(up).toHaveBeenCalledOnce();
+    expect(root.classList.contains('dragcur')).toBe(false);
+  });
+});
+
+describe('trackFrame', () => {
+  beforeEach(() => vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame'] }));
+  afterEach(() => vi.useRealTimers());
+  it('coalesces the moves of one frame to the last one, and flushes it before the release', () => {
+    const seen: number[] = [];
+    const up = vi.fn(() => seen.push(-1));
+    trackFrame(e => seen.push(e.clientX), up);
+    fire('pointermove', { clientX: 1 }); fire('pointermove', { clientX: 2 }); fire('pointermove', { clientX: 3 });
+    vi.advanceTimersToNextFrame();
+    fire('pointermove', { clientX: 4 }); fire('pointermove', { clientX: 5 });
+    fire('pointerup');
+    vi.advanceTimersToNextFrame(); // the cancelled frame does not run the move again
+    expect(seen).toEqual([3, 5, -1]);
+  });
+});
+
+describe('panDrag (middle button)', () => {
+  it('takes only the middle button, and pans opposite to the pointer', () => {
+    const set = vi.fn();
+    expect(panDrag(new PointerEvent('pointerdown', { button: 0 }), () => ({ x: 0, y: 0 }), set)).toBe(false);
+    expect(panDrag(new PointerEvent('pointerdown', { button: 1, clientX: 100, clientY: 100 }), () => ({ x: 50, y: 20 }), set)).toBe(true);
+    fire('pointermove', { clientX: 90, clientY: 130 });
+    expect(set).toHaveBeenLastCalledWith(60, -10);
   });
 });
 
 describe('double click (dblCheck)', () => {
-  // fire the capture listeners dblCheck installs on the window
-  const fire = (type: string, e: object) => all.filter(l => l.k === type).forEach(l => l.f(e));
   const down = (x: number, y: number) => fire('pointerdown', { clientX: x, clientY: y });
   let now = 0;
-  beforeEach(() => { now = 1000; vi.spyOn(performance, 'now').mockImplementation(() => now); dblCheck('install the listeners'); resetDblCheck(); });
+  beforeEach(() => { now = 1000; vi.spyOn(performance, 'now').mockImplementation(() => now); resetDblCheck(); });
+  afterEach(() => vi.restoreAllMocks());
 
   it('is two presses on the same key in the same place within 320 ms', () => {
     down(10, 10); expect(dblCheck('a')).toBe(false);

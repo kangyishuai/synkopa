@@ -18,10 +18,6 @@ describe('Channel Rack window width', () => {
     expect(rackFitWidth(16, geo)).toBe(212 + gridW(32, 22) + 8);
     expect(rackFitWidth(32, geo)).toBe(212 + gridW(48, 22) + 8);
   });
-  it('follows the pattern both ways', () => {
-    expect(rackFitWidth(16, geo)).toBeLessThan(rackFitWidth(32, geo));
-    expect(rackFitWidth(32, geo)).toBeGreaterThan(rackFitWidth(16, geo));
-  });
   it('grows with the pattern up to 16 bars, then to the room it has; never below the minimum', () => {
     const wide = { ...geo, room: 50000 };
     expect(rackFitWidth(64, wide)).toBe(212 + gridW(80, 22) + 8);

@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ERR_EXISTS } from '../api/errors';
 import type { MockBackend } from '../api/mock';
+import { syncEngine } from '../test/engine';
 import type { Fx, Insert } from '../api/types';
 
 // FX chain presets against the mock backend, which behaves like app/src/fx_chains.rs: a library
@@ -15,9 +16,8 @@ beforeAll(() => {
 let mock: MockBackend;
 let A: typeof import('./actions');
 let store: typeof import('./store');
-let ui: typeof import('./ui');
-const settle = () => new Promise(r => setTimeout(r, 30));
-const sync = async () => { await settle(); store.replaceState(await mock.getState()); };
+let edit: typeof import('./edit');
+const sync = () => syncEngine(mock, store, edit);
 const noIds = (fx: Fx[]) => fx.map(f => ({ ...store.plain(f), id: 0 }));
 const ins = (id: number) => store.S.project.inserts.find(m => m.id === id)!;
 
@@ -25,9 +25,9 @@ beforeEach(async () => {
   vi.resetModules();
   const backend = await import('../api/backend');
   mock = (await backend.getBackend()) as MockBackend;
+  edit = await import('./edit');
   A = await import('./actions');
   store = await import('./store');
-  ui = await import('./ui');
   await sync();
 });
 
@@ -63,7 +63,7 @@ describe('FX chain presets', () => {
   });
 
   it('on an insert with effects needs a mode: Replace swaps the chain, Append adds after, each undone in one step', async () => {
-    const { src, empty } = pick();
+    const { src } = pick();
     await mock.fxChainSave(src.id, 'Chain');
     const other = store.S.project.inserts.find(m => m.id !== src.id && m.fx.length > 0) ?? src;
     const mine = noIds(ins(other.id).fx);
@@ -79,11 +79,12 @@ describe('FX chain presets', () => {
     expect(noIds(ins(other.id).fx)).toEqual(noIds(ins(src.id).fx));
     await A.undo(); await sync();
     expect(noIds(ins(other.id).fx)).toEqual(mine);
-    expect(empty).toBeTruthy();
   });
 
   it('keeps presets across projects, and handles names, overwrite, rename and delete', async () => {
     const { src } = pick();
+    const chainLen = src.fx.length;
+    expect(chainLen).toBeGreaterThan(0);
     await mock.fxChainSave(src.id, 'Drum Bus');
     await expect(mock.fxChainSave(src.id, 'drum bus')).rejects.toThrow(new RegExp('^' + ERR_EXISTS));
     await mock.fxChainSave(src.id, 'drum bus', true);
@@ -97,7 +98,7 @@ describe('FX chain presets', () => {
     const target = store.S.project.inserts.find(m => m.id !== 0)!;
     expect(target.fx).toEqual([]);
     await mock.fxChainLoad(target.id, 'zeta'); await sync();
-    expect(ins(target.id).fx.length).toBe(src.fx.length);
+    expect(ins(target.id).fx.length).toBe(chainLen);
 
     await mock.fxChainDelete('Zeta');
     expect((await mock.fxChains()).presets.map(p => p.name)).toEqual(['drum bus']);
@@ -107,6 +108,6 @@ describe('FX chain presets', () => {
   it('refuses to save an insert without effects', async () => {
     const { empty } = pick();
     await expect(mock.fxChainSave(empty.id, 'Nothing')).rejects.toThrow(/no effects/);
-    expect(ui.U.fxChainWin).toBeNull();
+    expect((await mock.fxChains()).presets).toEqual([]);
   });
 });
