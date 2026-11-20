@@ -67,6 +67,13 @@ jobs:
       - run: pnpm --dir ui install --frozen-lockfile
       - run: pnpm --dir ui test
       - run: pnpm --dir ui build
+      # the UI's user journeys in Chromium, against the dev server and the in-browser mock engine
+      - name: UI end-to-end (Playwright)
+        run: pnpm --dir ui exec playwright install --with-deps chromium && pnpm --dir ui test:e2e
+      - name: Upload the traces of failed journeys
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with: { name: ui-e2e-results, path: ui/e2e/.results, if-no-files-found: ignore }
       - run: cargo clippy --workspace --all-targets -- -D warnings
       # a real VST3 instrument for crates/vst3-host/tests/instrument.rs
       - name: Synkopa Demo Synth
