@@ -664,6 +664,22 @@ select option { background: var(--bg4); color: var(--fg); }
 .rollprops .rpf { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; padding-left: 8px; font: 500 11px var(--sans); color: var(--fg3); }
 .rollprops .rpf input { min-width: 0; font: 500 11px var(--mono); border-color: var(--line3); }
 .rollprops .rpf input:focus { border-color: var(--blue); }
+/* FL's note properties: a head, a row of knobs with the Slide switch, the fields, Reset / Accept */
+.rollprops .rphead { display: flex; align-items: center; gap: 6px; padding-right: 2px; }
+.rollprops .rphead .rpwhat { flex: 1; font: 500 10px var(--mono); color: var(--fg3); text-transform: none; letter-spacing: 0; }
+.rollprops .rpx { width: 18px; height: 18px; border: 0; border-radius: 4px; background: none; color: var(--fg4); font-size: 14px; line-height: 1; cursor: pointer; }
+.rollprops .rpx:hover { background: var(--line2); color: var(--fg-hi); }
+.rollprops .rpknobs { display: flex; align-items: flex-end; gap: 4px; margin: 0 6px 6px; padding: 8px 6px 6px; border-radius: 6px; background: var(--viz); min-height: 72px; }
+.rollprops .rpknobs .knob { min-width: 48px; }
+.rollprops .rpsilent { align-self: center; max-width: 150px; font: 500 10px var(--sans); color: var(--fg4); line-height: 1.35; white-space: normal; }
+.rollprops .rpled { align-self: center; display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border: 1px solid var(--line3); border-radius: 5px; background: var(--bg2, transparent); color: var(--fg3); font: 700 9.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.rollprops .rpled i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg6); box-shadow: inset 0 0 0 1px var(--line3); }
+.rollprops .rpled:hover { color: var(--fg-hi); border-color: var(--fg5); }
+.rollprops .rpled.on { color: var(--fg-hi); border-color: var(--green); }
+.rollprops .rpled.on i { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.rollprops .rpled.part i { background: linear-gradient(90deg, var(--green) 50%, var(--fg6) 50%); }
+.rollprops .rpbtns { display: flex; justify-content: flex-end; gap: 6px; padding: 6px 8px 0; }
+.ptools .slidetog:disabled { opacity: .35; cursor: not-allowed; }
 .rollprops .rpf input::placeholder { color: var(--fg5); font-style: italic; }
 .rollprops .rpfoot { padding: 4px 8px 3px; font: 500 10px var(--mono); color: var(--fg5); }
 .rollprops .rpfoot.err { color: var(--danger); font-family: var(--sans); white-space: normal; }

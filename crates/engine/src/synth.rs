@@ -99,6 +99,44 @@ pub struct Voice {
     cut_at: u32,
     /// Sampler in slice mode: the slice this note plays ([`NO_SLICE`] = the channel's region).
     slice: u16,
+    /// Slide notes: the pitch offset in semitones now, where its glide ends, the step per
+    /// sample and samples left of it.
+    st: f32,
+    st_goal: f32,
+    st_step: f32,
+    st_left: u32,
+    /// A slide waiting to start: the voice's own time it starts at (`u32::MAX` = none), the
+    /// offset it glides to and over how many samples.
+    slide_at: u32,
+    slide_to: f32,
+    slide_len: u32,
+}
+
+impl Voice {
+    /// One sample of a slide: the playback-rate factor of the pitch offset now.
+    #[inline]
+    fn slide_tick(&mut self) -> f64 {
+        if self.t == self.slide_at {
+            self.slide_at = u32::MAX;
+            self.st_goal = self.slide_to;
+            if self.slide_len == 0 {
+                self.st = self.slide_to;
+                self.st_left = 0;
+            } else {
+                self.st_left = self.slide_len;
+                self.st_step = (self.slide_to - self.st) / self.slide_len as f32;
+            }
+        }
+        if self.st_left > 0 {
+            self.st_left -= 1;
+            self.st = if self.st_left == 0 { self.st_goal } else { self.st + self.st_step };
+        }
+        if self.st == 0.0 {
+            1.0
+        } else {
+            (self.st as f64 / 12.0).exp2()
+        }
+    }
 }
 
 /// A sampler voice that plays the channel's region, not a slice.
@@ -129,6 +167,13 @@ impl Voice {
             cut: 0,
             cut_at: u32::MAX,
             slice: NO_SLICE,
+            st: 0.0,
+            st_goal: 0.0,
+            st_step: 0.0,
+            st_left: 0,
+            slide_at: u32::MAX,
+            slide_to: 0.0,
+            slide_len: 0,
         }
     }
 }
@@ -266,6 +311,40 @@ impl VoicePool {
     #[allow(clippy::too_many_arguments)]
     pub fn note(&mut self, ch: &ChanRt, idx: usize, dest: Dest, delay: u32, end: NoteEnd, key: u8, vel: f32, gain: f32, pan: f32) -> bool {
         self.note_slot(ch, idx, dest, delay, end, key, vel, gain, pan).is_some()
+    }
+
+    /// A slide note of channel `chan_id`, `delay` samples from now: the channel's sampler and
+    /// piano voices that sound then (started, not yet at their end) glide by the distance from
+    /// the highest of them to `key`, over `len` samples. A slice plays at the file's pitch, so
+    /// it does not slide.
+    pub fn slide(&mut self, chan_id: Id, delay: u32, key: u8, len: u32) {
+        let at = |v: &Voice| v.t.saturating_add(delay - v.delay);
+        let sounding = |v: &Voice| {
+            v.alive
+                && v.chan_id == chan_id
+                && matches!(v.kind, VoiceKind::Sample | VoiceKind::Keys)
+                && v.slice == NO_SLICE
+                && v.delay <= delay
+                && v.cut_at == u32::MAX
+                && at(v) < v.len
+        };
+        // where each voice is headed: a slide still waiting, else the end of its glide
+        let goal = |v: &Voice| if v.slide_at != u32::MAX { v.slide_to } else { v.st_goal };
+        let Some(top) = self.voices.iter().filter(|v| sounding(v)).map(|v| v.key as f32 + goal(v)).max_by(f32::total_cmp) else {
+            return;
+        };
+        let by = key as f32 - top;
+        for v in self.voices.iter_mut().filter(|v| sounding(v)) {
+            // a second slide before the first began: the first jumps to its end there
+            if v.slide_at != u32::MAX {
+                v.st = v.slide_to;
+                v.st_goal = v.slide_to;
+                v.st_left = 0;
+            }
+            v.slide_at = at(v);
+            v.slide_to = goal(v) + by;
+            v.slide_len = len;
+        }
     }
 
     /// Like [`Self::note`], returning the voice slot that was started.
@@ -470,7 +549,7 @@ impl VoicePool {
                     if stereo {
                         out_r[i] += y * gr * fade;
                     }
-                    v.pos += v.rate * bend as f64;
+                    v.pos += v.rate * bend as f64 * v.slide_tick();
                     v.t += 1;
                 }
                 continue;
@@ -571,6 +650,7 @@ impl VoicePool {
                     if stereo {
                         out_r[i] += y * gr * fade;
                     }
+                    let step = step * v.slide_tick();
                     v.pos += if m.reverse { -step } else { step };
                     v.t += 1;
                 }

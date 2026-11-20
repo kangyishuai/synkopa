@@ -1052,9 +1052,9 @@ mod transform_tests {
     fn project_with_notes() -> Project {
         let mut p = crate::demo::routed_project();
         p.patterns[0].notes = vec![
-            Note { ch: 1001, step: 0.0, len: 1.0, p: Some(61), v: 0.8, trig: Some(false), pan: 0.0 },
-            Note { ch: 1001, step: 4.3, len: 1.0, p: Some(64), v: 0.8, trig: Some(false), pan: 0.0 },
-            Note { ch: 1001, step: 8.0, len: 1.0, p: Some(60), v: 0.8, trig: Some(false), pan: 0.0 },
+            Note { ch: 1001, step: 0.0, len: 1.0, p: Some(61), v: 0.8, trig: Some(false), pan: 0.0, slide: false },
+            Note { ch: 1001, step: 4.3, len: 1.0, p: Some(64), v: 0.8, trig: Some(false), pan: 0.0, slide: false },
+            Note { ch: 1001, step: 8.0, len: 1.0, p: Some(60), v: 0.8, trig: Some(false), pan: 0.0, slide: false },
         ];
         p
     }
@@ -1356,7 +1356,7 @@ mod transform_tests {
         set_key_a_minor(&mut p);
         // notes at 0.0 (C#4), 4.3 (E4), 8.0 (C4) on ch 1001; a hit on another channel at 5.0
         let other = p.channels.iter().map(|c| c.id).find(|id| *id != 1001).unwrap();
-        p.patterns[0].notes.push(Note { ch: other, step: 5.0, len: 1.0, p: None, v: 0.8, trig: Some(false), pan: 0.0 });
+        p.patterns[0].notes.push(Note { ch: other, step: 5.0, len: 1.0, p: None, v: 0.8, trig: Some(false), pan: 0.0, slide: false });
         // range select pinned to ch 1001, steps 4..9: E4 → Em, C4 → C; the C# (out of
         // scale) is outside the range and the drum hit is on another channel — both stay
         crate::ops::apply_all(
@@ -1391,7 +1391,7 @@ mod transform_tests {
         // OUTSIDE the selection — Em must not double the B that is already sounding
         let other = p.channels.iter().map(|c| c.id).find(|id| *id != 1001).unwrap();
         p.patterns[0].notes[1].p = Some(52); // the 4.3 note becomes E3
-        p.patterns[0].notes.push(Note { ch: other, step: 4.3, len: 2.0, p: Some(59), v: 0.8, trig: Some(false), pan: 0.0 });
+        p.patterns[0].notes.push(Note { ch: other, step: 4.3, len: 2.0, p: Some(59), v: 0.8, trig: Some(false), pan: 0.0, slide: false });
         crate::ops::apply_all(
             &mut p,
             &[Op::TransformNotes {

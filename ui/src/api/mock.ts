@@ -1233,10 +1233,12 @@ export class MockBackend implements Backend {
       ? this.p.patterns.filter(p => p.id === a.pattern)
       : this.p.clips.filter(c => c.kind === 'pat' && !c.muted).map(c => this.p.patterns.find(p => p.id === c.ref)).filter((p): p is Pattern => !!p);
     if (a.pattern != null && !pats.length) throw new Error(`no pattern ${a.pattern}`);
-    const notes = pats.reduce((n, p) => n + p.notes.length, 0);
+    // slide notes have no sound of their own and no MIDI equivalent: left out, as the engine does
+    const sounding = pats.flatMap(p => p.notes.filter(n => !n.slide));
+    const notes = sounding.length;
     const what = a.pattern != null ? pats[0].name : 'song';
     if (!notes) throw new Error(`the ${what} has no notes to export`);
-    return { out: a.out, what, tracks: new Set(pats.flatMap(p => p.notes.map(n => n.ch))).size, notes, bpm: this.p.bpm };
+    return { out: a.out, what, tracks: new Set(sounding.map(n => n.ch)).size, notes, bpm: this.p.bpm };
   }
   // ---- FX chain presets (app/src/fx_chains.rs): kept for the session, across projects
   private chains = new Map<string, { name: string; fx: Fx[] }>();
