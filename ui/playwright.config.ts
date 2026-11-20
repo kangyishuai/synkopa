@@ -27,7 +27,8 @@ export default defineConfig({
   webServer: {
     command: `pnpm exec vite --port ${PORT} --strictPort`,
     url: `http://localhost:${PORT}`,
-    reuseExistingServer: !process.env.CI,
+    // never a server left over from another run: it may be shutting down, and the app then hangs on its loading screen
+    reuseExistingServer: false,
     timeout: 60_000,
   },
 });

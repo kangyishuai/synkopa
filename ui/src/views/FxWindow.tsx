@@ -1,4 +1,4 @@
-import { createMemo, For, Show } from 'solid-js';
+import { createMemo, For, Show, untrack } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import { captureOn, createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
@@ -793,31 +793,34 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
         )}
       </Show>
       <div style={{ 'max-height': '320px', overflow: 'auto', 'padding-right': '4px' }}>
-        <For each={shown()} fallback={<span class="note">{t('c.fx.noParams')}</span>}>
+        {/* rows keyed by the parameter's id: a value change (a new object per parameter, here and on
+            every refresh) updates the row in place, so the slider being dragged stays in the page */}
+        <For each={shown()} keyed={p => p.id} fallback={<span class="note">{t('c.fx.noParams')}</span>}>
           {p => {
-            const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: p.id };
+            const id = untrack(() => p().id); // the row's key: the same for the row's whole life
+            const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: id };
             return (
               <div class="vparam" onContextMenu={e => { e.preventDefault(); e.stopPropagation();
-                if (!props.instrument) paramMenu(e.clientX, e.clientY, target, () => set(p.id, p.def), undefined, { current: p.value, paramLabel: p.name });
-                else controlMenu(e.clientX, e.clientY, p.name, () => set(p.id, p.def), t('c.fx.instNoAuto'));
+                if (!props.instrument) paramMenu(e.clientX, e.clientY, target, () => set(id, p().def), undefined, { current: p().value, paramLabel: p().name });
+                else controlMenu(e.clientX, e.clientY, p().name, () => set(id, p().def), t('c.fx.instNoAuto'));
               }}>
-                <span class="ell" style={{ font: '12px var(--sans)', color: 'var(--fg)' }} title={paramTitle(p)}>{p.name}</span>
-                <Show when={p.options?.length} fallback={
-                  <Show when={p.toggle} fallback={
-                    <input type="range" min="0" max="1" step={sliderStep(p)} value={p.value} onInput={e => set(p.id, +e.currentTarget.value)}
-                      onDblClick={() => set(p.id, p.def)} aria-label={p.name}
-                      onPointerDown={e => { if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); } }} />
+                <span class="ell" style={{ font: '12px var(--sans)', color: 'var(--fg)' }} title={paramTitle(p())}>{p().name}</span>
+                <Show when={p().options?.length} fallback={
+                  <Show when={p().toggle} fallback={
+                    <input type="range" min="0" max="1" step={sliderStep(p())} value={p().value} onInput={e => set(id, +e.currentTarget.value)}
+                      onDblClick={() => set(id, p().def)} aria-label={p().name}
+                      onPointerDown={e => { if (e.altKey && e.button === 0) { e.preventDefault(); set(id, p().def); } }} />
                   }>
-                    <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p.value >= 0.5} onChange={e => set(p.id, e.currentTarget.checked ? 1 : 0)} aria-label={p.name} />
+                    <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p().value >= 0.5} onChange={e => set(id, e.currentTarget.checked ? 1 : 0)} aria-label={p().name} />
                   </Show>
                 }>
-                  <select class="textin" style={{ height: '22px', padding: '0 4px' }} aria-label={p.name}
-                    value={String(nearestOption(p))} onChange={e => set(p.id, p.options![+e.currentTarget.value].value)} onKeyDown={e => e.stopPropagation()}>
-                    <For each={p.options}>{(o, oi) => <option value={String(oi())}>{o.label}</option>}</For>
+                  <select class="textin" style={{ height: '22px', padding: '0 4px' }} aria-label={p().name}
+                    value={String(nearestOption(p()))} onChange={e => set(id, p().options![+e.currentTarget.value].value)} onKeyDown={e => e.stopPropagation()}>
+                    <For each={p().options} keyed={false}>{(o, oi) => <option value={String(oi)}>{o().label}</option>}</For>
                   </select>
                 </Show>
-                <span class="mono ell" style={{ 'font-size': '10px', color: 'var(--fg2)', 'text-align': 'right' }} title={!props.instrument && isAutomated(target) ? t('d.ui.knob.auto') : p.display}>
-                  <Show when={!props.instrument && isAutomated(target)}>● </Show>{p.display}
+                <span class="mono ell" style={{ 'font-size': '10px', color: 'var(--fg2)', 'text-align': 'right' }} title={!props.instrument && isAutomated(target) ? t('d.ui.knob.auto') : p().display}>
+                  <Show when={!props.instrument && isAutomated(target)}>● </Show>{p().display}
                 </span>
               </div>
             );

@@ -62,4 +62,36 @@ test.describe('Mixer', () => {
     await app.keyboard.press(`${MOD}+z`);
     await pollEngine(app, s => ins(1)(s).fx.some(f => f.id === added.id)).toBe(true);
   });
+
+  test('the parameter slider of a hosted plugin follows a whole drag', async ({ app }) => {
+    await app.locator('.strip[data-ins="1"] .nmrow').click();
+    const n0 = ins(1)(await engine(app)).fx.length;
+    await app.getByText('Add effect', { exact: true }).click();
+    const search = app.getByPlaceholder('Search for an effect, plugin or tool…');
+    await search.fill('Decapitator');
+    await search.press('Enter');
+    await pollEngine(app, s => ins(1)(s).fx.length).toBe(n0 + 1);
+    const added = ins(1)(await engine(app)).fx[n0];
+    expect(added.type).toBe('plugin');
+
+    // a plugin shows its own window; the gear in that window's header opens Synkopa's, with the parameter list
+    await app.evaluate(id => (window as unknown as { __waveMock: { pressEditorSettings(id: number): void } }).__waveMock.pressEditorSettings(id), added.id);
+    const slider = app.locator(`[data-fxwin="${added.id}"]`).getByRole('slider', { name: 'Drive' });
+    await expect(slider).toBeVisible();
+    const box = (await slider.boundingBox())!;
+    const y = box.y + box.height / 2;
+    // press on the left end, drag to the right end in many steps: the value must keep following
+    await app.mouse.move(box.x + 4, y);
+    await app.mouse.down();
+    await app.mouse.move(box.x + box.width * 0.5, y, { steps: 6 });
+    await expect.poll(async () => +(await slider.inputValue())).toBeGreaterThan(0.4);
+    await app.mouse.move(box.x + box.width - 4, y, { steps: 6 });
+    await app.mouse.up();
+    await expect.poll(async () => +(await slider.inputValue())).toBeGreaterThan(0.9);
+    // the plugin itself got the last value
+    await expect.poll(() => app.evaluate(async id => {
+      const be = (window as unknown as { __waveMock: { pluginParams(id: number): Promise<{ name: string; value: number }[]> } }).__waveMock;
+      return (await be.pluginParams(id)).find(p => p.name === 'Drive')!.value;
+    }, added.id)).toBeGreaterThan(0.9);
+  });
 });
