@@ -8,7 +8,8 @@
   <a href="https://github.com/miskibin/synkopa/releases/latest"><b>Download</b> (Windows, macOS, Linux)</a> ·
   <a href="https://www.youtube.com/watch?v=wtuHDyIQpYk">Watch the video</a> ·
   <a href="https://miskibin.github.io/synkopa/">Hear a beat made in it</a> ·
-  <a href="docs/cli.md">Command line</a>
+  <a href="docs/cli.md">Command line</a> ·
+  <a href="https://discord.gg/zHMjE3fCY">Discord</a>
 </p>
 <p align="center">
   <a href="https://github.com/miskibin/synkopa/releases/latest"><img src="https://img.shields.io/github/v/release/miskibin/synkopa?label=release" alt="Latest release"></a>
@@ -149,6 +150,7 @@ a complete beat and a vocal session. What it does not do yet:
   musicians, not for developers.
 
 Found a bug or miss something from FL? [Open an issue](https://github.com/miskibin/synkopa/issues).
+Questions, beats and feedback: join the [Synkopa Discord](https://discord.gg/zHMjE3fCY).
 
 ## Questions people ask
 

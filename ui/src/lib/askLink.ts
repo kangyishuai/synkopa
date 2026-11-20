@@ -9,6 +9,8 @@ export const MAX_ASK_URL = 2000;
 const CHATGPT_URL = 'https://chatgpt.com/?q=';
 const CHATGPT_HOME = 'https://chatgpt.com/';
 export const DEEPWIKI_URL = 'https://deepwiki.com/miskibin/synkopa';
+/** The community server (Help ▸ Join the Discord); `links::DISCORD_URL` in the engine. */
+export const DISCORD_URL = 'https://discord.gg/zHMjE3fCY';
 
 /** Percent-encodes everything but RFC 3986 unreserved characters, like `links::encode_component`. */
 export function encodeComponent(s: string): string {

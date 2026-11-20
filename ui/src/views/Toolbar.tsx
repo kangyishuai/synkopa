@@ -10,6 +10,7 @@ import { noteName } from '../lib/pitch';
 import { prefs } from '../state/prefs';
 import { createEffect, createSignal, For, on, onCleanup, onMount, Show } from 'solid-js';
 import { be } from '../api/backend';
+import { notify } from '../state/notice';
 import { clamp, fmtClock, fmtPos, TapTracker } from '../lib/format';
 import { snapLabel } from '../lib/snap';
 import * as A from '../state/actions';
@@ -401,6 +402,8 @@ function MenuBar() {
       { t: 'sep' },
       { t: 'item', label: t('a.mn.updates'), glyph: G.updates, act: () => void checkUpdates() },
       { t: 'item', label: t('a.mn.whatsNew'), glyph: G.whatsNew, act: () => void showWhatsNew() },
+      { t: 'sep' },
+      { t: 'item', label: t('a.mn.discord'), glyph: G.discord, act: () => void be().openDiscord().catch(e => notify(t('a.mn.discordFailed', { error: String(e) }))) },
     ]],
   ];
   setCommandMenus(menus);
