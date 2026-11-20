@@ -105,3 +105,15 @@ describe('Palette', () => {
     expect(screen.getAllByRole('option')).toHaveLength(4);
   });
 });
+
+describe('Palette, mounted while already open', () => {
+  it('lists its commands (after the window is rebuilt with the palette open)', () => {
+    setPaletteOpen(false); settle();
+    setPaletteOpen(true); settle();
+    const { unmount } = render(() => <Palette />);
+    settle();
+    expect(screen.getAllByRole('dialog').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('New project').length).toBeGreaterThan(0);
+    unmount();
+  });
+});

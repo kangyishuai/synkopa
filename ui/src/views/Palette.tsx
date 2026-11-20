@@ -45,8 +45,8 @@ export function Palette() {
     for (const [name, items] of source) flatten(items(), t(name), '', out);
     return out;
   });
-  /** The context sections as [title, colour of its dot, commands]. */
-  const context = (): [string, string, MenuItem[]][] => {
+  /** The context sections as [title, colour of its dot, commands]. A declaration (hoisted): `all` above reads it at once when the palette mounts already open. */
+  function context(): [string, string, MenuItem[]][] {
     const out: [string, string, MenuItem[]][] = [];
     if (U.sel.length) out.push([t('a.cmd.ctxSel', { n: U.sel.length }), 'var(--blue)', [
       { t: 'item', label: t('a.mn.copy'), kbd: 'Ctrl+C', act: () => void A.copy() },
@@ -58,7 +58,7 @@ export function Palette() {
     const p = S.project.patterns.length ? curPat() : null;
     if (p) out.push([t('a.cmd.ctxPat', { name: p.name }), p.color, patItems(p, window.innerWidth / 2 - 120, 160)]);
     return out;
-  };
+  }
   const dotOf = (menu: string) => context().find(c => c[0] === menu)?.[1];
   const shown = createMemo(() => all().filter(c => matchCommand(c.menu + ' ' + c.sub + ' ' + c.label, q())));
   /** The commands by menu, each with its place in the flat list the arrow keys walk. */
