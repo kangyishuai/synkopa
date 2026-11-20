@@ -72,4 +72,32 @@ test.describe('Playlist', () => {
     await pollEngine(app, s => s.project.clips.some(c => c.id === next.id)).toBe(false);
     expect((await engine(app)).project.clips).toHaveLength(before.length - 2);
   });
+
+  test('dragging a lane header reorders the lanes with their clips; Esc cancels; undo restores', async ({ app }) => {
+    const names = () => engine(app).then(s => s.project.tracks.map(t => t.name));
+    const start = await names();
+    const firstClips = (await clipsOn(app, 0)).map(c => c.id).sort();
+    const lane = (i: number) => app.locator('.lanesCol .lane').nth(i);
+    const b0 = (await lane(0).boundingBox())!, b2 = (await lane(2).boundingBox())!;
+    const from = { x: b0.x + 60, y: b0.y + 12 }, to = { x: b0.x + 60, y: b2.y + b2.height - 4 };
+
+    // lift past a few px: the lane shows lifted and the drop line where it lands; Esc puts it back
+    await app.mouse.move(from.x, from.y);
+    await app.mouse.down();
+    await app.mouse.move(to.x, to.y, { steps: 10 });
+    await expect(lane(0)).toHaveClass(/lifted/);
+    await expect(app.locator('.laneDropLine')).toBeVisible();
+    await app.keyboard.press('Escape');
+    await expect(app.locator('.laneDropLine')).toBeHidden();
+    await app.mouse.up();
+    expect(await names()).toEqual(start);
+
+    // a drag to below the third lane moves the first there, with its clips
+    await drag(app, from, to, { steps: 10 });
+    await expect.poll(names).toEqual([start[1], start[2], start[0], ...start.slice(3)]);
+    expect((await clipsOn(app, 2)).map(c => c.id).sort()).toEqual(firstClips);
+    await app.keyboard.press(`${MOD}+z`);
+    await expect.poll(names).toEqual(start);
+    expect((await clipsOn(app, 0)).map(c => c.id).sort()).toEqual(firstClips);
+  });
 });
