@@ -306,8 +306,9 @@ export function Toolbar() {
 }
 
 /**
- * The application menus. A press opens one under its title; while one is open, moving over
- * another title switches to it (the bar is lifted above the menu backdrop for that).
+ * The application menus. A press opens one under its title; while one is open, pressing or
+ * moving over another title switches to it in one step (dismissal of presses elsewhere is
+ * handled at the document level — see ContextMenu — so nothing covers the bar).
  */
 function MenuBar() {
   const [open, setOpen] = createSignal(-1);
@@ -384,6 +385,10 @@ function MenuBar() {
     ]],
   ];
   setCommandMenus(menus);
+  // whether the open menu was opened by a press on its own title (vs a hover switch): a press
+  // on the open title toggles closed only then — a press on a hover-switched title keeps it,
+  // so "click Edit while File is open" ends with Edit's menu open either way
+  let byPress = false;
   const show = (i: number, el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     closeMenu(); // remount: an open panel keeps the position it was mounted at
@@ -395,8 +400,8 @@ function MenuBar() {
       <For each={menus}>
         {([key], i) => (
           <button class="mbtn" role="menuitem" aria-haspopup="menu" aria-expanded={open() === i()} classList={{ on: open() === i() }}
-            onPointerDown={e => { if (e.button !== 0) return; e.preventDefault(); if (open() === i()) closeMenu(); else show(i(), e.currentTarget); }}
-            onPointerEnter={e => { if (open() >= 0 && open() !== i()) show(i(), e.currentTarget); }}>{t(key)}</button>
+            onPointerDown={e => { if (e.button !== 0) return; e.preventDefault(); if (open() === i()) { if (byPress) closeMenu(); } else { byPress = true; show(i(), e.currentTarget); } }}
+            onPointerEnter={e => { if (open() >= 0 && open() !== i()) { byPress = false; show(i(), e.currentTarget); } }}>{t(key)}</button>
         )}
       </For>
     </div>

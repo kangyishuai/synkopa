@@ -1,4 +1,4 @@
-import { createSignal, For, Match, Show, Switch, onMount } from 'solid-js';
+import { createSignal, For, Match, Show, Switch, onCleanup, onMount } from 'solid-js';
 import { unwrap } from 'solid-js/store';
 import type { MenuItem } from '../state/ui';
 import { CHECK_GLYPH, menuGlyph, type MenuGlyph } from './menuIcons';
@@ -10,17 +10,56 @@ import { t } from '../lib/i18n';
 import { Icon } from './icons';
 import { SWATCHES } from '../lib/color';
 import { INST_ICONS, InstIcon } from './instIcons';
+import { pressKeepsMenu } from './menuPress';
 
-/** The one context menu (items are built by whoever opens it). */
+/**
+ * The one context menu (items are built by whoever opens it).
+ *
+ * A press outside an open menu dismisses it, and the whole press is swallowed (a native menu's
+ * click-outside: the control under the pointer does not also fire). That used to be a full-screen
+ * backdrop div, but a veil sits above the menu bar: the bar's own z-lift is trapped under the
+ * toolbar's stacking context, so pressing another title never reached its button and closed the
+ * open menu only — one menu per press. Instead a capture listener dismisses everywhere except
+ * inside the open menu and on the bar's titles, whose presses (and hover) open or switch menus.
+ */
 export function ContextMenu() {
+  onMount(() => {
+    // the release half of an absorbed press: the click (auxclick / contextmenu for the other
+    // buttons) must not fire on whatever sits under the pointer; `swallowing` resets on the
+    // next press, so a stray button's events from another press are never eaten
+    let swallowing = false;
+    const release = (e: Event) => {
+      if (!swallowing) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    const down = (e: PointerEvent) => {
+      swallowing = false;
+      if (!U.menu) return;
+      const el = e.target instanceof Element ? e.target : null;
+      if (pressKeepsMenu(el)) return;
+      closeMenu();
+      e.preventDefault(); // the dismissal keeps focus where it was, like a native menu
+      e.stopPropagation();
+      swallowing = true;
+    };
+    // a key between the absorbed press and its click is a new gesture: keyboard activation
+    // (Enter/Space fires click without a press) must not be eaten by the stale swallow window
+    const rearm = () => { swallowing = false; };
+    document.addEventListener('pointerdown', down, true);
+    document.addEventListener('keydown', rearm, true);
+    for (const t of ['pointerup', 'click', 'auxclick', 'contextmenu'] as const)
+      document.addEventListener(t, release, true);
+    onCleanup(() => {
+      document.removeEventListener('pointerdown', down, true);
+      document.removeEventListener('keydown', rearm, true);
+      for (const t of ['pointerup', 'click', 'auxclick', 'contextmenu'] as const)
+        document.removeEventListener(t, release, true);
+    });
+  });
   return (
-    <Show when={U.menu}>
-      {menu => (
-        <>
-          <div class="backdrop" onPointerDown={closeMenu} onContextMenu={e => e.preventDefault()} />
-          <MenuList items={menu().items} x={menu().x} y={menu().y} />
-        </>
-      )}
+    <Show when={U.menu} keyed>
+      {menu => <MenuList items={menu.items} x={menu.x} y={menu.y} />}
     </Show>
   );
 }
