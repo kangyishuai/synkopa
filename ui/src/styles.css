@@ -1551,7 +1551,11 @@ button.chip { color: var(--fg); }
 .laneswitch { left: 4px; top: 8px; gap: 4px; }
 .laneswitch button { width: 40px; height: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 6px; font-size: 8.5px; text-transform: uppercase; }
 .laneswitch button.vel.on { background: color-mix(in srgb, var(--blue) 22%, transparent); color: var(--blue-hi); }
-.laneswitch button.pan.on { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+.laneswitch button.pan.on { background: color-mix(in srgb, var(--pan) 22%, transparent); color: var(--pan); }
+.laneswitch button.key.on { background: color-mix(in srgb, var(--green) 22%, transparent); color: var(--green); }
+.laneswitch button.shift.on { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+/* the Channel Rack's graph editor shows the same switch side by side, in its label column */
+.laneswitch.row { position: static; flex-direction: row; gap: 4px; }
 
 /* round 7: window-bar controls are chips like the editor bars (no boxes until hovered) */
 .patwin .winhd .patname, .patwin .winhd .chsel, .patwin .winhd .bars, .patwin .winhd .numf { border-color: transparent; background: transparent; transition: background .12s; }

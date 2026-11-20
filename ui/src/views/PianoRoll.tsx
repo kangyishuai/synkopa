@@ -33,6 +33,7 @@ import { arrVersion, S } from '../state/store';
 import { openMenu, say, setU, U } from '../state/ui';
 import { ChipSelect, ToolSeg, type ChipOption } from '../ui/EditorBar';
 import { Knob } from '../ui/Knob';
+import { LANE_ICONS, LaneSwitch } from '../ui/LaneSwitch';
 import { selectionSpan, vocalsUnder } from '../lib/melody';
 import { fmtPos } from '../lib/format';
 import { openPitchEditor, seekSong, switchMode } from '../state/actions';
@@ -979,14 +980,10 @@ function Roll(props: { z: number; docked?: boolean }) {
         <div ref={laneWrap} class="lanecv">
           <canvas ref={laneCv} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', 'touch-action': 'none', cursor: 'ns-resize' }}
             onPointerDown={laneDown} onPointerMove={laneHover} onContextMenu={e => e.preventDefault()} />
-<div class="laneswitch" role="radiogroup" aria-label={t('b.pr.laneTarget')}>
-            <button role="radio" class="vel" aria-checked={lane() === 'vel'} classList={{ on: lane() === 'vel' }} title={t('b.pr.laneVelTip')} onClick={e => { setLaneMode('vel'); backToRoll(e.currentTarget); }}>
-              <Icon d="M5 20v-6 M12 20V9 M19 20V4" size={12} sw={2.4} /><span>{t('b.pr.laneVel')}</span>
-            </button>
-            <button role="radio" class="pan" aria-checked={lane() === 'pan'} classList={{ on: lane() === 'pan' }} disabled={!panPlays()} title={t(panPlays() ? 'b.pr.lanePanTip' : 'b.pr.lanePanOff')} onClick={e => { setLaneMode('pan'); backToRoll(e.currentTarget); }}>
-              <Icon d="M9 7l-5 5 5 5 M15 7l5 5-5 5" size={12} sw={2.4} /><span>{t('b.pr.lanePan')}</span>
-            </button>
-          </div>
+<LaneSwitch label={t('b.pr.laneTarget')} value={lane()} onPick={(id, el) => { setLaneMode(id); backToRoll(el); }} items={[
+            { id: 'vel', cls: 'vel', label: t('b.pr.laneVel'), icon: LANE_ICONS.vel, tip: t('b.pr.laneVelTip') },
+            { id: 'pan', cls: 'pan', label: t('b.pr.lanePan'), icon: LANE_ICONS.pan, tip: t(panPlays() ? 'b.pr.lanePanTip' : 'b.pr.lanePanOff'), disabled: !panPlays() },
+          ]} />
         </div>
       </div>
       <div class="pstatus mono">

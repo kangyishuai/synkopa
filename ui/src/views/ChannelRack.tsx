@@ -24,6 +24,7 @@ import { say, setU, U } from '../state/ui';
 import { edgeScroller, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
+import { LANE_ICONS, LaneSwitch } from '../ui/LaneSwitch';
 import { T } from '../ui/theme';
 import { channelIcon, InstIcon } from '../ui/instIcons';
 import { MiniKnob, NumField, parseNum } from '../ui/Knob';
@@ -429,12 +430,12 @@ function Rack(props: { z: number; docked?: boolean }) {
         {/* always mounted (hidden when off) so its size is observed from the start */}
         <div class="lanerow" style={{ height: GRAPH_H + 'px', display: graph() ? 'flex' : 'none' }}>
             <div class="lanelab" style={{ width: RACK_LEFT + 'px' }}>
-              <div class="seg graphtabs">
-                <button classList={{ on: graph() === 'vel' }} onClick={() => setU('rackGraph', 'vel')}>{t('b.rk.vel')}</button>
-                <button classList={{ on: graph() === 'key' }} onClick={() => setU('rackGraph', 'key')}>{t('b.rk.key')}</button>
-                <button classList={{ on: graph() === 'pan', off: !panPlays() }} title={panPlays() ? t('b.rk.panTip') : t('b.rk.panPlugin', { name: selCh()?.name ?? '' })} onClick={() => setU('rackGraph', 'pan')}>{t('b.rk.pan')}</button>
-                <button classList={{ on: graph() === 'shift' }} title={t('b.rk.shiftTip')} onClick={() => setU('rackGraph', 'shift')}>{t('b.rk.shift')}</button>
-              </div>
+              <LaneSwitch row label={t('b.rk.graphTitle')} value={graph() ?? 'vel'} onPick={id => setU('rackGraph', id)} items={[
+                { id: 'vel', cls: 'vel', label: t('b.pr.laneVel'), icon: LANE_ICONS.vel, tip: t('b.rk.velTip') },
+                { id: 'key', cls: 'key', label: t('b.rk.key'), icon: LANE_ICONS.key, tip: t('b.rk.keyTip') },
+                { id: 'pan', cls: 'pan', label: t('b.rk.pan'), icon: LANE_ICONS.pan, tip: panPlays() ? t('b.rk.panTip') : t('b.rk.panPlugin', { name: selCh()?.name ?? '' }), disabled: !panPlays() },
+                { id: 'shift', cls: 'shift', label: t('b.rk.shift'), icon: LANE_ICONS.shift, tip: t('b.rk.shiftTip') },
+              ]} />
               <div class="lanetitle"><span class="ell" style={{ color: selCh()?.color ?? 'var(--fg3)' }}>{selCh()?.name ?? '—'}</span></div>
             </div>
             <div ref={graphWrap} class="lanecv">
