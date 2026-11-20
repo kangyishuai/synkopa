@@ -1,4 +1,6 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { captureOn, createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import { PLUGIN_FORMAT_LABEL, unsafeReason, type Fx, type FxKind, type Id, type ParamDef, type PluginParam, type PluginRef } from '../api/types';
 import { sliderStep } from '../lib/pluginParam';
@@ -106,9 +108,9 @@ export function FxWindow(props: { pw: PlugWin; z: number }) {
         const info = () => presetInfo(S.catalog, fx(), S.project.bpm);
         return (
           <div class="win fxwin" style={{ left: props.pw.x + 'px', top: props.pw.y + 'px', width: props.pw.w + 'px', 'z-index': props.z }} data-fxwin={props.pw.fxId}
-            on:pointerdown={{ capture: true, handleEvent: () => A.plugFront(props.pw.fxId) }}>
+            ref={captureOn('pointerdown', () => A.plugFront(props.pw.fxId))}>
             <div class="winhd" onPointerDown={e => moveWindow(e, () => props.pw, setPos)}>
-              <button class="pwr" classList={{ off: fx().bypass }} title={fx().bypass ? t('c.fx.bypassOn') : t('c.fx.bypassOff')}
+              <button class={['pwr', { off: fx().bypass }]} title={fx().bypass ? t('c.fx.bypassOn') : t('c.fx.bypassOff')}
                 onPointerDown={e => { e.stopPropagation(); A.toggleBypass(fx().id); }} />
               <FxTile type={fx().type} size={20} icon={13} />
               <span class="title">{A.fxName(fx())}</span>
@@ -126,7 +128,7 @@ export function FxWindow(props: { pw: PlugWin; z: number }) {
               <Show when={!isVst() && presetList(S.catalog, fx().type).length}>
                 <div class="presetbar">
                   <button class="arrow" title={t('c.fx.presetPrev')} onClick={() => A.stepPreset(fx().id, -1)}>‹</button>
-                  <button class="name" title={t('c.fx.presets')} classList={{ mod: info().mod }} data-preset-name
+                  <button class={['name', { mod: info().mod }]} title={t('c.fx.presets')} data-preset-name
                     onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); openPresetMenu(fx().id, r.left, r.bottom + 4); }}>
                     <span class="ell" style={{ flex: 1, 'min-width': 0 }}>{tName(info().name)}{info().mod ? ' *' : ''}</span>
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
@@ -248,7 +250,7 @@ function Ctl(props: { fx: Fx; id: string; ends?: [string, string]; danger?: numb
 
 /** How to use the window, behind a "?" in the header (hover or focus): there when wanted, never taking room. */
 function HintIcon(props: { fx: Fx }) {
-  return <Show when={HINTS[props.fx.type]}>{k => <span class="fxhint" tabIndex={0} role="note" aria-label={t(k())} data-tip={t(k())}>?</span>}</Show>;
+  return <Show when={HINTS[props.fx.type]}>{k => <span class="fxhint" tabindex={0} role="note" aria-label={t(k())} data-tip={t(k())}>?</span>}</Show>;
 }
 /** Layout entries starting with `c.` are translation keys, anything else ("C3", "2×") is shown as is. */
 const L = (s: string) => (s.startsWith('c.') ? t(s as TranslationKey) : s);
@@ -448,7 +450,7 @@ function Sections(props: { fx: Fx }) {
       <For each={shown()}>
         {(sec, i) => (
           <>
-            <div class="fxsec" classList={{ adv: !!sec.adv }}>
+            <div class={['fxsec', { adv: !!sec.adv }]}>
               <div class="fxsec-h">{L(sec.title)}</div>
               <div class="fxsec-b"><For each={sec.items}>{it => <LayoutItem fx={props.fx} it={it} />}</For></div>
             </div>
@@ -457,7 +459,7 @@ function Sections(props: { fx: Fx }) {
       </For>
       <div style={{ flex: 1 }} />
       <Show when={hasAdv()}>
-        <button class="smallbtn advbtn" classList={{ on: adv() }} title={t('c.fx.advTip')}
+        <button class={['smallbtn advbtn', { on: adv() }]} title={t('c.fx.advTip')}
           onClick={() => setAdvOpen(m => ({ ...m, [props.fx.id]: !adv() }))}>{adv() ? t('c.fx.less') : t('c.fx.advanced')}</button>
       </Show>
     </div>
@@ -503,7 +505,7 @@ function VizCanvas(props: { fxId: Id; pw: PlugWin; height: number }) {
   const height = createMemo(() => props.height);
   const pw = createMemo(() => props.pw);
   let version = 0, drawnVersion = -1, lastW = 0, fontEpoch = -1, themeEpoch = -1;
-  createEffect(() => { // anything param-ish changes → redraw
+  effect(() => { // anything param-ish changes → redraw
     const f = ff()?.f; if (!f) return;
     f.bypass; f.mix; for (const k in f.params) void f.params[k];
     f.bands?.forEach(b => { b.on; b.type; b.f; b.g; b.q; b.slope; b.place; b.dynamic?.range; b.dynamic?.thr; });
@@ -747,9 +749,9 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
   const [trusting, setTrusting] = createSignal(false);
   onMount(() => { load(); be().appInfo().then(i => { setEditors(i.pluginEditors); setEditorsWhy(i.pluginEditorsWhy ?? null); }).catch(() => {}); });
   // a window opened with the slot is asked before the engine has the instance: ask again once it does
-  createEffect(() => { void S.revision; if (err() && !loadErr()) load(); });
+  effect(() => { void S.revision; if (err() && !loadErr()) load(); });
   // knobs turned in the plugin's own window: the list follows while both are open
-  createEffect(() => {
+  effect(() => {
     if (!editorOpen(props.id)) return;
     const iv = window.setInterval(load, 1000);
     onCleanup(() => clearInterval(iv));

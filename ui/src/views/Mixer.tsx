@@ -1,4 +1,5 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { PLUGIN_FORMAT_LABEL, unsafeReason, VOL_UNITY, type Fx, type Id, type Insert, type Op } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
 import { stripLabel } from '../lib/mixer';
@@ -135,7 +136,7 @@ function StripFx(props: { m: Insert; full: boolean }) {
     <div ref={el} class="sfx" style={props.full ? { flex: `0 0 ${(FX_ROWS_FULL + 1) * FX_ROW}px` } : undefined}>
       <Show when={room() > 0}>
         <For each={props.m.fx.slice(0, fit())}>{f => (
-          <div class="sfxr" classList={{ off: f.bypass, on: U.fxSel === f.id }} title={A.fxName(f) + ' · ' + tr('c.mix.fxRowTip')}
+          <div class={['sfxr', { off: f.bypass, on: U.fxSel === f.id }]} title={A.fxName(f) + ' · ' + tr('c.mix.fxRowTip')}
             onClick={() => { setU('fxSel', f.id); A.openPlug(f.id); }}>
             <FxTile type={f.type} size={14} dim={f.bypass} />
             <span class="ell">{A.fxName(f)}</span>
@@ -223,7 +224,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
   let nmEl: HTMLSpanElement | undefined, nmText: HTMLSpanElement | undefined;
   const [tight, setTight] = createSignal(false);
   const measure = () => { if (nmEl && nmText) setTight(nmText.getBoundingClientRect().width + ICON_W > nmEl.clientWidth); };
-  createEffect(() => { label(); icon(); U.mixView; m().fx.length; requestAnimationFrame(measure); });
+  effect(() => { label(); icon(); U.mixView; m().fx.length; requestAnimationFrame(measure); });
   onMount(() => { void document.fonts?.ready.then(measure); });
   const rename = (e: MouseEvent) => openRename(e.clientX, e.clientY, m().name, v => A.setInsert(m().id, { name: v }, tr('c.mix.undoName')));
   // a send being dragged over this strip: would it be taken?
@@ -247,12 +248,12 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
     }, 'copy');
   };
   return (
-    <div class="strip" data-ins={m().id} style={{ '--c': m().color }} onPointerDown={select}
-      classList={{ on: U.mixSel === m().id, multi: U.mixSel !== m().id && A.selectedInserts().includes(m().id), dimmed: !audible(), 'rt-ok': dropHere() === 'ok', 'rt-no': dropHere() === 'no', 'rt-to': sendsHere() }}>
+    <div data-ins={m().id} style={{ '--c': m().color }} onPointerDown={select}
+      class={['strip', { on: U.mixSel === m().id, multi: U.mixSel !== m().id && A.selectedInserts().includes(m().id), dimmed: !audible(), 'rt-ok': dropHere() === 'ok', 'rt-no': dropHere() === 'no', 'rt-to': sendsHere() }]}>
       <div class="bar" style={{ background: m().color }} />
       {/* one row: the insert's number and name (a default "Insert 7" is just its number), the effect count on the right */}
       <div class="nmrow" title={tName(label().full) + ' — ' + tr('c.mix.nameTip')} onDblClick={rename}>
-        <Show when={label().num}><span class="num" classList={{ only: !label().name && (props.full || !sources()) }}>{label().num}</span></Show>
+        <Show when={label().num}><span class={['num', { only: !label().name && (props.full || !sources()) }]}>{label().num}</span></Show>
         {/* docked, an insert without its own name: what is routed to it, quiet, after the number */}
         <Show when={!props.full && !label().name && sources()}>
           <span class="nm src" title={sources()}>{sources()}</span>
@@ -263,7 +264,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
         </Show>
         <Show when={m().fx.length}>
           {/* docked: a dot and the count; the wider Mix view strips spell out "3 FX" */}
-          <button class="fxn" classList={{ off: m().fx.every(f => f.bypass) }} onPointerDown={stop} onDblClick={stop} onClick={() => A.toggleInsertFx(m().id)}
+          <button class={['fxn', { off: m().fx.every(f => f.bypass) }]} onPointerDown={stop} onDblClick={stop} onClick={() => A.toggleInsertFx(m().id)}
             title={tr('c.mix.fxCountTip', { n: m().fx.length }) + ' · ' + tr('c.mix.fxToggleTip')} aria-label={tr('c.mix.fxCountTip', { n: m().fx.length })}>
             <span class="fxdot" /><span class="fxt">{m().fx.length}<span class="fxw"> FX</span></span></button>
         </Show>
@@ -271,7 +272,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
       <StripFx m={m()} full={props.full} />
       <div class="knobrow">
       <div style={{ display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '2px' }}>
-        <div class="pandial" classList={{ auto: isAutomated(panT()) }} onPointerDown={panDown} onWheel={wheel('pan')} onContextMenu={e => e.preventDefault()} title={tr('c.mix.panTip')}>
+        <div class={['pandial', { auto: isAutomated(panT()) }]} onPointerDown={panDown} onWheel={wheel('pan')} onContextMenu={e => e.preventDefault()} title={tr('c.mix.panTip')}>
           <svg width="30" height="30" viewBox="0 0 30 30" style={{ position: 'absolute', inset: 0 }}>
             <circle cx="15" cy="15" r="11" fill="none" transform="rotate(135 15 15)" style={{ stroke: 'var(--knob-track)', 'stroke-width': '2.5px', 'stroke-linecap': 'round', 'stroke-dasharray': '51.84px 69.12px' }} />
             <circle cx="15" cy="15" r="11" fill="none" transform="rotate(135 15 15)" style={{ stroke: 'var(--pan)', 'stroke-width': '2.5px', 'stroke-linecap': 'round', 'stroke-dasharray': pan().dash, 'stroke-dashoffset': pan().off }} />
@@ -279,7 +280,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
           <div class="pcap" />
           <div class="pptr" style={{ transform: `rotate(${pan().angle}deg)` }} />
         </div>
-        <span class="pantxt" classList={{ def: Math.abs(shownPan()) < 1e-4 }}>{panText(shownPan())}</span>
+        <span class={['pantxt', { def: Math.abs(shownPan()) < 1e-4 }]}>{panText(shownPan())}</span>
       </div>
       <div style={{ display: 'flex', 'flex-direction': 'column', 'align-items': 'center', gap: '2px' }}>
         <div class="pandial wdial" onPointerDown={widDown} onWheel={widWheel} onContextMenu={e => e.preventDefault()} title={tr('c.mix.widthTip')}>
@@ -290,7 +291,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
           <div class="pcap" />
           <div class="pptr" style={{ transform: `rotate(${widArc().angle}deg)` }} />
         </div>
-        <span class="pantxt" classList={{ def: widText(wid()) === widText(1) }}>{widText(wid())}</span>
+        <span class={['pantxt', { def: widText(wid()) === widText(1) }]}>{widText(wid())}</span>
       </div>
       </div>
       <div class="row" style={{ gap: '2px', 'justify-content': 'center' }}>
@@ -298,7 +299,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
           onMute={() => A.toggleInsertMute(m().id)} onSolo={add => A.toggleInsertSolo(m().id, add)} />
         {/* the master's clip LED (its meter's red cap): latched over 0 dBFS, where an export clips */}
         <Show when={m().id === 0}>
-          <button class="clipcap" classList={{ on: !!masterClip() }} onPointerDown={stop}
+          <button class={['clipcap', { on: !!masterClip() }]} onPointerDown={stop}
             title={masterClipTip()}
             onClick={() => resetMasterClip()}>{masterClip() ? '+' + masterClip()!.overDb.toFixed(1) : 'CLIP'}</button>
         </Show>
@@ -309,23 +310,23 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
       <div style={{ flex: props.full ? '1 1 0' : `0 1 ${FADER_H}px`, 'min-height': '50px', display: 'flex', 'justify-content': 'center', gap: '3px' }}>
         <div class="meter"><div ref={fl} /></div>
         <div class="meter"><div ref={fr} /></div>
-        <div class="fader" classList={{ auto: isAutomated(volT()) }} onPointerDown={faderDown} onWheel={wheel('vol')} onContextMenu={e => e.preventDefault()} title={tr('c.mix.faderTip')}>
+        <div class={['fader', { auto: isAutomated(volT()) }]} onPointerDown={faderDown} onWheel={wheel('vol')} onContextMenu={e => e.preventDefault()} title={tr('c.mix.faderTip')}>
           <div class="fslot" />
           {/* the dB scale: a tick per mark on every fader; the numbers on the master and under the pointer */}
           <For each={FADER_MARKS}>{([db, t]) => (
-            <div class="tick" classList={{ u: db === 0 }} style={{ top: `calc(${1 - t} * (100% - 14px) + 7px)` }}><span>{db > 0 ? '+' + db : db === 0 ? '0' : String(-db)}</span></div>
+            <div class={['tick', { u: db === 0 }]} style={{ top: `calc(${1 - t} * (100% - 14px) + 7px)` }}><span>{db > 0 ? '+' + db : db === 0 ? '0' : String(-db)}</span></div>
           )}</For>
           <div class="cap" style={{ top: `calc(${1 - shownVol()} * (100% - 14px))` }}><div /></div>
         </div>
       </div>
-      <span class="db" classList={{ unity: Math.abs(shownVol() - VOL_UNITY) < 1e-4 }}>{volText(shownVol())}</span>
+      <span class={['db', { unity: Math.abs(shownVol() - VOL_UNITY) < 1e-4 }]}>{volText(shownVol())}</span>
       <Show when={props.full}>
         <span class="route" title={route()}>{route()}</span>
         {/* routing (the cables below the strips): drag the dot onto another strip = a send; M = into the master */}
         <div class="rtport">
           <Show when={m().id !== 0}>
             <span class="rtdot" title={tr('c.rt.portTip')} onPointerDown={portDown} />
-            <button class="rtm" classList={{ on: toMaster(m()) }} title={tr('c.rt.mTip')} aria-pressed={toMaster(m())} aria-label={tr('c.rt.toMaster')}
+            <button class={['rtm', { on: toMaster(m()) }]} title={tr('c.rt.mTip')} aria-pressed={toMaster(m()) ? 'true' : 'false'} aria-label={tr('c.rt.toMaster')}
               onPointerDown={stop} onClick={() => setToMaster(m().id, !toMaster(m()))}>M</button>
           </Show>
         </div>
@@ -384,7 +385,7 @@ function FxSlot(props: { f: Fx; n: number; insId: Id }) {
     });
   };
   return (
-    <div class="slot" classList={{ on: U.fxSel === f().id, drag: U.fxDrag === f().id }} onPointerDown={down} title={tr('c.mix.slotTip')}>
+    <div class={['slot', { on: U.fxSel === f().id, drag: U.fxDrag === f().id }]} onPointerDown={down} title={tr('c.mix.slotTip')}>
       {/* the row drags by its grip (and anywhere else on it): the order is the signal path */}
       <span class="grip" aria-hidden="true"><svg width="8" height="14" viewBox="0 0 8 14"><g fill="currentColor"><circle cx="2" cy="2" r="1.2" /><circle cx="6" cy="2" r="1.2" /><circle cx="2" cy="7" r="1.2" /><circle cx="6" cy="7" r="1.2" /><circle cx="2" cy="12" r="1.2" /><circle cx="6" cy="12" r="1.2" /></g></svg></span>
       <FxTile type={f().type} size={22} dim={f().bypass} />
@@ -446,7 +447,7 @@ function Strips(props: { full: boolean }) {
   // an insert asked for elsewhere (double-click on a window's header, a track's number): scroll its strip into view
   // (a request already shown is not repeated when the row mounts again: it keeps its own scroll)
   let seen = revealed()?.n;
-  createEffect(() => {
+  effect(() => {
     const r = revealed(); if (!r || r.n === seen) return;
     seen = r.n;
     const i = S.project.inserts.findIndex(m => m.id === r.id); if (i < 0) return;
@@ -461,7 +462,7 @@ function Strips(props: { full: boolean }) {
     </>
   );
   return (
-    <div ref={el} class="strips" classList={{ routed: props.full }}>
+    <div ref={el} class={['strips', { routed: props.full }]}>
       <Show when={props.full} fallback={row()}>
         <div class="striprow">{row()}</div>
         <RouteLane />
@@ -532,7 +533,7 @@ function RouteLane() {
           };
           const g = () => geo(index().get(fromId) ?? 0, index().get(to) ?? 0, k);
           return (
-            <g class="cable" classList={{ dim: !lit(c.from.id, c.to) }}>
+            <g class={['cable', { dim: !lit(c.from.id, c.to) }]}>
               <path d={g().d} fill="none" stroke={c.from.color} stroke-width={lit(c.from.id, c.to) ? 2.5 : 1.5} stroke-linecap="round" />
               <g class="clabel" onPointerDown={e => labelDown(e, c.from.id, c.to)} onWheel={e => labelWheel(e, c.from.id, c.to, c.gain)} onContextMenu={e => e.preventDefault()}>
                 <title>{tr('c.rt.cableTip', { a: nameOf(c.from.id), b: nameOf(c.to), v: pct(c.gain) })}</title>
@@ -592,7 +593,7 @@ function FxChain() {
     <Show when={selIns()}>
       {ins => (
         <div class="fxchain" data-ins={ins().id}>
-          <div class="hd" classList={{ grab: ins().fx.length > 0 }} title={ins().fx.length ? tr('c.mix.chainDragTip') : ''} onPointerDown={e => chainDown(e, ins())}>
+          <div class={['hd', { grab: ins().fx.length > 0 }]} title={ins().fx.length ? tr('c.mix.chainDragTip') : ''} onPointerDown={e => chainDown(e, ins())}>
             <span style={{ width: '8px', height: '8px', 'border-radius': '2px', background: ins().color }} />
             <span class="ell" style={{ flex: 1, font: '600 11px var(--sans)', color: 'var(--fg-hi)' }}>{insName(ins())}</span>
             <span class="mono ell" style={{ 'font-size': '10px', color: 'var(--fg5)', 'max-width': '45%' }} title={routeSummary(ins().id)}>{routeSummary(ins().id)}</span>
@@ -671,7 +672,7 @@ export function MixDockPane() {
     <div class="mixdock">
       <MixBar docked />
       {/* on a side edge the mixer is narrow and tall: the effect chain goes under the strips */}
-      <div class="mixer docked" classList={{ side: findPane(U.dock, 'mix')?.edge !== 'bottom' }}>
+      <div class={['mixer docked', { side: findPane(U.dock, 'mix')?.edge !== 'bottom' }]}>
         <Show when={!U.mixView}>
           <Strips full={false} />
           <FxChain />

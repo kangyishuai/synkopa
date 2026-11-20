@@ -2,7 +2,8 @@
 // load them onto any insert of any project. Loading onto an insert that has effects asks
 // Replace (the default) or Append; either is one undo step and never touches volume, pan,
 // name, colour or routing. The list is searchable; rename (F2) and delete (Del) work in place.
-import { createEffect, createMemo, createSignal, For, on, Show } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import { createSignal, effect, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import { ERR_EXISTS } from '../api/errors';
 import type { FxChainPreset, Id } from '../api/types';
@@ -70,7 +71,7 @@ function FxChainLoader(props: { insId: Id; x: number; y: number }) {
   };
   void refresh();
   // the insert went away (undo, deleted): nothing to load onto
-  createEffect(() => { if (!ins()) close(); });
+  effect(() => { if (!ins()) close(); });
 
   const shown = createMemo(() => {
     const words = q().toLowerCase().split(/\s+/).filter(Boolean);
@@ -79,7 +80,7 @@ function FxChainLoader(props: { insId: Id; x: number; y: number }) {
       return words.every(w => hay.includes(w));
     });
   });
-  createEffect(on(shown, s => setSel(i => Math.min(i, Math.max(0, s.length - 1)))));
+  watch(shown, s => setSel(i => Math.min(i, Math.max(0, s.length - 1))));
   const cur = () => shown()[sel()];
 
   const load = async (p: FxChainPreset | undefined, mode: 'replace' | 'append') => {
@@ -154,7 +155,7 @@ function FxChainLoader(props: { insId: Id; x: number; y: number }) {
             <Show when={list()!.length} fallback={<div class="fxcl-empty">{t('e.fxc.none')}</div>}>
               <Show when={shown().length} fallback={<div class="fxcl-empty">{t('e.fxc.noMatch', { q: q() })}</div>}>
                 <For each={shown()}>{(p, i) => (
-                  <div class="fxcl-row" role="option" aria-selected={i() === sel()} classList={{ on: i() === sel(), bad: !!p.error }}
+                  <div class={['fxcl-row', { on: i() === sel(), bad: !!p.error }]} role="option" aria-selected={i() === sel() ? 'true' : 'false'}
                     onPointerEnter={() => setSel(i())} onClick={() => { if (!renaming() && !deleting() && !hasFx()) void load(p, 'replace'); else setSel(i()); }}
                     onDblClick={() => void load(p, 'replace')} title={p.error ?? p.effects.map(e => e.name).join(' → ')}>
                     <Show when={renaming() === p.name} fallback={

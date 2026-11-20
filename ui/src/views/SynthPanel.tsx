@@ -2,7 +2,9 @@
 // bar, three tabs (OSC / MOD / FX) and cards that each draw what their knobs do — the oscillator
 // waveform (with unison copies), the filter's response, the envelopes and LFO shapes. Edits are
 // `putChannel` (engine fast path, held notes follow).
-import { createEffect, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { For, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import type { Channel, ParamDef, SynthCatalog } from '../api/types';
 import { t, tName } from '../lib/i18n';
 import { pFmt, pNorm, pVal } from '../lib/presets';
@@ -87,7 +89,7 @@ function Panel(props: { cat: SynthCatalog; c: Channel }) {
         </div>
         <div class="syn-tabs">
           <For each={[['osc', 'OSC'], ['mod', 'MOD'], ['fx', 'FX']] as [Tab, string][]}>{([id, l]) =>
-            <button classList={{ on: lastTab() === id }} onClick={() => setLastTab(id)}>{l}</button>}</For>
+            <button class={{ on: lastTab() === id }} onClick={() => setLastTab(id)}>{l}</button>}</For>
         </div>
         <div class="syn-voice">
           <Choice ctx={ctx} id="v_mode" />
@@ -164,7 +166,7 @@ function ModTab(props: { ctx: Ctx }) {
       <Card title={t('b.sp.matrix')} color={C_LFO} class="matrix">
         <div class="syn-mgrid">
           <For each={SLOTS}>{n => (
-            <div class="syn-mrow" classList={{ off: c.v(`m${n}_src`) === 0 }}>
+            <div class={['syn-mrow', { off: c.v(`m${n}_src`) === 0 }]}>
               <span class="slot">{n}</span>
               <Choice ctx={c} id={`m${n}_src`} bare />
               <span class="to">→</span>
@@ -208,7 +210,7 @@ function Osc(props: { ctx: Ctx; n: 1 | 2 }) {
       </div>
       <div class="syn-row syn-warp">
         <Choice ctx={c} id={p + 'warp'} select />
-        <div classList={{ 'syn-off': c.v(p + 'warp') === 0 }} title={c.v(p + 'warp') === 0 ? t('b.sp.warpOff') : undefined}>
+        <div class={{ 'syn-off': c.v(p + 'warp') === 0 }} title={c.v(p + 'warp') === 0 ? t('b.sp.warpOff') : undefined}>
           <K ctx={c} id={p + 'wamt'} label={t('b.sp.warp')} color={C_OSC} />
         </div>
       </div>
@@ -220,7 +222,7 @@ function Osc(props: { ctx: Ctx; n: 1 | 2 }) {
 
 function Card(props: { title: string; color: string; class?: string; head?: JSX.Element; dim?: boolean; children: JSX.Element }) {
   return (
-    <div class={'syn-card ' + (props.class ?? '')} classList={{ dim: !!props.dim }} style={{ '--sc': props.color }}>
+    <div class={['syn-card ' + (props.class ?? ''), { dim: !!props.dim }]} style={{ '--sc': props.color }}>
       <div class="syn-chd"><span class="t">{props.title}</span><div style={{ flex: 1 }} />{props.head}</div>
       {props.children}
     </div>
@@ -252,7 +254,7 @@ function Choice(props: { ctx: Ctx; id: string; bare?: boolean; select?: boolean 
   return (
     <Show when={d()?.options}>{opts => (
       <Show when={opts().length <= 5 && !props.select} fallback={
-        <select class="sel syn-sel" classList={{ auto: props.ctx.auto(props.id) }} title={tName(d()!.label)} value={String(Math.round(props.ctx.v(props.id)))} onChange={e => props.ctx.set(props.id, +e.currentTarget.value)}
+        <select class={['sel syn-sel', { auto: props.ctx.auto(props.id) }]} title={tName(d()!.label)} value={String(Math.round(props.ctx.v(props.id)))} onChange={e => props.ctx.set(props.id, +e.currentTarget.value)}
           onContextMenu={e => { e.preventDefault(); e.stopPropagation(); props.ctx.menu(props.id, e.clientX, e.clientY); }}>
           <For each={opts()}>{(o, i) => <option value={String(i())}>{tName(o)}</option>}</For>
         </select>}>
@@ -278,7 +280,7 @@ function AmtBar(props: { ctx: Ctx; id: string }) {
     window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
   };
   return (
-    <div class="syn-amt" classList={{ auto: props.ctx.auto(props.id) }} onPointerDown={down} title={t('b.sp.amtTitle')}
+    <div class={['syn-amt', { auto: props.ctx.auto(props.id) }]} onPointerDown={down} title={t('b.sp.amtTitle')}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); props.ctx.menu(props.id, e.clientX, e.clientY); }}>
       <div class="fill" style={{ left: (v() < 0 ? 50 + v() / 2 : 50) + '%', width: Math.abs(v()) / 2 + '%' }} />
       <span>{(v() > 0 ? '+' : '') + Math.round(v())}%</span>
@@ -305,7 +307,7 @@ function Macros(props: { ctx: Ctx }) {
       <For each={[1, 2, 3, 4]}>{n => {
         const tg = () => targets(n);
         return (
-          <div class="syn-macro" classList={{ free: !tg().length }} title={tg().length ? `Macro ${n} → ${tg().join(', ')}` : t('b.sp.macroFree', { n })}>
+          <div class={['syn-macro', { free: !tg().length }]} title={tg().length ? `Macro ${n} → ${tg().join(', ')}` : t('b.sp.macroFree', { n })}>
             <K ctx={c} id={`macro${n}`} label={tg().length ? tg()[0] + (tg().length > 1 ? ` +${tg().length - 1}` : '') : `Macro ${n}`} color={C_LFO} />
           </div>
         );
@@ -327,7 +329,7 @@ function Plot(props: { draw: (g: CanvasRenderingContext2D, w: number, h: number)
     props.draw(g, w, h);
   };
   onMount(() => { const ro = new ResizeObserver(paint); ro.observe(cv); onCleanup(() => ro.disconnect()); });
-  createEffect(() => { props.deps(); themeVersion(); paint(); });
+  effect(() => { props.deps(); themeVersion(); paint(); });
   return <canvas ref={cv} class="syn-plot" />;
 }
 

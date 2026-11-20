@@ -1,7 +1,8 @@
 // Channel settings window (FL "Channel settings"): click a Channel Rack name to see what makes
 // the sound — the synth, Synkopa Keys or a hosted VST3 instrument (its editor and parameters) — plus level,
 // pan, root key, mixer routing and a keyboard to play it.
-import { createEffect, Show } from 'solid-js';
+import { Show } from 'solid-js';
+import { captureOn, effect } from '../lib/reactive';
 import { VOL_UNITY, type AutoTarget, type Channel, type Id } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
@@ -78,7 +79,7 @@ export function closeChannelWindow() {
 }
 
 export function ChannelWindow() {
-  createEffect(() => {
+  effect(() => {
     const w = win();
     if (!w) return;
     const c = chanById(w.id);
@@ -103,7 +104,7 @@ function Body(props: { w: Win; c: Channel }) {
   const plugin = () => { const x = c(); return x.kind === 'plugin' ? x.plugin : undefined; };
   return (
     <div class="win chanwin" data-channel-window={c().id} style={{ left: props.w.x + 'px', top: props.w.y + 'px', width: props.w.w + 'px', 'z-index': outerZ(props.w.z) }}
-      on:pointerdown={{ capture: true, handleEvent: chanFront }}>
+      ref={captureOn('pointerdown', chanFront)}>
       <div class="winhd" onPointerDown={e => moveWindow(e, () => props.w, setPos)} title={t('b.cw.headTip')}
         onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(chanHeardInsert(c()) ?? 0); }}>
         <span class="chicon" style={{ color: c().color }}><InstIcon id={channelIcon(c(), (id: number) => S.project.sources.find(s => s.id === id))} size={14} /></span>

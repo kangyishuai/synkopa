@@ -2,7 +2,8 @@
 // fader and two small knobs (FREQ, BW). No numbers on the controls: values show in the tooltip and
 // the status bar while you move them, and on the graph. Any edit on a switched-off band switches it
 // back on, like dragging its handle on the graph.
-import { createEffect, Index } from 'solid-js';
+import { For } from 'solid-js';
+import { effect } from '../../lib/reactive';
 import type { BandType, EqBand, Fx, Id } from '../../api/types';
 import { BTYPE_LABEL, defaultFreq, defaultQ, f2t, hasGain, q2t, SHAPE_STEPS, shapePatch, shapeStep, t2f, t2q } from '../../lib/eq';
 import { clamp, dbText, hzText } from '../../lib/format';
@@ -121,13 +122,13 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
   };
 
   return (
-    <div class="eqstrip" classList={{ picked: sel(), off: !b().on }} style={{ '--c': col() }} data-band={i()} onPointerDown={select}>
+    <div class={['eqstrip', { picked: sel(), off: !b().on }]} style={{ '--c': col() }} data-band={i()} onPointerDown={select}>
       <button class="eqshape" title={tr('c.eq.shapeTip', { n: i() + 1, type: shapeName() })} onPointerDown={shapeDown} onContextMenu={e => e.preventDefault()}>
         <svg width="14" height="10" viewBox="0 0 14 10" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
           <path d={b().on ? SHAPE_PATH[b().type] : 'M3 5 L11 5'} />
         </svg>
       </button>
-      <div class="eqfader" classList={{ dis: !gainOk(), auto: isAutomated(target('g')) }} onPointerDown={faderDown} onWheel={faderWheel} onContextMenu={e => e.preventDefault()}
+      <div class={['eqfader', { dis: !gainOk(), auto: isAutomated(target('g')) }]} onPointerDown={faderDown} onWheel={faderWheel} onContextMenu={e => e.preventDefault()}
         title={gainOk() ? name() + ' · ' + dbText(b().g) + ' — ' + tr('c.eq.gainTip') : tr('c.eq.noGain', { type: BTYPE_LABEL[b().type] })}>
         <div class="fslot" ref={slot}>
           {gainOk() && b().on && <div class="fill" style={{ top: Math.min(50, capY() * 100) + '%', bottom: Math.min(50, (1 - capY()) * 100) + '%' }} />}
@@ -175,7 +176,7 @@ function OutStrip(props: { fx: Fx }) {
   return (
     <div class="eqstrip eqout" style={{ '--c': 'var(--fg4)' }}>
       <span class="outlab">OUT</span>
-      <div class="eqfader" classList={{ auto: isAutomated(target()) }} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()}
+      <div class={['eqfader', { auto: isAutomated(target()) }]} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()}
         title={label() + ' ' + dbText(val()) + ' — ' + tr('c.eq.gainTip')}>
         <div class="fslot" ref={slot} />
         <div class="fcap" style={{ top: `calc(${capY() * 100}% - 4px)` }} />
@@ -189,7 +190,7 @@ function OutStrip(props: { fx: Fx }) {
 export function EqStrips(props: { fx: Fx }) {
   let row!: HTMLDivElement;
   // keep the selected band's strip in view (only matters past ~7 bands)
-  createEffect(() => {
+  effect(() => {
     const i = U.eqSel[props.fx.id];
     if (i == null) return;
     (row?.querySelector(`[data-band="${i}"]`) as HTMLElement | null)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
@@ -198,7 +199,7 @@ export function EqStrips(props: { fx: Fx }) {
     <div class="eqbank">
       <OutStrip fx={props.fx} />
       <div class="eqstriprow" ref={row}>
-        <Index each={props.fx.bands ?? []}>{(bd, i) => <BandStrip fx={props.fx} i={i} band={bd} />}</Index>
+        <For each={props.fx.bands ?? []} keyed={false}>{(bd, i) => <BandStrip fx={props.fx} i={i} band={bd} />}</For>
       </div>
       <div class="eqrowlab"><span>FREQ</span><span>BW</span></div>
     </div>

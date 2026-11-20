@@ -2,8 +2,9 @@
 // bar — its icon and name, its own controls, then dock / maximize / close always in that order on
 // the right — the same move (drag the title bar), the same resize grip and the same "click brings it
 // to the front". Docked, the same frame is laid out in the main window (no move, no grip).
-import type { JSX } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { Show } from 'solid-js';
+import { captureOn } from '../lib/reactive';
 import { clamp } from '../lib/format';
 import { t } from '../lib/i18n';
 import { track } from '../ui/drag';
@@ -27,14 +28,14 @@ export function WinControls(props: {
   return (
     <>
       <Show when={props.dock}>{d => (
-        <button class="iconbtn dockbtn" title={d().tip} aria-label={d().tip} aria-pressed={d().docked} onClick={() => d().toggle()}>
+        <button class="iconbtn dockbtn" title={d().tip} aria-label={d().tip} aria-pressed={d().docked ? 'true' : 'false'} onClick={() => d().toggle()}>
           <Icon d={d().icon} size={13} />
         </button>
       )}</Show>
       <Show when={props.max}>{m => {
         const tip = () => t(m().on ? 'b.dk.restore' : 'b.dk.max');
         return (
-          <button class="iconbtn dockbtn maxbtn" title={tip()} aria-label={tip()} aria-pressed={m().on} onClick={() => m().toggle()}>
+          <button class="iconbtn dockbtn maxbtn" title={tip()} aria-label={tip()} aria-pressed={m().on ? 'true' : 'false'} onClick={() => m().toggle()}>
             <Icon d={m().on ? RESTORE_ICON : MAX_ICON} size={13} />
           </button>
         );
@@ -78,11 +79,10 @@ export function PanelFrame(props: {
     track(ev => put({ w: clamp(o.w + ev.clientX - sx, props.minW, window.innerWidth - 20), h: clamp(o.h + ev.clientY - sy, props.minH, window.innerHeight - 20) }), null, 'nwse-resize');
   };
   return (
-    <div ref={root} tabIndex={0} class={'win patwin ' + props.class} classList={{ docked: !!props.docked, compact: compact() }}
+    // to the front in the capture phase (`captureOn`), before the contents act on the press: a channel
+    // name or a mini roll opens its window on pointerdown, and raising this one afterwards covered it
+    <div ref={[e => (root = e), captureOn('pointerdown', () => { if (!props.docked) props.front(); })]} tabindex={0} class={['win patwin ' + props.class, { docked: !!props.docked, compact: compact() }]}
       style={props.docked ? undefined : { left: props.geom().x + 'px', top: props.geom().y + 'px', width: props.geom().w + 'px', height: props.geom().h + 'px', 'z-index': props.z }}
-      // to the front in the capture phase, before the contents act on the press: a channel name or a
-      // mini roll opens its window on pointerdown, and raising this one afterwards covered it
-      on:pointerdown={{ capture: true, handleEvent: () => { if (!props.docked) props.front(); } }}
       onPointerDown={e => { const tg = (e.target as HTMLElement).tagName; if (tg !== 'SELECT' && tg !== 'INPUT') root.focus({ preventScroll: true }); }}
       onKeyDown={e => guardKeys(e, props.onKey)}>
       <div class="winhd" onPointerDown={e => { if (props.dockId) paneHeadDown(e, props.dockId); else if (!props.docked) moveWindow(e, () => props.geom(), (x, y) => put({ x, y })); }} onWheel={e => props.onHeadWheel?.(e)}
