@@ -61,7 +61,8 @@ export function setCurPattern(id: Id, quiet = false) {
 }
 createRoot(() => {
   // a pattern picked in the playlist or the browser (the paint brush) becomes the current one
-  createEffect(on(() => U.cur, cur => { if (cur?.kind === 'pat' && cur.ref !== U.pat && patById(cur.ref)) setU('pat', cur.ref); }));
+  // (its fields, not its identity: a store write merges into the same object)
+  createEffect(on(() => (U.cur?.kind === 'pat' ? U.cur.ref : null), ref => { if (ref != null && ref !== U.pat && patById(ref)) setU('pat', ref); }));
   // PAT mode keeps looping the current pattern when it changes (FL)
   createEffect(on(() => curPat()?.id, id => { if (id != null && U.patPlaying && previewId !== id) void togglePreview(id); }, { defer: true }));
 });

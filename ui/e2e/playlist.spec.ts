@@ -46,6 +46,17 @@ test.describe('Playlist', () => {
     await pollEngine(app, s => s.project.clips.find(c => c.id === made.id)?.start).toBe(16);
   });
 
+  test('clicking a pattern clip makes its pattern the current one', async ({ app }) => {
+    const { patterns, clips } = (await engine(app)).project;
+    const sel = app.locator('.patselbtn');
+    await expect(sel).toContainText(patterns[0].name);
+    const other = clips.find(c => c.kind === 'pat' && c.ref !== patterns[0].id)!;
+    const name = patterns.find(p => p.id === other.ref)!.name;
+    const p = await at(app, other.track, other.start + Math.min(1, other.len / 2));
+    await app.mouse.click(p.x, p.y);
+    await expect(sel).toContainText(name);
+  });
+
   test('right-click deletes a clip; the Delete tool does too', async ({ app }) => {
     const before = (await engine(app)).project.clips;
     const victim = before.find(c => c.track === 0)!;

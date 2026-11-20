@@ -55,11 +55,9 @@ describe('layout persistence', () => {
 });
 
 describe('the current pattern', () => {
-  // KNOWN BUG (kept failing on purpose; remove `.fails` once fixed): the follow effect in
-  // state/pattern.ts tracks the identity of `U.cur`, but every writer uses `setU('cur', {...})`,
-  // which a Solid 1 store merges into the existing object, so the effect never re-runs and
-  // clicking a pattern clip in the Playlist does not make it the current pattern.
-  it.fails('follows a pattern picked as the Playlist brush, but not a missing one', async () => {
+  // every writer uses `setU('cur', {...})`, which the store merges into the existing object:
+  // the follow effect must watch the fields, not the object's identity
+  it('follows a pattern picked as the Playlist brush, but not a missing one', async () => {
     const store = await import('./store');
     const ui = await import('./ui');
     await import('./pattern'); // installs the follow effect
