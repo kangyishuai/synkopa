@@ -100,15 +100,43 @@ type Obj = Record<string, unknown>;
 const isObj = (v: unknown): v is Obj => v !== null && typeof v === 'object';
 const isProxy = (v: unknown): boolean => isObj(v) && !!(v as Record<symbol, unknown>)[$PROXY];
 
-/** Project items by id (ids come from one counter, `nextId`): rebuilt on the first lookup after an edit. */
-let byId: Map<Id, object> | null = null;
-function idIndex(): Map<Id, object> {
+/**
+ * An item of `M` and where it is in the project: `list[i]`, or `list[i][sub][j]` for an effect or a
+ * take (the same place in `S.project` holds its store proxy). Flat fields, no array per item: the
+ * index is rebuilt on the first lookup after every edit (a drag frame).
+ */
+interface Indexed { r: object; list: string; i: number; sub: string | null; j: number }
+/** Project items by id (ids come from one counter, `nextId`): rebuilt on the first lookup after a change of `M`. */
+let byId: Map<Id, Indexed> | null = null;
+/**
+ * Store proxy of a project item → its object in `M`, filled by `rawOf` once the proxy was found at
+ * that object's place in `S.project` (so a hit needs no check). Valid while `M` is unchanged: it is
+ * dropped with the id index by `mChanged`, which every writer of `M` calls.
+ */
+let rawCache = new WeakMap<object, object>();
+/** `M` (and the store's project) change: the id index and the `rawOf` cache are stale. */
+function mChanged(): void {
+  byId = null;
+  rawCache = new WeakMap();
+}
+function idIndex(): Map<Id, Indexed> {
   if (byId) return byId;
-  const m = new Map<Id, object>(), add = (xs: readonly { id: Id }[] | undefined) => { if (xs) for (const x of xs) m.set(x.id, x); };
-  add(M.tracks); add(M.inserts); for (const ins of M.inserts) add(ins.fx); add(M.patterns); add(M.sources); add(M.clips);
-  add(M.automations); add(M.channels); add(M.notebook?.pages);
-  if (M.comps) { add(M.comps); for (const c of M.comps) add(c.takes); }
+  const m = new Map<Id, Indexed>();
+  const add = (xs: readonly { id: Id }[] | undefined, list: string, i = -1, sub: string | null = null) => {
+    if (xs) for (let k = 0; k < xs.length; k++) m.set(xs[k].id, sub ? { r: xs[k], list, i, sub, j: k } : { r: xs[k], list, i: k, sub, j: -1 });
+  };
+  add(M.tracks, 'tracks'); add(M.inserts, 'inserts'); M.inserts.forEach((ins, i) => add(ins.fx, 'inserts', i, 'fx'));
+  add(M.patterns, 'patterns'); add(M.sources, 'sources'); add(M.clips, 'clips');
+  add(M.automations, 'automations'); add(M.channels, 'channels'); add(M.notebook?.pages, 'notebook.pages');
+  if (M.comps) { add(M.comps, 'comps'); M.comps.forEach((c, i) => add(c.takes, 'comps', i, 'takes')); }
   return (byId = m);
+}
+/** The store proxy at an indexed item's place in `S.project` (read untracked by the caller). */
+function storeAt(e: Indexed): unknown {
+  const p = S.project as unknown as Obj;
+  const xs = (e.list === 'notebook.pages' ? (p.notebook as Obj | undefined)?.pages : p[e.list]) as Obj[] | undefined;
+  const x = xs?.[e.i];
+  return e.sub ? (x?.[e.sub] as Obj[] | undefined)?.[e.j] : x;
 }
 const sameKeys = (a: object, b: object) => {
   const ka = Object.keys(a), kb = Object.keys(b);
@@ -119,15 +147,25 @@ const sameKeys = (a: object, b: object) => {
  * The plain, current data behind store data (Solid 1's `unwrap`): `S.project` and its items with
  * an id come from `M` without a copy (read only: never mutate them); anything else in a store is
  * copied (`snapshot`, a walk of it); plain data comes back as is. Does not track.
+ * A project item's proxy seen before (and `S.project`) is a WeakMap hit until the next change.
  */
 export function rawOf<T>(x: T): T {
+  if (!isObj(x)) return x;
+  const hit = rawCache.get(x);
+  if (hit) return hit as T;
   if (!isProxy(x)) return x;
   return untrack(() => {
-    if (x === S.project) return M as T;
+    if ((x as unknown) === S.project) { rawCache.set(x, M); return M as T; }
     const id = (x as Obj).id;
     if (typeof id === 'number') {
-      const r = idIndex().get(id);
-      if (r && Array.isArray(r) === Array.isArray(x) && sameKeys(r, x as object)) return r as T;
+      const e = idIndex().get(id);
+      if (e && Array.isArray(e.r) === Array.isArray(x)) {
+        // the store's own item at that place: certain, and cached
+        if (storeAt(e) === x) { rawCache.set(x, e.r); return e.r as T; }
+        // not where the item is (another store holding a copy, or a mirror out of step): the
+        // check this had before the cache, and never cached
+        if (sameKeys(e.r, x as object)) return e.r as T;
+      }
     }
     // a list of items with ids (clips, tracks): each from `M`; else one copy (notes, points)
     if (Array.isArray(x) && x.length && typeof (x[0] as Obj | undefined)?.id === 'number') return x.map(rawOf) as T;
@@ -239,9 +277,11 @@ export function replaceState(dto: StateDto) {
   const was = new Map(M.sources.map(s => [s.id, s.path]));
   for (const s of dto.project.sources) { const p = was.get(s.id); if (p != null && p !== s.path) dropSourcePeaks(s.id); }
   const prev = M;
-  M = dto.project; byId = null;
+  mChanged();
+  M = dto.project;
   batch(() => {
     setS(d => { mergeInto(d as unknown as Obj, 'project', prev, M); });
+    mChanged(); // nothing cached while the store was half merged
     bumpProject();
     setMeta(dto);
   });
@@ -428,9 +468,10 @@ export function applyLocal(ops: Op[]) {
   const forStore = ops.map(copyOp);
   // one batch: memos that follow `arrVersion` are current before any effect of the edit runs
   batch(() => {
+    mChanged();
     // op by op, the store's draft first and then `M`: each op sees `M` as the draft is before it
     setS(d => { ops.forEach((op, i) => { applyInPlace(d.project, forStore[i], M); applyInPlace(M, op); }); });
-    byId = null;
+    mChanged(); // nothing cached while the edit was half applied
     bumpProject(arrangement);
     setS('dirty', true);
   });

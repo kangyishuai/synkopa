@@ -359,3 +359,103 @@ describe('the plain copy (rawOf / plain)', () => {
     expect(store.plainNotes(store.rawOf(pt).notes)[0]).not.toBe(store.rawOf(pt).notes[0]);
   });
 });
+
+// `rawOf` caches a store item's plain object (views call it per note, per pointer move): a hit must
+// always be the object the plain copy holds now, never one from before a change.
+describe('rawOf cache', () => {
+  /** The plain copy's own item with that id, found without `rawOf`'s cache (through the project). */
+  const live = (pick: (p: Project) => unknown) => pick(store.rawOf(store.S.project));
+  /** Ids unique across kinds, as the engine's counter makes them (`project()` reuses 1 for a track, an insert and the pattern). */
+  const uniq = () => project({ inserts: [master(), ins(5)], patterns: [{ id: 6, name: 'Beat', color: '#4f8ef7', len: 4, notes: [{ ch: 10, step: 0, len: 1 }] } as never], clips: [clip(10, { ref: 6 }), clip(11, { track: 1, start: 4, ref: 6 }), clip(12, { track: 2, start: 8, ref: 6 })] });
+
+  it('a repeated call is the live plain object, the same one every time', () => {
+    store.replaceState(dto(uniq()));
+    const c = clipById(11), pt = store.S.project.patterns[0], fx = store.S.project.inserts[1].fx[0];
+    expect(store.rawOf(c)).toBe(live(p => p.clips[1]));
+    expect(store.rawOf(c)).toBe(store.rawOf(c));
+    expect(store.rawOf(pt)).toBe(live(p => p.patterns[0]));
+    expect(store.rawOf(fx)).toBe(live(p => p.inserts[1].fx[0]));
+    expect(store.rawOf(store.S.project)).toBe(store.rawOf(store.S.project));
+  });
+
+  it('after a local edit it is the new plain object, also when the edit replaced it', () => {
+    store.replaceState(dto(uniq()));
+    const c = clipById(11), pt = store.S.project.patterns[0];
+    const oldPt = store.rawOf(pt);
+    void store.rawOf(c);
+    store.applyLocal([{ op: 'putClips', clips: [{ ...store.plain(c), start: 9 }] }]);
+    expect(store.rawOf(c).start).toBe(9);
+    expect(store.rawOf(c)).toBe(live(p => p.clips[1]));
+    // putPattern gives the plain copy a new pattern object
+    store.applyLocal([{ op: 'putPattern', pattern: { ...store.plain(pt), notes: [{ ch: 10, step: 3, len: 1 }] } }]);
+    const pt2 = store.S.project.patterns[0]; // the store's pattern after the edit (the edit copies it)
+    expect(store.rawOf(pt2)).not.toBe(oldPt);
+    expect(store.rawOf(pt2)).toBe(live(p => p.patterns[0]));
+    expect(store.rawOf(pt2).notes).toEqual([{ ch: 10, step: 3, len: 1 }]);
+  });
+
+  it('after an engine state it is the object of the new state, never the old one', () => {
+    store.replaceState(dto(uniq()));
+    const c = clipById(10), proj = store.S.project;
+    const before = store.rawOf(c), beforeProject = store.rawOf(proj);
+    const next = uniq(); next.clips = [clip(12, { track: 2, start: 8, ref: 6 }), clip(10, { start: 5, ref: 6 })];
+    store.replaceState(dto(next, { revision: 2 }));
+    expect(clipById(10)).toBe(c);
+    expect(store.rawOf(c)).not.toBe(before);
+    expect(store.rawOf(c)).toBe(next.clips[1]);
+    expect(store.rawOf(c).start).toBe(5);
+    expect(store.rawOf(proj)).not.toBe(beforeProject);
+    expect(store.rawOf(proj)).toBe(next);
+  });
+
+  it('stays the live object through a run of edits and states, for every item kind it indexes', () => {
+    store.replaceState(dto(uniq()));
+    const check = () => {
+      const p = store.S.project, raw = store.rawOf(p);
+      p.clips.forEach((c, i) => expect(store.rawOf(c)).toBe(raw.clips[i]));
+      p.tracks.forEach((t, i) => expect(store.rawOf(t)).toBe(raw.tracks[i]));
+      p.inserts.forEach((m, i) => { expect(store.rawOf(m)).toBe(raw.inserts[i]); m.fx.forEach((f, j) => expect(store.rawOf(f)).toBe(raw.inserts[i].fx[j])); });
+      p.patterns.forEach((x, i) => expect(store.rawOf(x)).toBe(raw.patterns[i]));
+      expect(store.rawOf(p.clips).map(c => c.id)).toEqual(raw.clips.map(c => c.id));
+    };
+    check();
+    store.applyLocal([{ op: 'putClips', clips: [clip(10, { start: 3, ref: 6 }), clip(13, { track: 2, start: 1, ref: 6 })] }]); check();
+    store.applyLocal([{ op: 'removeClips', ids: [11] }]); check();
+    store.applyLocal([{ op: 'removeTrack', id: 2 }, { op: 'putInsert', insert: ins(7) }]); check();
+    store.applyLocal([{ op: 'putFx', insertId: 7, index: 0, fx: { id: 20, type: 'comp', bypass: false, preset: null, params: { thr: -3 } } as never }]); check();
+    store.applyLocal([{ op: 'moveFx', fxId: 20, to: 1 }]); check();
+    const next = uniq(); next.clips.reverse(); next.inserts = [master(), ins(7), ins(5)];
+    store.replaceState(dto(next, { revision: 5 })); check();
+    store.replaceMeta(dto(next, { revision: 6, canUndo: true })); check();
+  });
+
+  it('a removed item is not answered from the plain copy (its last data, as a copy)', () => {
+    store.replaceState(dto(uniq()));
+    const c = clipById(11), before = store.rawOf(c);
+    store.applyLocal([{ op: 'removeClips', ids: [11] }]);
+    const r = store.rawOf(c);
+    expect(r).not.toBe(before);
+    expect(store.rawOf(store.S.project).clips.includes(r)).toBe(false);
+    expect(r).toEqual(before);
+  });
+
+  it('two kinds sharing an id: each item gets its own data (the guard against a wrong item)', () => {
+    store.replaceState(dto(project())); // track 1, insert 1 and pattern 1
+    const t1 = store.S.project.tracks[0], p1 = store.S.project.patterns[0];
+    expect(store.rawOf(t1)).toEqual(project().tracks[0]);
+    expect(store.rawOf(t1)).toEqual(project().tracks[0]); // twice: a cache hit too
+    expect(store.rawOf(p1)).toBe(live(p => p.patterns[0]));
+  });
+
+  it('a copy of an item in another store is never cached as the item', async () => {
+    const { createStore } = await import('../lib/reactive');
+    store.replaceState(dto(uniq()));
+    const [ui, setUi] = createStore({ c: store.plain(clipById(11)) as Clip & { extra?: number } });
+    // same id and fields: the item (the check rawOf has always made)
+    expect(store.rawOf(ui.c)).toBe(store.rawOf(clipById(11)));
+    // the copy gains a field: its own data from then on
+    setUi('c', 'extra', 1);
+    expect(store.rawOf(ui.c)).toEqual({ ...store.plain(clipById(11)), extra: 1 });
+    expect(store.rawOf(ui.c)).not.toBe(store.rawOf(clipById(11)));
+  });
+});
