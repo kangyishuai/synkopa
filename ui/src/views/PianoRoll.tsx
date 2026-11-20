@@ -48,6 +48,7 @@ import { paneDock } from '../state/docking';
 import { KW, type RollCtx, type RollPtr, type Tool } from './roll/types';
 import { rollDown, rollMove } from './roll/grid';
 import { buildTransformOp, TOOL_META, type ToolId } from './roll/noteTools';
+import type { TransformVerb } from '../api/types';
 import { STAMP_INVS, STAMP_TYPES } from './roll/stamp';
 
 const LANE_H = 92;
@@ -621,6 +622,29 @@ function Roll(props: { z: number; docked?: boolean }) {
         commitNotes(r.notes, t('b.pr.legato'));
         say(t('b.pr.legatoDone', { x: notesText(r.changed) }));
       }
+      return;
+    }
+    // FL: Ctrl+U quick chop (pieces one snap step long), Ctrl+G glue; Alt+U / Alt+A open the chop / arpeggiator tool
+    if (m && !e.shiftKey && !e.altKey && (k === 'u' || k === 'g')) {
+      stop();
+      if (!chanNotes().length) return;
+      const grid = rollSnapName(snapNow()) ?? '1/16';
+      const verb: TransformVerb = k === 'u' ? { kind: 'chop', len: Math.max(0.25, snapNow() || 1) } : { kind: 'glue' };
+      const before = chanNotes().length;
+      commit([{ op: 'transformNotes', pattern: pt().id, verb, select: s.length ? { kind: 'indices', indices: [...s].sort((a, b) => a - b) } : { kind: 'range', from: 0, to: 1e9, ch: ch().id } }],
+        t(k === 'u' ? 'b.pr.tool.chop' : 'b.pr.tool.glue'));
+      // the edit applies locally at once (the engine confirms it), so the count is already the new one
+      const after = chanNotes().length;
+      say(k === 'u' ? (after > before ? t('b.pr.chopped', { grid, x: notesText(after) }) : t('b.pr.chopNone', { grid }))
+        : (after < before ? t('b.pr.glued', { x: notesText(before - after) }) : t('b.pr.glueNone')));
+      setSel(new Set<number>());
+      return;
+    }
+    if (e.altKey && !m && !e.shiftKey && (k === 'u' || k === 'a')) {
+      stop();
+      const id: ToolId = k === 'u' ? 'chop' : 'arp';
+      setToolId(id); setVals(TOOL_META[id].fields.map(f => (id === 'chop' && f.kind === 'num' ? Math.max(0.25, snapNow() || 1) : f.def)));
+      setToolsOpen(true);
       return;
     }
     // Ctrl+Shift+X: cut the selection out to a new pattern, in place (the playlist keeps it)

@@ -61,3 +61,18 @@ describe('buildTransformOp verbs and values', () => {
     expect(buildTransformOp('humanize', [0.3, 0.2], '42', 7, 64, 3, new Set()).seed).toBe(42);
   });
 });
+
+describe('chop, glue and arpeggiate', () => {
+  it('are scoped like humanize: the selection, else the shown channel', () => {
+    for (const id of ['chop', 'glue', 'arp'] as const) {
+      expect(buildTransformOp(id, [], '', 7, 64, 3, new Set([4, 1])).select).toEqual({ kind: 'indices', indices: [1, 4] });
+      expect(buildTransformOp(id, [], '', 7, 64, 3, new Set()).select).toEqual({ kind: 'range', from: 0, to: 1e9, ch: 3 });
+    }
+  });
+  it('clamp their values into what the engine takes', () => {
+    expect(buildTransformOp('chop', [0], '', 7, 64, 3, new Set()).verb).toEqual({ kind: 'chop', len: 0.25 });
+    expect(buildTransformOp('glue', [], '', 7, 64, 3, new Set()).verb).toEqual({ kind: 'glue' });
+    expect(buildTransformOp('arp', ['upDown', 2, 0.5, 2], '', 7, 64, 3, new Set()).verb).toEqual({ kind: 'arpeggiate', mode: 'upDown', rate: 2, gate: 0.5, octaves: 2 });
+    expect(buildTransformOp('arp', ['sideways', 0, 9, 7.6], '', 7, 64, 3, new Set()).verb).toEqual({ kind: 'arpeggiate', mode: 'up', rate: 0.25, gate: 1, octaves: 4 });
+  });
+});

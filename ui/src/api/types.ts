@@ -397,7 +397,13 @@ export type TransformVerb =
   | { kind: 'euclidDrums'; voices: { ch: Id; k: number; n: number; rotate?: number; vel?: number }[]; bars?: number }
   | { kind: 'melody'; ch: Id; bars?: number; density?: number; repeat?: number }
   | { kind: 'chord'; harmony?: string }
-  | { kind: 'progression'; ch: Id; bars?: number; template?: string; voiceLead?: boolean; degrees?: number[] };
+  | { kind: 'progression'; ch: Id; bars?: number; template?: string; voiceLead?: boolean; degrees?: number[] }
+  /** FL's chop: held notes cut into pieces `len` steps long (≥ 0.25). */
+  | { kind: 'chop'; len?: number }
+  /** FL's glue: touching / overlapping held notes of one channel and key become one. */
+  | { kind: 'glue' }
+  /** FL's arpeggiator: each chord (notes starting together, per channel) becomes a run of its keys. */
+  | { kind: 'arpeggiate'; mode?: 'up' | 'down' | 'upDown' | 'random'; rate?: number; gate?: number; octaves?: number };
 /** Which notes a `transformNotes` verb touches. */
 export type TransformSelect =
   | { kind: 'indices'; indices: number[] }
