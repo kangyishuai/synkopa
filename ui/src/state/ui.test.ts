@@ -65,7 +65,7 @@ describe('the current pattern', () => {
     store.replaceState({
       project: { version: 2, bpm: 120, tracks: [], inserts: [], patterns: [pat(1), pat(2)] as never, sources: [], clips: [], loop: null, nextId: 10 },
       revision: 1, canUndo: false, canRedo: false, path: null, dirty: false,
-      transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0 },
+      transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0, recAutomation: true, recAutoLatch: false },
     });
     ui.setU('pat', 1);
     ui.setU('cur', { kind: 'pat', ref: 2, clipId: null }); // as Playlist.tsx and Browser.tsx write it

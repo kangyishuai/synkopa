@@ -40,14 +40,16 @@ export interface EngineState {
   missing: Record<string, string>;
   /** Fx id → why its hosted plugin did not load (the slot passes audio through; its data is kept). */
   fxErrors: Record<string, string>;
+  /** Automation ids a manual tweak overrode while playing (knobs show the override; re-enable or stop clears). */
+  overriddenAutos: Id[];
 }
 
 const emptyProject = (): Project => ({ version: 2, bpm: 128, tracks: [], inserts: [], patterns: [], sources: [], clips: [], loop: null, nextId: 1 });
 
 export const [S, setS] = createStore<EngineState>({
   ready: false, project: emptyProject(), revision: 0, canUndo: false, canRedo: false, undoLabel: null, redoLabel: null,
-  transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0 },
-  path: null, dirty: false, catalog: null, audition: {}, stretching: {}, missing: {}, fxErrors: {},
+  transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0, recAutomation: true, recAutoLatch: false },
+  path: null, dirty: false, catalog: null, audition: {}, stretching: {}, missing: {}, fxErrors: {}, overriddenAutos: [],
 });
 
 /** The project as plain objects, equal to `S.project` (see the header). Read only: never mutate it. */
@@ -265,7 +267,7 @@ function same(a: unknown, b: unknown): boolean {
   return na === nb;
 }
 /** Replace the transport or a live-only map (`audition`, `missing`, ...) in place, its removed keys too. */
-function setLive<K extends 'transport' | 'audition' | 'stretching' | 'missing' | 'fxErrors'>(key: K, next: EngineState[K]) {
+function setLive<K extends 'transport' | 'audition' | 'stretching' | 'missing' | 'fxErrors' | 'overriddenAutos'>(key: K, next: EngineState[K]) {
   const prev = untrack(() => snapshot(S[key]));
   if (!same(prev, next)) setS(d => { mergeInto(d as unknown as Obj, key, prev, next); });
 }
@@ -276,6 +278,7 @@ function setMeta(dto: StateDto) {
   setLive('stretching', stretchStatus(dto));
   setLive('missing', dto.missing ?? {});
   setLive('fxErrors', dto.fxErrors ?? {});
+  setLive('overriddenAutos', dto.overriddenAutos ?? []);
 }
 
 /** Project fields no arrangement canvas draws from (what `NOT_ARRANGEMENT` ops change, and the id counter). */

@@ -837,7 +837,7 @@ pub fn context(app: &dyn Host, full: bool) -> Value {
 
 pub fn schema() -> Value {
     json!({
-        "automation": "an automation plays through a clip of kind `auto` whose `ref` is the automation id; points t = beats from the automation start, v = 0..1 normalised (log params normalised logarithmically); optional per point, for the segment ending there: tension -1..1 (0 = straight) and shape curve|double|hold|stairs (stairs: tension sets 2..16 steps)",
+        "automation": "an automation plays through a clip of kind `auto` whose `ref` is the automation id; points t = beats from the automation start, v = 0..1 normalised (log params normalised logarithmically); optional per point, for the segment ending there: tension -1..1 (0 = straight) and shape curve|double|hold|stairs (stairs: tension sets 2..16 steps). While the app records with its Automation filter on, control tweaks during playback send these same putAutomation ops (touch: until release; Latch holds until stop); a manual tweak on an automated control while playing overrides its envelope until the transport stops",
         "units": "time in beats (quarter notes); pattern len in beats (4 = 1 bar, derived from the notes, at least minLen), note step/len in sixteenths, note v (velocity) 0..1, swing 0..1; fades in seconds; vol = fader 0..1 (0.7937 = 0 dB); clip gain in dB; pan -1..1",
         "patterns": "channels are global (Channel Rack rows, `synkopa channels`); a pattern note plays channel `ch`; trig = true for a step trigger without sampler note-off; p = MIDI key (absent = the channel's root, the key at which a sampler plays its file unpitched); swing delays notes on odd 16ths by swing × ½ step; the pattern length is derived: the end of the last note rounded up to a bar, at least `minLen` beats (a `len` you send is ignored); when it changes, clips that show exactly one whole pass (offset 0) follow. Easier: `synkopa pattern --id N --ch C --steps \"x...x...x...x...\"`",
         "ids": "take new ids from context.nextId and count up",
@@ -853,7 +853,7 @@ pub fn schema() -> Value {
             "removeFx": {"fxId": 0},
             "moveFx": {"fxId": 0, "to": 0},
             "putPattern": {"pattern": {"id": 0, "name": "", "color": "#4f8ef7", "minLen": 4, "swing": 0, "notes": [{"ch": "channel id", "step": 0, "len": 1, "p": 36, "v": 1}]}},
-            "putChannel": {"channel": {"id": 0, "name": "Kick", "color": "#4f8ef7", "kind": "sample|synth|keys", "source": "source id (kind sample)", "sampler": "kind sample, optional: {start, end (0..1 of the file), reverse, norm, semi, fine, env (volume envelope on), delay, attack, hold, decay, release, fadeInMs, fadeOutMs (ms), sustain (0..1), attackTension, decayTension, releaseTension (-1..1), cut (0 = none, 1..8)}", "slices": "kind sample, optional: slice mode, increasing fractions of the file in 0..1 where each slice starts (at most 128); key root plays slice 1, root+1 slice 2, ...; a slice plays to the next at the file's pitch and cuts the one sounding; omit or [] = off", "vol": 0.7937, "pan": 0, "mute": false, "solo": false, "insert": "insert id or null (= the clip's track)", "root": 60}, "index": null},
+            "putChannel": {"channel": {"id": 0, "name": "Kick", "color": "#4f8ef7", "kind": "sample|synth|keys", "source": "source id (kind sample)", "sampler": "kind sample, optional: {start, end (0..1 of the file), reverse, norm, semi, fine, env (volume envelope on), delay, attack, hold, decay, release, fadeInMs, fadeOutMs (ms), sustain (0..1), attackTension, decayTension, releaseTension (-1..1), cut (0 = none, 1..8)}", "slices": "kind sample, optional: slice mode, increasing fractions of the file in 0..1 where each slice starts (at most 128); key root plays slice 1, root+1 slice 2, ...; a slice plays to the next at the file's pitch and cuts the one sounding; omit or [] = off", "vol": 0.7937, "pan": 0, "mute": false, "solo": false, "insert": "insert id or null (= the clip's track)", "root": 60, "group": "Channel Rack filter group, optional (absent = unsorted)"}, "index": null},
             "removeChannel": {"id": 0},
             "removePattern": {"id": 0},
             "putSource": {"source": "rename/recolour an existing source"},
@@ -862,7 +862,7 @@ pub fn schema() -> Value {
             "setLoop": {"loop": {"a": 0, "b": 16}},
             "putAutomation": {"automation": {"id": 0, "name": "Reverb mix", "color": "#e0a44a", "target": {"kind": "fx|mix|insertVol|insertPan|trackVol|chanVol|chanPan|synth|keys|clipGain|clipPan", "fxId": 0, "chanId": 0, "param": "fx: mix or band:<i>:f|g|q; synth: catalog id; keys: release|dynamics", "id": "insert/track/channel/clip id for vol/pan/gain"}, "points": [{"t": 0, "v": 0.2}, {"t": 8, "v": 0.8, "tension": -0.4}, {"t": 12, "v": 0.5, "shape": "hold"}]}},
             "removeAutomation": {"id": 0},
-            "transformNotes": {"pattern": 1, "verb": {"kind": "humanize|quantize|euclidFill|strum|euclidDrums|melody|chord|progression", "timing": 0.3, "velocity": 0.2, "grid": 1, "amount": 1, "scaleAware": false, "ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7, "width": 0.5, "ramp": 0.05, "voices": [{"ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7}], "bars": 2, "density": 0.5, "repeat": 1, "harmony": "diatonic|maj|min|7|maj7|min7", "template": "pop|pop2|minloop|trap|iivI|doowop|andalusian|blues|canon|chance", "voiceLead": true, "degrees": [0, 5, 2, 6]}, "seed": 7, "select": {"kind": "indices|range", "indices": [1, 2], "from": 0, "to": 16, "ch": 0}},
+            "transformNotes": {"pattern": 1, "verb": {"kind": "humanize|quantize|euclidFill|strum|chop|glue|arpeggiate|euclidDrums|melody|chord|progression", "len": 1, "mode": "up|down|upDown|random", "rate": 1, "gate": 0.9, "octaves": 1, "timing": 0.3, "velocity": 0.2, "grid": 1, "amount": 1, "scaleAware": false, "ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7, "width": 0.5, "ramp": 0.05, "voices": [{"ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7}], "bars": 2, "density": 0.5, "repeat": 1, "harmony": "diatonic|maj|min|7|maj7|min7", "template": "pop|pop2|minloop|trap|iivI|doowop|andalusian|blues|canon|chance", "voiceLead": true, "degrees": [0, 5, 2, 6]}, "seed": 7, "select": {"kind": "indices|range", "indices": [1, 2], "from": 0, "to": 16, "ch": 0}},
             "setKey": {"key": 2, "scale": 1},
             "putComp": {"comp": {"id": 0, "name": "Comp 1", "xfade": 0.01, "takes": [{"id": 0, "name": "Take 1", "ref": "source id", "start": 0, "len": 8, "offset": 0}], "regions": [{"take": 0, "from": 0, "to": 4, "xfade": 0.02}]}},
             "removeComp": {"id": 0},
@@ -956,7 +956,7 @@ fn channel_json(p: &wave_engine::Project, c: &wave_engine::Channel) -> Value {
     let mut v = json!({
         "id": c.id, "index": p.channels.iter().position(|x| x.id == c.id), "name": c.name, "kind": kind,
         "volume": if g < 1e-6 { "-inf".to_string() } else { format!("{:+.1} dB", 20.0 * g.log10()) }, "vol": c.vol, "pan": c.pan,
-        "mute": c.mute, "solo": c.solo, "insert": c.insert, "root": c.root,
+        "mute": c.mute, "solo": c.solo, "insert": c.insert, "root": c.root, "group": c.group,
         "notes": p.patterns.iter().map(|pt| pt.notes.iter().filter(|n| n.ch == c.id).count()).sum::<usize>(),
     });
     if let (Value::Object(m), Value::Object(w)) = (&mut v, what) {
@@ -1122,6 +1122,16 @@ pub fn channels(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value>
         }
         ops.push(Op::PutChannel { channel: c, index: None });
     }
+    if let (Some(v), Some(g)) = (arg(a, "ch"), arg(a, "group").and_then(Value::as_str)) {
+        // the Channel Rack filter group ("" = none)
+        let mut c = find_channel(&p, v)?.clone();
+        let g = g.trim();
+        if g.chars().count() > 40 {
+            return Err("a group name has at most 40 characters".into());
+        }
+        c.group = (!g.is_empty()).then(|| g.to_string());
+        ops.push(Op::PutChannel { channel: c, index: None });
+    }
     if let Some(v) = arg(a, "remove") {
         ops.push(Op::RemoveChannel { id: find_channel(&p, v)?.id });
     }
@@ -1184,7 +1194,14 @@ fn pattern_json(p: &wave_engine::Project, pt: &wave_engine::Pattern) -> Value {
             if !simple {
                 row["notes"] = json!(notes
                     .iter()
-                    .map(|n| json!({ "step": n.step, "len": n.len, "p": n.p.unwrap_or(c.root), "v": n.v, "trig": n.trig.unwrap_or(false) }))
+                    .map(|n| {
+                        let mut j =
+                            json!({ "step": n.step, "len": n.len, "p": n.p.unwrap_or(c.root), "v": n.v, "trig": n.trig.unwrap_or(false) });
+                        if n.slide {
+                            j["slide"] = json!(true);
+                        }
+                        j
+                    })
                     .collect::<Vec<_>>());
             }
             row
@@ -1261,14 +1278,18 @@ pub fn pattern(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value> 
             pt.notes.extend(parse_steps(s, vel)?.into_iter().map(|(k, v)| Note { v, ..Note::trigger(ch, k, None) }));
         }
         if let Some(ns) = notes {
-            let list = ns.as_array().ok_or("--notes is a JSON array of {step, len, p?, v?, trig?}")?;
+            let list = ns.as_array().ok_or("--notes is a JSON array of {step, len, p?, v?, trig?, slide?}")?;
             for n in list {
                 let step = opt_f64(n, "step").ok_or("each note needs `step` (16ths)")? as f32;
                 let len = opt_f64(n, "len").unwrap_or(1.0) as f32;
                 let key = arg(n, "p").and_then(as_index).map(|k| k.min(127) as u8);
                 let v = opt_f64(n, "v").unwrap_or(1.0) as f32;
                 let trigger = arg(n, "trig").map(|v| v.as_bool().ok_or("note `trig` must be a boolean")).transpose()?.unwrap_or(false);
-                pt.notes.push(Note { v, trig: Some(trigger), ..Note::new(ch, step, len, key) });
+                let slide = arg(n, "slide").map(|v| v.as_bool().ok_or("note `slide` must be a boolean")).transpose()?.unwrap_or(false);
+                if slide && trigger {
+                    return Err("a slide note is held for its length (the glide time): it cannot be a trigger".into());
+                }
+                pt.notes.push(Note { v, trig: Some(trigger), slide, ..Note::new(ch, step, len, key) });
             }
         }
     }

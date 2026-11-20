@@ -7,8 +7,8 @@ import { be } from '../api/backend';
 import { KEYS_DYNAMICS, KEYS_RELEASE, type Channel, type KeysStatus } from '../api/types';
 import { clamp } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
-import { commit, Gesture, wheelEdit } from '../state/edit';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
+import { commit } from '../state/edit';
 import { chanById, chanOp } from '../state/pattern';
 import { say } from '../state/ui';
 import { InstIcon } from '../ui/instIcons';
@@ -51,19 +51,20 @@ export function KeysPanel(props: { c: KeysChannel }) {
   };
 
   const knob = (lab: TranslationKey, titleKey: TranslationKey, tv: () => number, text: () => string, patch: (v: number) => KeysChannel['keys'], def: number, param: 'release' | 'dynamics') => {
-    let g: Gesture | null = null;
+    let g: Tweak | null = null;
     const op = (v: number) => [chanOp(live(), { keys: patch(v) } as Partial<Channel>)];
     const target = () => ({ kind: 'keys' as const, chanId: props.c.id, param });
     const reset = () => commit(op(def), t('b.kp.gest', { name: t(lab) }));
     return (
       <Knob key={'keys' + lab + props.c.id} label={t(lab)} title={t('b.kp.knobTitle', { title: t(titleKey) })} t={tv} text={text}
         automated={() => isAutomated(target())}
+        overridden={() => isOverridden(target())}
         onMenu={(x, y) => paramMenu(x, y, target(), reset, props.c.color)}
-        onStart={() => { g = new Gesture(t('b.kp.gest', { name: t(lab) })); }}
-        onChange={v => { g?.update(op(v)); say(props.c.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
+        onStart={() => { g = autoTweak(target(), t('b.kp.gest', { name: t(lab) }), v => op(v)); }}
+        onChange={v => { g?.move(v); say(props.c.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
         onEnd={() => { g?.end(); g = null; }}
         onReset={reset}
-        onWheel={v => wheelEdit('keys' + lab, t('b.kp.gest', { name: t(lab) }), op(v))} />
+        onWheel={v => autoWheel(target(), 'keys' + lab + props.c.id, t('b.kp.gest', { name: t(lab) }), v, vv => op(vv))} />
     );
   };
 

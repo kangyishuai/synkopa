@@ -6,7 +6,7 @@ import { listen } from '@tauri-apps/api/event';
 import type { BeatRange } from '../lib/patLoop';
 import type {
   AudioConfig, AudioDevices, AudioHost, AudioStatus, LatencyReport, Catalog, CliStatus, ExportAudioOptions, ExportProgress, ExportResult, ExportStemsOptions, ExportStemsResult, F0ModelStatus, FxChainLoadResult, FxChainPreset, Id, ImportResult, MidiExportResult, MidiImportArgs, MidiImportResult, MidiInfo, Relinked, RelinkSearch,
-  KeysStatus, LibraryFiles, LibraryList, LibraryProgress, Melody, MelodyChannel, MidiDevice, MidiNoteEvent, MidiStatus, ModelProgress, AppInfo, UpdateInfo, UpdateProgress, MusicAnalysis, AutoVocalPlan, AutoVocalStyle, Op, OpenResult, PitchAnalysis, PitchTarget, RecoveredProject, RefTune, SaveResult, StateDto, TransportDto, PluginScan, PluginParam, PluginCrashSuspect,
+  KeysStatus, LibraryFiles, LibraryList, LibraryProgress, Melody, MelodyChannel, MidiDevice, MidiNoteEvent, MidiStatus, ModelProgress, AppInfo, UpdateInfo, UpdateProgress, MusicAnalysis, AutoVocalPlan, AutoVocalStyle, Op, OpenResult, PitchAnalysis, RecentProject, PitchTarget, RecoveredProject, RefTune, SaveResult, StateDto, TransportDto, PluginScan, PluginParam, PluginCrashSuspect,
   ExtractStemsResult, StemId, StemModelStatus, StemsProgress,
 } from './types';
 
@@ -48,7 +48,9 @@ export interface Backend {
   transportStop(): Promise<void>;
   /** A second Stop (panic): cut every tail still ringing — voices, effect tails, the preview. Not an edit. */
   transportSilence(): Promise<void>;
-  transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor' | 'recAudio' | 'recNotes' | 'recQuantize'>>): Promise<TransportDto>;
+  transportSet(patch: Partial<Pick<TransportDto, 'metro' | 'countIn' | 'rec' | 'monitor' | 'recAudio' | 'recNotes' | 'recQuantize' | 'recAutomation' | 'recAutoLatch'>>): Promise<TransportDto>;
+  /** Whether automation `id` drives its target while playing; `on: false` re-enables it (a tweak had overridden it). */
+  automationOverride(id: Id, on: boolean): Promise<TransportDto>;
   subscribeTelemetry(onFrame: (buf: ArrayBuffer) => void): Promise<void>;
   watchFx(ids: Id[]): Promise<void>;
   fxCatalog(): Promise<Catalog>;
@@ -184,6 +186,10 @@ export interface Backend {
   projectNew(demo?: boolean): Promise<StateDto>;
   /** The file dialog when `path` is omitted. */
   projectOpen(path?: string, ifRevision?: number): Promise<OpenResult>;
+  /** File → Open recent: projects opened or saved lately, newest first (at most 10). */
+  recentProjects(): Promise<RecentProject[]>;
+  /** Takes `path` off the recent list; without a path, clears it. */
+  recentForget(path?: string): Promise<void>;
   /** Project paths received at launch or forwarded by another instance. */
   takeProjectOpenRequests(): Promise<string[]>;
   /** The save dialog when the project has no path yet or `saveAs`. */
@@ -245,6 +251,8 @@ export interface Backend {
   /** "Ask AI": opens `service` in the system browser (ChatGPT with `prompt` in the link, DeepWiki on the
    *  repository). No ChatGPT prompt opens a new chat; one whose link is past MAX_ASK_URL (lib/askLink) is rejected. */
   openAsk(service: AskService, prompt: string | null): Promise<void>;
+  /** Opens the Synkopa Discord server in the system browser. */
+  openDiscord(): Promise<void>;
   on<K extends keyof EventMap>(ev: K, cb: (payload: EventMap[K]) => void): Promise<() => void>;
   /** OS file drag & drop with real paths (Tauri) or file names (mock). */
   onOsDrop(cb: (e: OsDropEvent) => void): Promise<() => void>;
@@ -337,6 +345,7 @@ export function tauriBackend(): Backend {
     transportStop: () => invoke('transport_stop'),
     transportSilence: () => invoke('transport_silence'),
     transportSet: patch => invoke('transport_set', patch),
+    automationOverride: (id, on) => invoke('automation_override', { id, on }),
     async subscribeTelemetry(onFrame) {
       const ch = new Channel<ArrayBuffer>();
       ch.onmessage = m => onFrame(m instanceof ArrayBuffer ? m : (toF32(m).buffer as ArrayBuffer));
@@ -429,6 +438,8 @@ export function tauriBackend(): Backend {
     projectNew: demo => invoke('project_new', { demo: !!demo }),
     projectOpen: (path, ifRevision) => invoke('project_open', { path: path ?? null, ifRevision }),
     takeProjectOpenRequests: () => invoke('take_project_open_requests'),
+    recentProjects: () => invoke('recent_projects'),
+    recentForget: path => invoke('recent_forget', { path: path ?? null }),
     projectSave: (saveAs, version) => invoke('project_save', { saveAs: !!saveAs, version: !!version }),
     projectExportZip: ifRevision => invoke('project_export_zip', { ifRevision }),
     recoveryWrite: () => invoke('recovery_write'),
@@ -456,6 +467,7 @@ export function tauriBackend(): Backend {
     updateMarkSeen: version => invoke('update_mark_seen', { version }),
     openReleasePage: version => invoke('open_release_page', { version: version ?? null }),
     openAsk: (service, prompt) => invoke('open_ask', { service, prompt }),
+    openDiscord: () => invoke('open_discord'),
     on: async (ev, cb) => listen(ev, e => cb(e.payload as never)),
     async onOsDrop(cb) {
       const { getCurrentWebview } = await import('@tauri-apps/api/webview');

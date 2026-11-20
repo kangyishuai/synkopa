@@ -9,28 +9,31 @@ import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { t } from '../lib/i18n';
 import { TOTAL_BEATS, VOL_UNITY, type Channel } from '../api/types';
 import { clamp, panText, volText } from '../lib/format';
-import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setStep, setVelAt, stepsOf, type ChannelClip } from '../lib/pattern';
+import { barsText, cellsBetween, clearChannel, copyChannelNotes, gridW, pasteChannelNotes, stepAt, isRollRow, keyOf, notesText, rotate, setKeyAt, setPanAt, setShiftAt, setStep, setVelAt, shiftOf, MAX_SHIFT, stepsOf, type ChannelClip } from '../lib/pattern';
 import { moveIndex, rackMoveIndex } from '../lib/rack';
 import { noteName } from '../lib/pitch';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
 import { commit, Gesture } from '../state/edit';
 import {
   addBar, RACK_MIN_W, STEP_W, audition, chanById, chanKindLabel, chanOp, channels, closeRack, curPat, openRoll, patOp, playStep, putNotes, RACK_LEFT, RACK_ROW,
   rackFront, rackPlaceFor, removeBar, selChan, selectChannel, selectChannelRange, toggleChannelSelected, isChannelSelected, stepPattern, toggleChanMute, toggleChanSolo,
+  rackChannels, rackFilter, setRackFilter,
 } from '../state/pattern';
 import { arrVersion, rawOf, S } from '../state/store';
 import { ensurePluginScan } from '../state/pluginScan';
-import { say, setU, U } from '../state/ui';
+import { openMenu, openRename, say, setU, U, type MenuItem } from '../state/ui';
 import { edgeScroller, track } from '../ui/drag';
 import { WindowBoundary } from '../ui/PanelBoundary';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
+import { cleanGroup, fullIndexFor, rackGroups } from '../lib/rackGroups';
+import { LANE_ICONS, LaneSwitch } from '../ui/LaneSwitch';
+import { T } from '../ui/theme';
 import { channelIcon, InstIcon } from '../ui/instIcons';
 import { MiniKnob, NumField, parseNum } from '../ui/Knob';
 import { PanelFrame, WinControls } from './PanelFrame';
 import { paneDock } from '../state/docking';
-import { pickFreeInsert, wheelInsert } from '../ui/InsertPicker';
-import { showInsert } from '../state/mixView';
+import { insertBoxClick, wheelInsert } from '../ui/InsertPicker';
 import { toggleChannelWindow } from './ChannelWindow';
 import { drawKeyGraph, drawLane, drawRack, drawRackHead, type RackGeo, laneColor } from './patternDraw';
 import { addChannelMenu, chanMenu, chanInsertChoice, insertMenu, insLabel, insTitle, patGeom, PatternChip, useDataVersion, useSize } from './patternShared';
@@ -60,7 +63,8 @@ function Rack(props: { z: number; docked?: boolean }) {
   let gridWrap!: HTMLDivElement, cv!: HTMLCanvasElement, head!: HTMLCanvasElement, graphCv!: HTMLCanvasElement, graphWrap!: HTMLDivElement;
   const ptM = createMemo(() => curPat()!);
   const pt = () => ptM();
-  const chans = () => channels();
+  /** The rows the rack shows: every channel, or the group the filter picks. */
+  const chans = () => rackChannels();
   const selCh = () => selChan();
   const size = useSize(() => gridWrap);
   const graphSize = useSize(() => graphWrap);
@@ -105,6 +109,8 @@ function Rack(props: { z: number; docked?: boolean }) {
     const p = rawOf(pt()), notes = c ? p.notes.map((n, i) => ({ n, i })).filter(x => x.n.ch === c.id) : [];
     const roll = !!c && rollRows().has(c.id);
     if (mode === 'vel') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: laneColor('vel'), cells: !roll, beatGap: true, muted: !!c?.mute });
+    else if (mode === 'pan') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: laneColor('pan'), cells: !roll, beatGap: true, muted: !!c?.mute || !panPlays(), value: n => ((n.pan ?? 0) + 1) / 2, bipolar: true });
+    else if (mode === 'shift') drawLane(g, w, h, { x0: 0, cw: G.cw, sx: G.sx, steps: G.steps, notes, color: T.amber, cells: true, beatGap: true, muted: !!c?.mute || roll, value: n => shiftOf(n) / MAX_SHIFT });
     else drawKeyGraph(g, w, h, { cw: G.cw, sx: G.sx, steps: G.steps, notes, color: c?.color ?? '#4f8ef7', root: c?.root ?? 60, span: KEY_SPAN, off: roll });
   });
   // playhead column: only when the step changes
@@ -167,22 +173,37 @@ function Rack(props: { z: number; docked?: boolean }) {
     const d = (e.deltaY || e.deltaX);
     setScroll(s => horiz ? { ...s, x: clamp(s.x + d, 0, m.x) } : { ...s, y: clamp(s.y + d * 0.6, 0, m.y) });
   };
-  // graph editor: drag across the steps to draw values
+  /** The selected channel plays a note's own pan (plugin instruments do not). */
+  const panPlays = () => selCh()?.kind !== 'plugin';
+  // graph editor: drag across the steps to draw values; Alt+click resets a step (FL)
   const graphDown = (e: PointerEvent) => {
     const c = selCh(), mode = graph(); if (!c || !mode || e.button !== 0) return;
     e.preventDefault();
     const roll = rollRows().has(c.id);
     if (mode === 'key' && roll) { say(t('b.rk.keyRoll', { name: c.name })); return; }
+    if (mode === 'shift' && roll) { say(t('b.rk.shiftRoll', { name: c.name })); return; }
+    if (mode === 'pan' && !panPlays()) { say(t('b.rk.panPlugin', { name: c.name })); return; }
+    if (e.altKey && mode !== 'key') {
+      const G0 = geo(), r0 = graphCv.getBoundingClientRect(), s = stepAt(e.clientX - r0.left + G0.sx, G0.cw), ns = rawOf(pt()).notes;
+      const out = mode === 'vel' ? setVelAt(ns, c.id, s, 1) : mode === 'pan' ? setPanAt(ns, c.id, s, 0) : setShiftAt(ns, c.id, s, 0);
+      commit([putNotes(pt(), out)], t('b.rk.resetStep'));
+      say(t('b.rk.resetStepDone', { name: c.name, n: s + 1 }));
+      return;
+    }
     const G = geo(), r = graphCv.getBoundingClientRect();
     const at = (ev: PointerEvent) => ({ s: stepAt(ev.clientX - r.left + G.sx, G.cw), f: clamp(1 - (ev.clientY - r.top - 6) / (r.height - 9), 0, 1) });
-    const g = new Gesture(mode === 'vel' ? 'Velocity' : t('b.rk.keyGest'));
+    const g = new Gesture(mode === 'vel' ? 'Velocity' : mode === 'pan' ? t('b.rk.panGest') : mode === 'shift' ? t('b.rk.shiftGest') : t('b.rk.keyGest'));
     let notes = rawOf(pt()).notes, last = at(e);
     const keyFor = (f: number) => clamp(Math.round(c.root - KEY_SPAN + f * 2 * KEY_SPAN), 0, 127);
     const apply = (s: number, f: number) => {
       if (mode === 'key') { notes = setKeyAt(notes, c, s, keyFor(f)); return; }
+      if (mode === 'pan') { notes = setPanAt(notes, c.id, s, f * 2 - 1); return; }
+      if (mode === 'shift') { notes = setShiftAt(notes, c.id, s, f * MAX_SHIFT); return; }
       notes = roll ? notes.map(n => n.ch === c.id && Math.floor(n.step + 1e-3) === s ? { ...n, v: Math.round(f * 100) / 100 } : n) : setVelAt(notes, c.id, s, f);
     };
-    const tell = (f: number) => say(c.name + ' · ' + (mode === 'vel' ? 'velocity ' + Math.round(f * 100) + '%' : noteName(keyFor(f))));
+    const tell = (f: number) => say(c.name + ' · ' + (mode === 'vel' ? 'velocity ' + Math.round(f * 100) + '%'
+      : mode === 'pan' ? 'pan ' + panText(Math.abs(f * 2 - 1) < 0.03 ? 0 : f * 2 - 1)
+      : mode === 'shift' ? t('b.rk.shiftSay', { pct: Math.round(f * MAX_SHIFT * 100) }) : noteName(keyFor(f))));
     apply(last.s, last.f);
     g.update([putNotes(pt(), notes)]);
     tell(last.f);
@@ -264,7 +285,9 @@ function Rack(props: { z: number; docked?: boolean }) {
     ]);
   };
   const moveChannelTo = (c: Channel, to: number) => {
-    commit([chanOp(c, {}, to)], t('b.rk.gestMove'));
+    // `to` is a row of the shown rack; filtered, it lands next to the shown channel it now sits by
+    const full = fullIndexFor(channels().map(x => x.id), chans().map(x => x.id), c.id, to);
+    commit([chanOp(c, {}, full)], t('b.rk.gestMove'));
     say(t('b.rk.moved', { name: c.name, n: to + 1, of: chans().length }));
     const top = to * RACK_ROW, h = size().h;
     if (top < scroll().y) setScroll(s => ({ ...s, y: top }));
@@ -363,6 +386,30 @@ function Rack(props: { z: number; docked?: boolean }) {
     if (e.altKey) return;
     if (e.key.toLowerCase() === 'g') { e.preventDefault(); e.stopPropagation(); toggleGraph(); }
   };
+  /** FL's filter-group menu: All, each group, the unsorted channels; rename or ungroup the shown group. */
+  const groupFilterMenu = (x: number, y: number) => {
+    const all = channels(), groups = rackGroups(all), f = rackFilter(), unsorted = all.filter(c => !c.group).length;
+    const items: MenuItem[] = [
+      { t: 'item', label: t('b.rk.groupAllN', { n: all.length }), checked: f == null, act: () => setRackFilter(null) },
+      ...groups.map((g): MenuItem => ({ t: 'item', label: `${g.name} (${g.n})`, checked: f === g.name, act: () => setRackFilter(g.name) })),
+    ];
+    if (groups.length) items.push({ t: 'item', label: t('b.rk.groupNoneN', { n: unsorted }), checked: f === '', disabled: !unsorted, act: () => setRackFilter('') });
+    else items.push({ t: 'sec', label: t('b.rk.groupHint') });
+    if (f) {
+      const members = all.filter(c => c.group === f);
+      items.push({ t: 'sep' },
+        { t: 'item', label: t('b.rk.groupRename', { name: f }), act: () => openRename(x, y, f, v => {
+          const g = cleanGroup(v); if (!g || g === f) return;
+          commit(members.map(c => chanOp(c, { group: g })), t('b.rk.groupRenameGest'));
+          setRackFilter(g); say(t('b.rk.groupRenamed', { from: f, to: g }));
+        }) },
+        { t: 'item', label: t('b.rk.groupUngroup', { name: f }), title: t('b.rk.groupUngroupTip'), act: () => {
+          commit(members.map(c => chanOp(c, { group: undefined })), t('b.rk.groupUngroupGest'));
+          setRackFilter(null); say(t('b.rk.groupUngrouped', { name: f, n: members.length }));
+        } });
+    }
+    openMenu(x, y, items);
+  };
   const notesCount = createMemo(() => { arrVersion(); return rawOf(pt()).notes.length; });
   // Shift+wheel over the title bar: previous / next pattern (FL). A plain wheel does nothing here, so
   // scrolling the channel list and drifting onto the title bar no longer switches the pattern
@@ -382,6 +429,12 @@ function Rack(props: { z: number; docked?: boolean }) {
         <span class="tile" style={{ width: '20px', height: '20px', background: pt().color + '2e', color: pt().color }}><Icon d={RACK_ICON} size={12} /></span>
         <span class="wintitle">Channel rack</span>
         <PatternChip pat={pt()} />
+        <button class={['chip groupchip', { on: rackFilter() != null }]} title={t('b.rk.groupTip')} aria-haspopup="menu"
+          onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); groupFilterMenu(r.left, r.bottom + 4); }}>
+          <Icon d="M3 5h18l-7 8v6l-4 2v-8z" size={11} />
+          <span>{rackFilter() == null ? t('b.rk.groupAll') : rackFilter() === '' ? t('b.rk.groupNone') : rackFilter()}</span>
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 2.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.3" /></svg>
+        </button>
         <div class="bars" title={t('b.rk.barsTitle')}>
           <button disabled={pt().len <= 4} onClick={() => removeBar(pt())} title={t('b.pm.removeBarTitle')}>−</button>
           <span class="mono">{barsText(pt().len / 4)}</span>
@@ -420,10 +473,12 @@ function Rack(props: { z: number; docked?: boolean }) {
         {/* always mounted (hidden when off) so its size is observed from the start */}
         <div class="lanerow" style={{ height: GRAPH_H + 'px', display: graph() ? 'flex' : 'none' }}>
             <div class="lanelab" style={{ width: RACK_LEFT + 'px' }}>
-              <div class="seg graphtabs">
-                <button class={{ on: graph() === 'vel' }} onClick={() => setU('rackGraph', 'vel')}>{t('b.rk.vel')}</button>
-                <button class={{ on: graph() === 'key' }} onClick={() => setU('rackGraph', 'key')}>{t('b.rk.key')}</button>
-              </div>
+              <LaneSwitch row label={t('b.rk.graphTitle')} value={graph() ?? 'vel'} onPick={id => setU('rackGraph', id)} items={[
+                { id: 'vel', cls: 'vel', label: t('b.pr.laneVel'), icon: LANE_ICONS.vel, tip: t('b.rk.velTip') },
+                { id: 'key', cls: 'key', label: t('b.rk.key'), icon: LANE_ICONS.key, tip: t('b.rk.keyTip') },
+                { id: 'pan', cls: 'pan', label: t('b.rk.pan'), icon: LANE_ICONS.pan, tip: panPlays() ? t('b.rk.panTip') : t('b.rk.panPlugin', { name: selCh()?.name ?? '' }), disabled: !panPlays() },
+                { id: 'shift', cls: 'shift', label: t('b.rk.shift'), icon: LANE_ICONS.shift, tip: t('b.rk.shiftTip') },
+              ]} />
               <div class="lanetitle"><span class="ell" style={{ color: selCh()?.color ?? 'var(--fg3)' }}>{selCh()?.name ?? '—'}</span></div>
             </div>
             <div ref={graphWrap} class="lanecv">
@@ -445,17 +500,11 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
   const c = () => props.c;
   const sel = () => isChannelSelected(c().id);
   const anySolo = () => channels().some(x => x.solo);
-  let vg: Gesture | null = null, pg: Gesture | null = null;
-  // one click opens the insert menu, a double-click goes to that insert in the mixer instead
-  let insTimer = 0;
-  onCleanup(() => clearTimeout(insTimer));
-  const insClick = (e: MouseEvent) => {
-    // FL: a double-click on a channel without its own insert gives it a free one (named and coloured after it)
-    if (insTimer) { clearTimeout(insTimer); insTimer = 0; if (c().insert == null) pickFreeInsert(chanInsertChoice(live())); else showInsert(c().insert); return; }
-    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    insTimer = window.setTimeout(() => { insTimer = 0; insertMenu(c(), r.left, r.bottom + 2); }, 250);
-  };
+  let vg: Tweak | null = null, pg: Tweak | null = null;
   const live = () => chanById(c().id) ?? c();
+  // one click opens the insert menu; a double-click gives a channel without its own insert a free
+  // one (FL, named and coloured after it), else goes to that insert in the mixer
+  const insClick = insertBoxClick(() => chanInsertChoice(live()), r => insertMenu(c(), r.left, r.bottom + 2));
   const volOp = (v: number) => chanOp(live(), { vol: Math.round(clamp(v, 0, 1) * 10000) / 10000 });
   const volT = () => ({ kind: 'chanVol' as const, id: c().id }), panT = () => ({ kind: 'chanPan' as const, id: c().id });
   const panOp = (v: number) => chanOp(live(), { pan: Math.round(clamp(v * 2 - 1, -1, 1) * 100) / 100 });
@@ -483,15 +532,15 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
         }}
         onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}>{c().solo && !c().mute ? 'S' : 'M'}</button>
       <MiniKnob key={'cp' + c().id} color="var(--pan)" t={() => ((autoDisplay(panT()) ?? c().pan) + 1) / 2} title={t('b.pe.panTitle', { v: panText(autoDisplay(panT()) ?? c().pan) })}
-        automated={() => isAutomated(panT())} onMenu={(x, y) => paramMenu(x, y, panT(), () => commit([panOp(0.5)], t('b.cw.panCh')), c().color)}
-        onStart={() => { pg = new Gesture(t('b.cw.panCh')); }} onChange={v => { pg?.update([panOp(v)]); say(c().name + ' · pan ' + panText(v * 2 - 1)); }}
+        automated={() => isAutomated(panT())} overridden={() => isOverridden(panT())} onMenu={(x, y) => paramMenu(x, y, panT(), () => commit([panOp(0.5)], t('b.cw.panCh')), c().color)}
+        onStart={() => { pg = autoTweak(panT(), t('b.cw.panCh'), v => [panOp(v)]); }} onChange={v => { pg?.move(v); say(c().name + ' · pan ' + panText(v * 2 - 1)); }}
         onEnd={() => { pg?.end(); pg = null; }} onReset={() => commit([panOp(0.5)], t('b.cw.panCh'))}
-        onWheel={v => commit([panOp(v)], t('b.cw.panCh'))} />
+        onWheel={v => autoWheel(panT(), 'cp' + c().id, t('b.cw.panCh'), v, vv => [panOp(vv)])} />
       <MiniKnob key={'cv' + c().id} t={() => autoDisplay(volT()) ?? c().vol} title={t('b.pe.volTitle', { v: volText(autoDisplay(volT()) ?? c().vol) })}
-        automated={() => isAutomated(volT())} onMenu={(x, y) => paramMenu(x, y, volT(), () => commit([volOp(VOL_UNITY)], t('b.cw.volCh')), c().color)}
-        onStart={() => { vg = new Gesture(t('b.cw.volCh')); }} onChange={v => { vg?.update([volOp(v)]); say(c().name + ' · ' + volText(v)); }}
+        automated={() => isAutomated(volT())} overridden={() => isOverridden(volT())} onMenu={(x, y) => paramMenu(x, y, volT(), () => commit([volOp(VOL_UNITY)], t('b.cw.volCh')), c().color)}
+        onStart={() => { vg = autoTweak(volT(), t('b.cw.volCh'), v => [volOp(v)]); }} onChange={v => { vg?.move(v); say(c().name + ' · ' + volText(v)); }}
         onEnd={() => { vg?.end(); vg = null; }} onReset={() => commit([volOp(VOL_UNITY)], t('b.cw.volCh'))}
-        onWheel={v => commit([volOp(v)], t('b.cw.volCh'))} />
+        onWheel={v => autoWheel(volT(), 'cv' + c().id, t('b.cw.volCh'), v, vv => [volOp(vv)])} />
       <button class={['cins', { auto: c().insert == null }]} title={insTitle(c())}
         onPointerDown={e => e.stopPropagation()} onClick={insClick}
         onWheel={e => wheelInsert(chanInsertChoice(c()), e)}>{insLabel(c())}</button>

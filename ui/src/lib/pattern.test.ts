@@ -4,7 +4,7 @@ import { applyAll } from './applyOps';
 import {
   migrateSamplerEnvelope,
   BEAT_GAP, cellsBetween, fitCw, gridW, stepAt, stepX, contentLen, duplicateRight, fillEvery, isRollRow, isStepOn, migrateProject, moveNotes, noteAt, resizeNotes,
-  rotate, samplerError, setKeyAt, setStep, setVelAt, snapStep, stepSpans, swingOffset, transpose,
+  rotate, samplerError, setKeyAt, setPanAt, setShiftAt, shiftOf, MAX_SHIFT, setStep, setVelAt, snapStep, stepSpans, swingOffset, transpose,
 } from './pattern';
 
 const KICK = 1000, BASS = 1003;
@@ -66,6 +66,20 @@ describe('step sequencer', () => {
     expect(isRollRow([{ ch: BASS, step: 0, len: 1, p: 40 }], bass)).toBe(false);
     expect(isRollRow([{ ch: BASS, step: 0, len: 1, p: 40 }, { ch: BASS, step: 0, len: 1, p: 43 }], bass)).toBe(true);
     expect(isRollRow([{ ch: BASS, step: 0.5, len: 1 }], bass)).toBe(true);
+  });
+  it('the graph editor pans and shifts a step; a shifted step stays a step', () => {
+    const row: Note[] = [{ ch: KICK, step: 2, len: 1, trig: true }, { ch: KICK, step: 3, len: 1 }, { ch: BASS, step: 2, len: 1, trig: true }];
+    const panned = setPanAt(row, KICK, 2, -0.5);
+    expect(panned.map(x => x.pan)).toEqual([-0.5, undefined, undefined]);
+    expect('pan' in setPanAt(panned, KICK, 2, 0.01)[0]).toBe(false); // centre clears it
+    const shifted = setShiftAt(setShiftAt(row, KICK, 2, 0.25), KICK, 3, 5);
+    expect(shifted.map(x => x.step)).toEqual([2.25, 3 + MAX_SHIFT, 2]);
+    expect(shiftOf(shifted[0])).toBeCloseTo(0.25);
+    expect(shifted[1].trig).toBe(true); // an old unflagged step becomes a trigger
+    expect(isRollRow(shifted, { ...bass, id: KICK })).toBe(false);
+    // shifting again or back works from the cell, not from where the note sits now
+    expect(setShiftAt(shifted, KICK, 2, 0)[0].step).toBe(2);
+    expect(setShiftAt(shifted, KICK, 3, 0.5)[1].step).toBe(3.5);
   });
   it('keeps a step row with triplet triggers written in the Piano roll as steps', () => {
     const trip = [12, 12 + 2 / 3, 12 + 4 / 3].map(step => ({ ch: BASS, step, len: 2 / 3, trig: true }));

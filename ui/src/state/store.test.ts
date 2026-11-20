@@ -47,7 +47,7 @@ function project(over: Partial<Project> = {}): Project {
 function dto(p: Project, over: Partial<StateDto> = {}): StateDto {
   return {
     project: p, revision: 1, canUndo: false, canRedo: false, undoLabel: null, redoLabel: null, path: null, dirty: false,
-    transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0 },
+    transport: { playing: false, rec: false, monitor: false, metro: false, countIn: true, startBeat: 0, recAudio: true, recNotes: true, recQuantize: 0, recAutomation: true, recAutoLatch: false },
     ...over,
   };
 }

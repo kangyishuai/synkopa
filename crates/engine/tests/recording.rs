@@ -383,15 +383,18 @@ fn stopping_on_the_wrap_keeps_the_delayed_last_sample_of_each_pass() {
 fn the_recording_filter_leaves_audio_out_and_keeps_one_kind_on() {
     let e = engine(unarmed(&[], 0.0), "filter");
     // notes only: the input's audio is not taken
-    let t = e.set_rec_filter(Some(false), None);
+    let t = e.set_rec_filter(Some(false), None, None, None);
     assert!(!t.rec_audio && t.rec_notes);
     record_second(&e);
     assert_eq!(take_track(&e.project()), None, "audio was recorded with Audio unticked");
-    // unticking the last kind leaves it on
-    let t = e.set_rec_filter(None, Some(false));
-    assert!(!t.rec_audio && t.rec_notes, "the filter must keep one kind on");
+    // unticking the last input kind is refused while automation is off too: one kind stays on
+    let t = e.set_rec_filter(None, Some(false), Some(false), None);
+    assert!(!t.rec_audio && t.rec_notes, "with automation off, the filter keeps one input kind on");
+    // with automation capturing, both input kinds may rest
+    let t = e.set_rec_filter(None, Some(false), Some(true), None);
+    assert!(!t.rec_audio && !t.rec_notes && t.rec_automation, "automation alone may capture");
     // audio back on: it records again
-    e.set_rec_filter(Some(true), None);
+    e.set_rec_filter(Some(true), None, None, None);
     record_second(&e);
     assert_eq!(take_track(&e.project()), Some(0));
 }
@@ -425,7 +428,7 @@ fn a_notes_only_take_refuses_new_project_too() {
     let e = engine(p, "newproj-notes");
     let mut rt = e.create_rt(SR as f32, BLOCK);
     e.set_transport(None, Some(false), Some(true), None); // record on
-    e.set_rec_filter(Some(false), Some(true)); // notes only: no audio take, `c.take` stays None
+    e.set_rec_filter(Some(false), Some(true), None, None); // notes only: no audio take, `c.take` stays None
     e.play(0.0);
     let mut at = 0;
     feed(&mut rt, &mut at, BLOCK * 4, &|_| 0.0);

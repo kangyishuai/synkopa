@@ -23,7 +23,7 @@ import { NOTE_NAMES, noteName } from '../lib/pitch';
 const setKeyOp = (key: number, scale: number) => ({ op: 'setKey' as const, key, scale });
 import {
   applyProps, fitRange, fmtLen, fmtStart, followPage, invertSelection, legato, MAX_STEP, nudgeNotes, nudgeVelocity, panLine, pasteStart, velocityLine,
-  parseKey, parseLen, parseStart, parseVel, quantizeStarts, readProps, wheelNotches, parsePan, sharedPan,
+  parseKey, parseLen, parseStart, quantizeStarts, readProps, wheelNotches,
 } from '../lib/rollEdit';
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { audition, chanKindLabel, channels, closeRoll, curPat, moveNotesToNewPattern, patFrom, patLoopOf, patMode, patPlayhead, patStartOf, putNotes, rollFront, selChan,
@@ -32,6 +32,8 @@ import { audition, chanKindLabel, channels, closeRoll, curPat, moveNotesToNewPat
 import { arrVersion, rawOf, S } from '../state/store';
 import { openMenu, say, setU, U } from '../state/ui';
 import { ChipSelect, ToolSeg, type ChipOption } from '../ui/EditorBar';
+import { Knob } from '../ui/Knob';
+import { LANE_ICONS, LaneSwitch } from '../ui/LaneSwitch';
 import { selectionSpan, vocalsUnder } from '../lib/melody';
 import { fmtPos } from '../lib/format';
 import { openPitchEditor, seekSong, switchMode } from '../state/actions';
@@ -42,12 +44,14 @@ import { noteClip, setNoteClip } from '../state/noteClipboard';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
 import { drawRollLane, drawRoll, rollX, rollY, type RollGeo } from './patternDraw';
+import { noteEndNear, onNoteEdge } from './roll/edge';
 import { patGeom, PatternChip, useDataVersion, useSize } from './patternShared';
 import { PanelFrame, WinControls } from './PanelFrame';
 import { paneDock } from '../state/docking';
 import { KW, type RollCtx, type RollPtr, type Tool } from './roll/types';
 import { rollDown, rollMove } from './roll/grid';
 import { buildTransformOp, TOOL_META, type ToolId } from './roll/noteTools';
+import type { TransformVerb } from '../api/types';
 import { STAMP_INVS, STAMP_TYPES } from './roll/stamp';
 
 const LANE_H = 92;
@@ -88,6 +92,10 @@ const setLastLen = (len: number, trig = false) => { setLastLenRaw(len); setLastT
 /** Velocity of the last note touched: new notes take it, like the length (FL). 1 = full, stored as none. */
 const [lastVel, setLastVel] = createSignal(1);
 const [rollTool, setRollTool] = createSignal<Tool>('draw');
+/** FL's slide toggle (S): notes drawn while it is on are slide notes. */
+const [slideMode, setSlideMode] = createSignal(false);
+/** FL's slide icon: a ramp triangle. */
+const SLIDE_ICON = 'M4 19h16V6z';
 /** The stamp picker: chord type and inversion for the stamp tool (a click writes the
  * chord rooted at the clicked key). */
 const [stampType, setStampType] = createSignal('min');
@@ -253,7 +261,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     const g = laneCv.getContext('2d')!, dpr = window.devicePixelRatio || 1;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     const G = geo();
-    drawRollLane(g, w, h, { x0: KW, pps: G.pps, sx: G.sx, steps: G.steps, notes: chanNotes(), sel: sel(), muted: ch().mute, mode: lane() });
+    drawRollLane(g, w, h, { x0: KW, pps: G.pps, sx: G.sx, steps: G.steps, notes: chanNotes().filter(x => !x.n.slide), sel: sel(), muted: ch().mute, mode: lane() }); // a slide note has no level or pan of its own
   };
   let rafMain = 0, rafVel = 0;
   effect(() => {
@@ -401,7 +409,8 @@ function Roll(props: { z: number; docked?: boolean }) {
     }
     return -1;
   };
-  const edgeHit = (i: number, x: number) => { const n = notesRaw()[i], G = geo(); const width = noteWidth(n, G.pps); return x >= rollX(G, n.step) + width - Math.min(6, width * 0.4); };
+  const edgeHit = (i: number, x: number) => { const n = notesRaw()[i], G = geo(); return onNoteEdge(x, rollX(G, n.step), noteWidth(n, G.pps)); };
+  const edgeAfter = (key: number, x: number) => { const G = geo(); return noteEndNear(notesRaw(), ch().id, rawOf(ch()), key, x, s => rollX(G, s), G.pps); };
   const commitNotes = (notes: Note[], label: string) => commit([putNotes(pt(), notes)], label);
 
   /** Views to go back to (Ctrl+right-click), newest last. */
@@ -437,11 +446,12 @@ function Roll(props: { z: number; docked?: boolean }) {
   const ctx: RollCtx = {
     pt: () => pt(), ch: () => rawOf(ch()), notes: notesRaw, chanNotes: () => chanNotes(), chans: chansMap,
     geo, snap: () => snapNow(),
-    hit: hitNote, edgeHit, ghostAt,
+    hit: hitNote, edgeHit, edgeAfter, ghostAt,
     tool: () => rollTool(),
     sel: () => sel(), setSel,
     lastLen: () => lastLen(), lastTrig: () => lastTrig(), setLastLen,
     lastVel: () => lastVel(), setLastVel,
+    slideMode: () => slideMode() && slidePlays(),
     commitNotes,
     notesOp: notes => putNotes(pt(), [...notes]),
     gest: label => new Gesture(label),
@@ -521,6 +531,13 @@ function Roll(props: { z: number; docked?: boolean }) {
   };
   // a note's own pan is played by sampler and Synkopa Keys channels; a synth or plugin channel has the lane on velocity only
   const panPlays = () => ch().kind !== 'plugin';
+  /** Slide notes bend the built-in instruments; a plugin is never told (as in FL). */
+  const slidePlays = () => ch().kind !== 'plugin';
+  const toggleSlide = () => {
+    if (!slidePlays()) return say(t('b.pr.slideNoPlugin'));
+    const on = !slideMode(); setSlideMode(on);
+    say(t(on ? 'b.pr.slideOn' : 'b.pr.slideOff'));
+  };
   const lane = () => (panPlays() ? laneMode() : 'vel');
   const laneDown = (e: PointerEvent) => {
     if (pan(e, false)) { dragging = true; return; } // middle-drag: scroll time, as on the grid
@@ -548,7 +565,7 @@ function Roll(props: { z: number; docked?: boolean }) {
   const laneHover = (e: PointerEvent) => {
     if (e.buttons) return;
     const r = laneCv.getBoundingClientRect(), G = geo(), step = (e.clientX - r.left - KW + G.sx) / G.pps, tol = Math.max(0.25, 5 / G.pps);
-    const at = chanNotes().filter(x => Math.abs(x.n.step - step) <= tol).sort((a, b) => keyOf(b.n, ch()) - keyOf(a.n, ch()));
+    const at = chanNotes().filter(x => !x.n.slide && Math.abs(x.n.step - step) <= tol).sort((a, b) => keyOf(b.n, ch()) - keyOf(a.n, ch()));
     if (!at.length) return;
     const val = (n: Note) => (lane() === 'pan' ? panText(n.pan ?? 0) : Math.round(velOf(n) * 100) + '%');
     say(at.slice(0, 6).map(x => noteName(keyOf(x.n, ch())) + ' ' + val(x.n)).join(' · ') + (at.length > 6 ? ' …' : '')
@@ -579,6 +596,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     const tl = TOOLS.find(x => x.key === k);
     const stop = () => { e.preventDefault(); e.stopPropagation(); };
     if (tl && !m && !e.altKey) { stop(); setRollTool(tl.id); say(t('b.pe.rollTool', { tool: t(tl.label) })); return; }
+    if (k === 's' && !m && !e.altKey && !e.shiftKey) { stop(); toggleSlide(); return; }
     if (m && k === 'a') { stop(); setSel(new Set(chanNotes().map(x => x.i))); say(t('b.pe.selected', { x: notesText(chanNotes().length) })); return; }
     // Shift+I: invert the selection within the channel
     if (e.shiftKey && !m && !e.altKey && e.code === 'KeyI') {
@@ -616,6 +634,29 @@ function Roll(props: { z: number; docked?: boolean }) {
         commitNotes(r.notes, t('b.pr.legato'));
         say(t('b.pr.legatoDone', { x: notesText(r.changed) }));
       }
+      return;
+    }
+    // FL: Ctrl+U quick chop (pieces one snap step long), Ctrl+G glue; Alt+U / Alt+A open the chop / arpeggiator tool
+    if (m && !e.shiftKey && !e.altKey && (k === 'u' || k === 'g')) {
+      stop();
+      if (!chanNotes().length) return;
+      const grid = rollSnapName(snapNow()) ?? '1/16';
+      const verb: TransformVerb = k === 'u' ? { kind: 'chop', len: Math.max(0.25, snapNow() || 1) } : { kind: 'glue' };
+      const before = chanNotes().length;
+      commit([{ op: 'transformNotes', pattern: pt().id, verb, select: s.length ? { kind: 'indices', indices: [...s].sort((a, b) => a - b) } : { kind: 'range', from: 0, to: 1e9, ch: ch().id } }],
+        t(k === 'u' ? 'b.pr.tool.chop' : 'b.pr.tool.glue'));
+      // the edit applies locally at once (the engine confirms it), so the count is already the new one
+      const after = chanNotes().length;
+      say(k === 'u' ? (after > before ? t('b.pr.chopped', { grid, x: notesText(after) }) : t('b.pr.chopNone', { grid }))
+        : (after < before ? t('b.pr.glued', { x: notesText(before - after) }) : t('b.pr.glueNone')));
+      setSel(new Set<number>());
+      return;
+    }
+    if (e.altKey && !m && !e.shiftKey && (k === 'u' || k === 'a')) {
+      stop();
+      const id: ToolId = k === 'u' ? 'chop' : 'arp';
+      setToolId(id); setVals(TOOL_META[id].fields.map(f => (id === 'chop' && f.kind === 'num' ? Math.max(0.25, snapNow() || 1) : f.def)));
+      setToolsOpen(true);
       return;
     }
     // Ctrl+Shift+X: cut the selection out to a new pattern, in place (the playlist keeps it)
@@ -687,13 +728,54 @@ function Roll(props: { z: number; docked?: boolean }) {
   /** The note properties popover, under the clicked note (above it near the bottom). */
   function PropsPop(pp: { idx: number[] }) {
     let box!: HTMLDivElement, first!: HTMLInputElement;
+    // FL's note properties: knobs act at once (one undo step per turn), Reset puts back what the notes
+    // were when the box opened, Accept (Enter) applies the typed fields and closes, Esc closes as it was
+    const orig = notesRaw().slice();
     const init = readProps(notesRaw(), pp.idx, rawOf(ch()));
-    const shown = { vel: init.vel == null ? '' : String(init.vel), start: fmtStart(init.start), len: init.len == null ? '' : fmtLen(init.len), key: noteName(init.key),
-      pan: (p => (p == null ? '' : panText(p)))(sharedPan(notesRaw(), pp.idx)) };
+    const shown = { start: fmtStart(init.start), len: init.len == null ? '' : fmtLen(init.len), key: noteName(init.key) };
     const [err, setErr] = createSignal('');
-    const W = 236, H = (pp.idx.length > 1 ? 196 : 176) + (pp.idx.some(i => notesRaw()[i]?.trig) ? 27 : 0) + (panPlays() ? 27 : 0);
+    const picked = () => pp.idx.map(i => notesRaw()[i]).filter(Boolean);
+    /** The double-clicked note: the knobs show its values and set every picked note to them (FL). */
+    const lead = () => notesRaw()[pp.idx[pp.idx.length - 1]] ?? orig[pp.idx[pp.idx.length - 1]];
+    const slides = () => picked().filter(n => n.slide).length;
+    const allSlide = () => slides() === picked().length;
+    // a slide note makes no sound of its own: it has no level or pan
+    const levels = () => !allSlide(), pans = () => panPlays() && !allSlide();
+    const differ = (f: (n: Note) => number) => new Set(picked().filter(n => !n.slide).map(f)).size > 1;
+    let g: Gesture | null = null;
+    const setAll = (f: (n: Note) => Note, label: string) => {
+      const ids = new Set(pp.idx);
+      const notes = notesRaw().map((n, i) => (ids.has(i) && !n.slide ? f(n) : n));
+      if (g) g.update([putNotes(pt(), notes)]); else commitNotes(notes, label);
+    };
+    const withVel = (n: Note, v: number): Note => { const { v: _v, ...rest } = n; return v < 0.995 ? { ...rest, v: Math.round(v * 1000) / 1000 } : rest; };
+    const withPan = (n: Note, p: number): Note => { const { pan: _p, ...rest } = n; return Math.abs(p) > 0.005 ? { ...rest, pan: Math.round(p * 100) / 100 } : rest; };
+    const knob = (k: 'vel' | 'pan') => {
+      const isVel = k === 'vel', label = t(isVel ? 'b.pr.pVel' : 'b.pr.pPan');
+      const val = () => (isVel ? velOf(lead()) : (lead().pan ?? 0));
+      const set = (x: number) => setAll(n => (isVel ? withVel(n, x) : withPan(n, x * 2 - 1)), label);
+      return (
+        <Knob key={'np' + k} size="md" label={isVel ? 'VEL' : 'PAN'} title={label + (pp.idx.length > 1 ? ' — ' + t('b.pr.propsAll') : '')}
+          t={() => (isVel ? val() : (val() + 1) / 2)} zero={isVel ? undefined : () => 0.5}
+          text={() => (differ(n => Math.round((isVel ? velOf(n) : (n.pan ?? 0)) * 100)) ? t('b.pr.pMixed') : isVel ? Math.round(val() * 100) + '%' : panText(val()))}
+          color={isVel ? undefined : 'var(--pan)'}
+          onStart={() => { g = new Gesture(label); }} onChange={set} onEnd={() => { g?.end(); g = null; }}
+          onReset={() => set(isVel ? 1 : 0.5)} onWheel={set} />
+      );
+    };
+    const setSlide = (on: boolean) => {
+      const ids = new Set(pp.idx);
+      // a slide note is held for its length (it sets the glide time): a step trigger becomes a held note
+      commitNotes(notesRaw().map((n, i) => {
+        if (!ids.has(i)) return n;
+        const { slide: _s, ...rest } = n;
+        return on ? { ...rest, slide: true, ...(n.trig ? { trig: false } : {}) } : rest;
+      }), t(on ? 'b.pr.toSlide' : 'b.pr.toNormal'));
+      say(t(on ? 'b.pr.slideSet' : 'b.pr.slideCleared', { x: notesText(pp.idx.length) }));
+    };
+    const W = 252, H = 26 + (pp.idx.length > 1 ? 18 : 0) + 72 + 3 * 27 + (pp.idx.some(i => notesRaw()[i]?.trig) ? 27 : 0) + 36 + 18;
     const place = () => {
-      const n = notesRaw()[pp.idx[pp.idx.length - 1]], G = geo(), { w, h } = size();
+      const n = lead(), G = geo(), { w, h } = size();
       if (!n) return { left: 0, top: 0 };
       const x = rollX(G, n.step), y = rollY(G, keyOf(n, ch()));
       const below = y + G.rowH + 4;
@@ -701,28 +783,30 @@ function Roll(props: { z: number; docked?: boolean }) {
     };
     // the window takes the keyboard back (found before the popover leaves the DOM)
     const close = () => { const w = box.closest<HTMLElement>('.win'); setPropsFor(null); w?.focus({ preventScroll: true }); };
-    const apply = () => {
-      const val = (name: string) => (box.querySelector(`[name=${name}]`) as HTMLInputElement).value.trim();
-      const ch0: { vel?: number; len?: number; start?: number; key?: number; pan?: number } = {};
+    const changed = () => notesRaw().length !== orig.length || notesRaw().some((n, i) => n !== orig[i]);
+    const reset = () => { if (changed()) { commitNotes(orig.slice(), t('b.pr.pReset')); say(t('b.pr.pResetDone')); } setErr(''); };
+    const cancel = () => { reset(); close(); };
+    const accept = () => {
+      const val = (name: string) => (box.querySelector(`[name=${name}]`) as HTMLInputElement | null)?.value.trim() ?? '';
+      const ch0: { len?: number; start?: number; key?: number } = {};
       const bad = (msg: string, name: string) => { setErr(msg); say(msg); (box.querySelector(`[name=${name}]`) as HTMLInputElement).select(); };
       // a field left as shown (or empty when the notes differ) changes nothing
-      const v = val('vel'), s = val('start'), l = val('len'), k = val('key');
-      if (v && v !== shown.vel) { const x = parseVel(v); if (x == null) return bad(t('b.pr.pBadVel'), 'vel'); ch0.vel = x; }
+      const s = val('start'), l = val('len'), k = val('key');
       if (s && s !== shown.start) { const x = parseStart(s); if (x == null) return bad(t('b.pr.pBadStart'), 'start'); ch0.start = x; }
       if (l && l !== shown.len) { const x = parseLen(l); if (x == null) return bad(t('b.pr.pBadLen'), 'len'); ch0.len = x; }
       if (k && k !== shown.key) { const x = parseKey(k); if (x == null) return bad(t('b.pr.pBadKey'), 'key'); ch0.key = x; }
-      if (panPlays()) { const p = val('pan'); if (p && p !== shown.pan) { const x = parsePan(p); if (x == null) return bad(t('b.pr.pBadPan'), 'pan'); ch0.pan = x; } }
-      if (!Object.keys(ch0).length) return close();
-      const notes = applyProps(notesRaw(), pp.idx, rawOf(ch()), ch0);
-      if (!notes) { setErr(t('b.pr.pRange')); say(t('b.pr.pRange')); return; }
-      commitNotes(notes, t('b.pr.props'));
-      if (ch0.len != null) setLastLen(ch0.len);
-      say(t('b.pr.pDone', { x: notesText(pp.idx.length) }));
+      if (Object.keys(ch0).length) {
+        const notes = applyProps(notesRaw(), pp.idx, rawOf(ch()), ch0);
+        if (!notes) { setErr(t('b.pr.pRange')); say(t('b.pr.pRange')); return; }
+        commitNotes(notes, t('b.pr.props'));
+        if (ch0.len != null) setLastLen(ch0.len);
+      }
+      if (Object.keys(ch0).length || changed()) say(t('b.pr.pDone', { x: notesText(pp.idx.length) }));
       close();
     };
     onMount(() => setTimeout(() => { first.focus(); first.select(); }, 0));
-    const field = (name: 'vel' | 'start' | 'len' | 'key' | 'pan', label: string, tip: string | undefined, ref?: (el: HTMLInputElement) => void) => {
-      // a plain local: the value is written once, so a placeholder update (an edit, the language) keeps what is typed
+    const field = (name: 'start' | 'len' | 'key', label: string, tip: string, ref?: (el: HTMLInputElement) => void) => {
+      // a plain local: the value is written once, so a placeholder update (an edit, a knob turn, the language) keeps what is typed
       const value = shown[name];
       return (
         <label class="rpf" title={tip}>
@@ -736,14 +820,26 @@ function Roll(props: { z: number; docked?: boolean }) {
         onPointerDown={e => e.stopPropagation()} onWheel={e => e.stopPropagation()}
         onKeyDown={e => {
           e.stopPropagation(); // typed text never reaches the roll's shortcuts or the playlist
-          if (e.key === 'Enter') { e.preventDefault(); apply(); }
-          if (e.key === 'Escape') { e.preventDefault(); close(); }
+          if (e.key === 'Enter') { e.preventDefault(); accept(); }
+          if (e.key === 'Escape') { e.preventDefault(); cancel(); }
         }}>
-        <div class="mt">{pp.idx.length > 1 ? t('b.pr.props') + ' · ' + notesText(pp.idx.length) : t('b.pr.props')}</div>
+        <div class="mt rphead">
+          <span>{t('b.pr.props')}</span>
+          <span class="rpwhat">{pp.idx.length > 1 ? notesText(pp.idx.length) : noteName(keyOf(lead(), ch()))}</span>
+          <button class="rpx" type="button" title={t('b.pr.pCancelTip')} onClick={cancel}>×</button>
+        </div>
         <Show when={pp.idx.length > 1}><div class="rpnote">{t('b.pr.propsN', { x: notesText(pp.idx.length) })}</div></Show>
-        {field('vel', t('b.pr.pVel'), undefined, el => (first = el))}
-        <Show when={panPlays()}>{field('pan', t('b.pr.pPan'), t('b.pr.pPanTip'))}</Show>
-        {field('start', t('b.pr.pStart'), t('b.pr.pStartTip'))}
+        <div class="rpknobs">
+          <Show when={pans()}>{knob('pan')}</Show>
+          <Show when={levels()}>{knob('vel')}</Show>
+          <Show when={!levels()}><span class="rpsilent">{t('b.pr.pSlideSilent')}</span></Show>
+          <div style={{ flex: 1 }} />
+          <Show when={slidePlays()}>
+            <button type="button" class={['rpled', { on: allSlide(), part: slides() > 0 && !allSlide() }]} aria-pressed={allSlide() ? 'true' : 'false'} title={t('b.pr.pSlideTip')}
+              onClick={() => setSlide(!allSlide())}><i />{t('b.pr.pSlide')}</button>
+          </Show>
+        </div>
+        {field('start', t('b.pr.pStart'), t('b.pr.pStartTip'), el => (first = el))}
         {field('len', t('b.pr.pLen'), t('b.pr.pLenTip'))}
         <Show when={pp.idx.some(i => notesRaw()[i]?.trig)}>
           <button class="smallbtn" type="button" title={t('b.pr.triggerTip')} onClick={() => {
@@ -753,7 +849,11 @@ function Roll(props: { z: number; docked?: boolean }) {
           }}>{t('b.pr.toHeld')}</button>
         </Show>
         {field('key', t('b.pr.pKey'), t('b.pr.pKeyTip'))}
-        <div class={["rpfoot", { err: !!err() }]}>{err() || t('b.pr.pFoot')}</div>
+        <div class="rpbtns">
+          <button class="smallbtn" type="button" title={t('b.pr.pResetTip')} disabled={!changed()} onClick={reset}>{t('b.pr.pReset')}</button>
+          <button class="smallbtn primary" type="button" title={t('b.pr.pAcceptTip')} onClick={accept}>{t('b.pr.pAccept')}</button>
+        </div>
+        <div class={['rpfoot', { err: !!err() }]}>{err() || t('b.pr.pFoot')}</div>
       </div>
     );
   }
@@ -773,6 +873,12 @@ function Roll(props: { z: number; docked?: boolean }) {
       <div class="ptools">
         <ToolSeg label={t('a.pl.toolsLabel')} value={rollTool()} onPick={(id, el) => { setRollTool(id); backToRoll(el); }}
           tools={TOOLS.map(tl => ({ id: tl.id, icon: tl.icon, title: t(tl.label) + ' (' + tl.key.toUpperCase() + ') — ' + t(tl.tip) }))} />
+        <div class="seg tools">
+          <button class={['slidetog', { on: slideMode() && slidePlays() }]} aria-pressed={slideMode() && slidePlays() ? 'true' : 'false'} disabled={!slidePlays()}
+            title={slidePlays() ? t('b.pr.slideTip') : t('b.pr.slideNoPlugin')} onClick={e => { toggleSlide(); backToRoll(e.currentTarget); }}>
+            <Icon d={SLIDE_ICON} size={14} />
+          </button>
+        </div>
         <div class="vsep" />
         <ChipSelect label="Snap" title={rollSnap() < 0 ? t('a.tb.snapTipAuto', { unit: rollSnapName(snapNow()) ?? '' }) : t('b.pe.snapTitle')} value={String(rollSnap())}
           options={[['auto', '-1'], ...ROLL_SNAPS.map(([l, v]): ChipOption => [l, String(v)])]} group={{ label: t('b.pe.snapTriplets'), options: ROLL_SNAPS_TRIPLET.map(([l, v]) => [l, String(v)]) }}
@@ -889,14 +995,10 @@ function Roll(props: { z: number; docked?: boolean }) {
         <div ref={laneWrap} class="lanecv">
           <canvas ref={laneCv} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', 'touch-action': 'none', cursor: 'ns-resize' }}
             onPointerDown={laneDown} onPointerMove={laneHover} onContextMenu={e => e.preventDefault()} />
-<div class="laneswitch" role="radiogroup" aria-label={t('b.pr.laneTarget')}>
-            <button role="radio" class={['vel', { on: lane() === 'vel' }]} aria-checked={lane() === 'vel' ? 'true' : 'false'} title={t('b.pr.laneVelTip')} onClick={e => { setLaneMode('vel'); backToRoll(e.currentTarget); }}>
-              <Icon d="M5 20v-6 M12 20V9 M19 20V4" size={12} sw={2.4} /><span>{t('b.pr.laneVel')}</span>
-            </button>
-            <button role="radio" class={['pan', { on: lane() === 'pan' }]} aria-checked={lane() === 'pan' ? 'true' : 'false'} disabled={!panPlays()} title={t(panPlays() ? 'b.pr.lanePanTip' : 'b.pr.lanePanOff')} onClick={e => { setLaneMode('pan'); backToRoll(e.currentTarget); }}>
-              <Icon d="M9 7l-5 5 5 5 M15 7l5 5-5 5" size={12} sw={2.4} /><span>{t('b.pr.lanePan')}</span>
-            </button>
-          </div>
+<LaneSwitch label={t('b.pr.laneTarget')} value={lane()} onPick={(id, el) => { setLaneMode(id); backToRoll(el); }} items={[
+            { id: 'vel', cls: 'vel', label: t('b.pr.laneVel'), icon: LANE_ICONS.vel, tip: t('b.pr.laneVelTip') },
+            { id: 'pan', cls: 'pan', label: t('b.pr.lanePan'), icon: LANE_ICONS.pan, tip: t(panPlays() ? 'b.pr.lanePanTip' : 'b.pr.lanePanOff'), disabled: !panPlays() },
+          ]} />
         </div>
       </div>
       <div class="pstatus mono">

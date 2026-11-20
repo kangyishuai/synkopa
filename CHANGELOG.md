@@ -4,6 +4,46 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **Channel groups in the Channel Rack, as FL's filter groups.** Right-click a channel → Group to
+  put it in Drums, Bass or a new group; the filter at the rack's top shows every channel, one group or
+  the unsorted ones (hidden channels keep playing). Channels added while a group is shown join it, and
+  a group can be renamed or ungrouped from the filter. `synkopa channels --ch Kick --group Drums`
+  does the same from the command line.
+- **Pan and shift per step in the Channel Rack's graph editor**, as in FL Studio. Next to
+  Velocity and Key, Pan places each step left or right, and Shift starts a step a little later
+  inside its cell, for pushed hats, flams and hand-made swing. Alt+click puts a step back.
+- **Drag a track header to reorder Playlist tracks.** Grab a track's header and drag it up or down;
+  a line shows where it lands and the view scrolls at its edges. The track takes its clips, name,
+  colour, volume, routing and takes along, in one undo step; Esc puts it back.
+- **File → Open recent.** The last ten projects you opened or saved, newest first, one click away.
+  Two projects with the same name show their folders. A project that was moved or deleted is
+  shown as missing, and "Remove missing projects" and "Clear list" tidy the list. Opening one
+  asks about unsaved changes first, like Open.
+- **Chop, glue and arpeggiate in the Piano roll, as in FL Studio.** Ctrl+U chops the selected
+  notes (or every note of the channel) into pieces one snap step long, for rolls, stutters and
+  hi-hat or 808 rhythms; Ctrl+G glues touching notes of the same key back into one. The
+  arpeggiator (Alt+A, or Tools → Arpeggiate) turns chords into a run of their notes up, down,
+  up and down or at random, with the step, note length and octave range you choose; Alt+U opens
+  the chop tool with a piece length of your choice. Each is one undo step, and the same tools
+  work from the command line (`synkopa notes chop|glue|arp`).
+- **Slide notes, as in FL Studio.** Turn on Slide in the Piano roll (the glide button next to the
+  tools, or S) and the notes you draw become slide notes: they make no sound of their own, they
+  bend the notes already playing to their key, and their length is the glide time. An 808 can now
+  jump an octave and back in one held note. A slide note is drawn darker, with a triangle at its start; double-click
+  a note to switch Slide on or off. Works on samplers, Synkopa Keys and the Synth; plugin
+  instruments ignore slide notes, so the button is greyed out for them.
+
+### Changed
+- **The clip menu says what Rename and the colours change.** "Rename pattern…" (sample, automation) and
+  "Colour of the pattern · 3 clips" make clear that every clip of it follows; the tooltip points to
+  Make unique for changing one copy only.
+- **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
+  from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
+  stops a preview wherever the keyboard is.
+
 ## 0.9.30 — 2026-11-19
 
 ### Added

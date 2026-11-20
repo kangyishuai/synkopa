@@ -59,6 +59,8 @@ export interface RollCtx {
   hit(step: number, key: number): number;
   /** True when `x` is on note `i`'s drag-right edge (resize). */
   edgeHit(i: number, x: number): boolean;
+  /** Over empty grid: the channel's note on row `key` whose end is just left of `x`, or −1. */
+  edgeAfter(key: number, x: number): number;
   /** Index of another channel's note (a ghost) under (step, key), or −1. */
   ghostAt(step: number, key: number): number;
   // the active pointer tool
@@ -71,6 +73,8 @@ export interface RollCtx {
   lastLen(): number;
   lastTrig(): boolean;
   setLastLen(len: number, trig?: boolean): void;
+  /** Slide mode (S): new notes are slide notes. */
+  slideMode(): boolean;
   lastVel(): number;
   setLastVel(v: number): void;
   // edits: a finished change (one undo step), an op for a gesture's update, a new gesture
@@ -138,8 +142,9 @@ export const velProp = (c: RollCtx) => (c.lastVel() < 0.995 ? { v: c.lastVel() }
  * step, a step trigger (no note-off) occupying one grid cell at most, so a triplet drawn among
  * the hats stays a step and the rack keeps showing the row as steps.
  */
-export const noteShape = (c: RollCtx): { len: number; trig: boolean } =>
-  c.lastTrig() ? { len: Math.min(1, c.snap() || 1), trig: true } : { len: c.lastLen(), trig: false };
+export const noteShape = (c: RollCtx): { len: number; trig: boolean; slide?: true } =>
+  c.slideMode() ? { len: c.lastLen(), trig: false, slide: true }
+    : c.lastTrig() ? { len: Math.min(1, c.snap() || 1), trig: true } : { len: c.lastLen(), trig: false };
 
 /** The snap unit the pointer's Alt picks: Alt = free, else the grid snap. */
 export const unitOf = (c: RollCtx, m: { alt: boolean }) => (m.alt ? 0 : c.snap());

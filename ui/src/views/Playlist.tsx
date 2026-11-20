@@ -31,7 +31,7 @@ import { PlaylistTools } from './PlaylistTools';
 import type { ZRange } from '../lib/zoomBar';
 import { laneOverlaps } from '../lib/overlaps';
 import { damageRects, followScroll, planTile, snapPx, type Rect, type Tile } from './playlistTile';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, isAutomated, paramMenu } from '../state/automation';
 import { autoValueText, parseAutoValue, cyclesOf, stairsOf } from '../lib/automation';
 import { addPoint, deletePoints, dragTension, hitEnv, insetGeom, movePoints, pointsInBox, setShape, type EnvHit } from '../lib/envEdit';
 import { autoById } from '../state/store';
@@ -139,6 +139,39 @@ export function Playlist() {
     t.push(y); return t;
   });
   const [bndHover, setBndHover] = createSignal<{ clipId: Id; i: number } | null>(null);
+  // dragging a lane header: past a few px it lifts; the line shows the gap it lands in, the view
+  // scrolls at its top and bottom edge, Esc puts it back
+  laneDragStart = (e, from) => {
+    const col = (e.currentTarget as HTMLElement).closest<HTMLElement>('.lanesCol');
+    if (!col) return;
+    const y0 = e.clientY;
+    let lifted = false, cancelled = false, to = from;
+    const run = (ev: PointerEvent) => {
+      if (cancelled) return;
+      if (!lifted) { if (Math.abs(ev.clientY - y0) < 5) return; lifted = true; dragCursor('grabbing'); }
+      const y = ev.clientY - col.getBoundingClientRect().top, ts = tops(), n = S.project.tracks.length;
+      // the gap nearest the pointer: 0 = above the first lane, n = below the last
+      let gap = 0;
+      for (let k = 1; k <= n; k++) if (Math.abs(ts[k] - y) < Math.abs(ts[gap] - y)) gap = k;
+      to = gap > from ? gap - 1 : gap;
+      setLaneDrag({ from, to, y: ts[gap] });
+      say(to === from ? tl('a.pl.dragTrackSame') : tl('a.pl.dragTrackTo', { name: S.project.tracks[from].name, n: to + 1 }));
+    };
+    const es = edgeScroller(() => scrollEl.getBoundingClientRect(), (_dx, dy) => { const b = scrollEl.scrollTop; scrollEl.scrollTop += dy; return scrollEl.scrollTop !== b; }, run, { y: true });
+    const esc = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Escape' || !lifted) return;
+      ev.preventDefault(); ev.stopPropagation(); cancelled = true; setLaneDrag(null); es.stop(); dragCursor(null); say(tl('a.pl.dragTrackCancel'));
+    };
+    window.addEventListener('keydown', esc, true);
+    track(ev => { run(ev); if (lifted) es.move(ev); }, () => {
+      window.removeEventListener('keydown', esc, true);
+      es.stop();
+      if (lifted) dragCursor(null);
+      setLaneDrag(null);
+      if (lifted && !cancelled && to !== from) A.moveTrackTo(from, to);
+    });
+  };
+  onCleanup(() => { laneDragStart = null; });
   effect(() => { geom.tops = tops(); });
   // recording starts: make sure the armed track is on screen (a tall mixer can hide it)
   watch(() => S.transport.rec && U.playing, rec => {
@@ -1204,11 +1237,18 @@ export function Playlist() {
     if (!U.sel.includes(c.id)) setU('sel', [c.id]);
     if (c.kind === 'comp') return openCompMenu(x, y, c, p);
     const src = srcOf(c), isPat = c.kind === 'pat';
+    // Rename and the swatches change what the clip plays (the pattern, sample or automation): every
+    // clip of it follows. The menu says so, with how many clips that is (FL: "Rename / color pattern")
+    const copies = S.project.clips.filter(v => v.kind === c.kind && v.ref === c.ref).length;
+    const what = (k: 'pat' | 'audio' | 'auto') => tl(k === 'pat' ? 'a.pl.whatPat' : k === 'audio' ? 'a.pl.whatAudio' : 'a.pl.whatAuto');
+    const scopeLabel = (k: 'pat' | 'audio' | 'auto') => copies > 1 ? tl('a.pl.colourOfN', { what: what(k), n: copies }) : tl('a.pl.colourOf', { what: what(k) });
+    const scopeTip = (k: 'pat' | 'audio' | 'auto') => copies > 1 ? tl('a.pl.scopeTipN', { what: what(k), n: copies }) : tl('a.pl.scopeTip', { what: what(k) });
     if (c.kind === 'auto') {
       const a = autoById(c.ref);
       openMenu(x, y, [
         { t: 'title', label: tl('a.pl.autoPrefix') + (a?.name ?? '') },
-        { t: 'item', label: tl('a.pl.rename'), act: () => openRename(x, y, a?.name ?? '', v => A.setSrcProp(c, { name: v })) },
+        { t: 'item', label: tl('a.pl.renameAuto'), title: scopeTip('auto'), act: () => openRename(x, y, a?.name ?? '', v => A.setSrcProp(c, { name: v })) },
+        { t: 'sec', label: scopeLabel('auto') },
         { t: 'swatches', current: a?.color, pick: col => A.setSrcProp(c, { color: col }) },
         { t: 'sep' },
         { t: 'item', label: c.muted ? tl('a.pl.unmute') : tl('a.pl.mute'), kbd: 'Alt+M', act: A.toggleMuteSel },
@@ -1224,7 +1264,8 @@ export function Playlist() {
     const all = () => setU('sel', S.project.clips.filter(v => v.kind === c.kind && v.ref === c.ref).map(v => v.id));
     const items: MenuItem[] = [
       { t: 'title', label: (isPat ? 'Pattern · ' : 'Audio · ') + (src?.name ?? '') },
-      { t: 'item', label: tl('a.pl.rename'), act: () => openRename(x, y, src?.name ?? '', v => A.setSrcProp(c, { name: v })) },
+      { t: 'item', label: tl(isPat ? 'a.pl.renamePat' : 'a.pl.renameAudio'), title: scopeTip(isPat ? 'pat' : 'audio'), act: () => openRename(x, y, src?.name ?? '', v => A.setSrcProp(c, { name: v })) },
+      { t: 'sec', label: scopeLabel(isPat ? 'pat' : 'audio') },
       { t: 'swatches', current: (src as { color?: string } | undefined)?.color, pick: col => A.setSrcProp(c, { color: col }) },
       { t: 'sec', label: tl('a.pl.secEdit') },
       { t: 'item', label: c.muted ? tl('a.pl.unmute') : tl('a.pl.mute'), kbd: 'Alt+M', act: A.toggleMuteSel },
@@ -1398,7 +1439,8 @@ export function Playlist() {
 
             </div>
           </div>
-          <div style={{ display: 'flex' }}>
+          <div style={{ display: 'flex', position: 'relative' }}>
+            <Show when={laneDrag()}>{d => <div class="laneDropLine" style={{ top: d().y - 1 + 'px', width: U.headW + gridW() + 'px' }} />}</Show>
             <div class="lanesCol" style={{ width: U.headW + 'px' }}>
               <For each={S.project.tracks}>{(t, i) => <><LaneHeader t={t} i={i()} auto={laneIcons()[i()] ?? null} /><TakeHeaders i={i()} /></>}</For>
               <button class="addTrack" onClick={A.addTrack}>{tl('a.pl.addTrack')}</button>
@@ -1465,6 +1507,10 @@ function openLaneMenu(x: number, y: number, i: number) {
   ], 400);
 }
 
+/** Set by the Playlist: a press on a lane header that may become a drag to reorder (FL / every DAW). */
+let laneDragStart: ((e: PointerEvent, from: number) => void) | null = null;
+const [laneDrag, setLaneDrag] = createSignal<{ from: number; to: number; y: number } | null>(null);
+
 function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
   const t = () => props.t;
   const icon = () => trackIcon(t()) ?? props.auto;
@@ -1472,7 +1518,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
   const routeIdx = () => S.project.inserts.findIndex(m => m.id === t().insert);
   const down = (e: PointerEvent) => {
     if (e.button === 2) { e.preventDefault(); return openLaneMenu(e.clientX, e.clientY, props.i); }
-    if (e.button === 0) A.selectInsert(t().insert);
+    if (e.button === 0) { A.selectInsert(t().insert); laneDragStart?.(e, props.i); }
   };
   const resize = (e: PointerEvent) => {
     if (e.button !== 0) return;
@@ -1493,11 +1539,11 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
     e.preventDefault(); e.stopPropagation();
     if (e.altKey || dblCheck('lvol' + props.i)) { A.setTrack(props.i, { vol: VOL_UNITY }, tl('a.pl.volume')); say(t().name + ' · 0.0 dB'); return; }
     const w = (e.currentTarget as HTMLElement).getBoundingClientRect().width;
-    const g = new Gesture(tl('a.pl.trackVolume'));
-    let v = t().vol, lx = e.clientX;
+    const g = autoTweak(volTarget(), tl('a.pl.trackVolume'), n => [{ op: 'putTrack', track: { ...plain(t()), vol: n } }]);
+    let v = shownVol(), lx = e.clientX;
     track(ev => {
       v = clamp(v + (ev.clientX - lx) / w * fineMul(ev), 0, 1); lx = ev.clientX;
-      g.update([{ op: 'putTrack', track: { ...plain(t()), vol: v } }]);
+      g.move(v);
       say(t().name + ' · ' + volText(v));
     }, () => g.end(), 'ew-resize');
   };
@@ -1519,7 +1565,8 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
             </Show>
   );
   return (
-    <div class={['lane', { armrec: t().arm && S.transport.rec, dimmed: !audible() }]} style={{ height: t().h + 'px' }} onPointerDown={down}>
+    <div class={['lane', { armrec: t().arm && S.transport.rec, dimmed: !audible(), lifted: laneDrag()?.from === props.i }]} style={{ height: t().h + 'px' }} onPointerDown={down}
+      title={tl('a.pl.dragTrackTip')}>
       <div class="stripe" style={{ background: t().color }} />
       <div class="body">
         <div class="row" style={{ gap: '6px', 'min-width': 0 }}>
@@ -1552,7 +1599,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
           <div class="row" style={{ gap: '6px', 'padding-left': '20px' }}>
             <div class={['lvol', { auto: isAutomated(volTarget()) }]} onPointerDown={vol} onContextMenu={e => e.preventDefault()} title={tl('a.pl.volTip')}>
               <div class="track">
-                <div class="fill" style={{ width: shownVol() * 100 + '%', background: audible() ? t().color : 'var(--fg6)' }} />
+                <div class="fill" style={{ width: shownVol() * 100 + '%', background: audible() ? 'var(--fg5)' : 'var(--line2)' }} />
                 <div class="thumb" style={{ left: shownVol() * 100 + '%' }} />
               </div>
             </div>

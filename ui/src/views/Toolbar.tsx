@@ -2,6 +2,8 @@ import { isFullscreen, setFullscreen, toggleFullscreen } from '../state/fullscre
 import { curPat, newPattern, openRack, patMode, rackFloating, rollFloating, stepPattern, toggleRackShown, toggleRollShown } from '../state/pattern';
 import { patternMenu } from './patternShared';
 import { APP_GLYPH as G } from '../ui/menuIcons';
+import { forgetRecent, recent, recentLabels, refreshRecent } from '../state/recent';
+import { samePath } from '../lib/paths';
 import { t, type TranslationKey } from '../lib/i18n';
 import { setTypingOn, typingBase, typingOn } from '../state/typingKeys';
 import { noteName } from '../lib/pitch';
@@ -9,6 +11,7 @@ import { prefs } from '../state/prefs';
 import { For, Show } from 'solid-js';
 import { createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive';
 import { be } from '../api/backend';
+import { notify } from '../state/notice';
 import { clamp, fmtClock, fmtPos, TapTracker } from '../lib/format';
 import { snapLabel } from '../lib/snap';
 import * as A from '../state/actions';
@@ -31,7 +34,7 @@ import { MissingChip } from './MissingAudio';
 import { MiniKnob } from '../ui/Knob';
 import { VOL_UNITY } from '../api/types';
 import { volText } from '../lib/format';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
 import { masterClip, masterClipTip, resetMasterClip } from '../state/masterClip';
 import { cpuBand, cpuText, resetUnderruns, underrunFlash, underruns } from '../state/underruns';
 import { audioStatus, openAudioSettings } from '../state/audioWatch';
@@ -131,6 +134,8 @@ export function Toolbar() {
       { t: 'title', label: t('a.tb.recWhat') },
       { t: 'item', label: t('a.tb.recAudio'), title: t('a.tb.recAudioTip'), checked: T().recAudio, act: () => void A.setRecFilter('audio', !T().recAudio) },
       { t: 'item', label: t('a.tb.recNotes'), title: t('a.tb.recNotesTip'), checked: T().recNotes, act: () => void A.setRecFilter('notes', !T().recNotes) },
+      { t: 'item', label: t('a.tb.recAutomation'), title: t('a.tb.recAutomationTip'), checked: T().recAutomation, act: () => void A.setRecAutomation(!T().recAutomation) },
+      { t: 'item', label: t('a.tb.recAutoLatch'), title: t('a.tb.recAutoLatchTip'), disabled: !T().recAutomation, checked: T().recAutoLatch, act: () => void A.setRecAutoLatch(!T().recAutoLatch) },
       { t: 'sep' },
       { t: 'sub', label: t('a.tb.recQuantize'), items: A.REC_QUANTIZE.map(q => ({ t: 'item' as const, label: t(q.label), checked: T().recQuantize === q.beats, act: () => void A.setRecQuantize(q.beats) })) },
       { t: 'item', label: t('a.tb.recTyping'), kbd: 'Ctrl+T', title: t('a.tb.typOff'), checked: typingOn(), act: () => setTypingOn(!typingOn()) },
@@ -326,10 +331,27 @@ function MenuBar() {
   const win = be().win;
   const none = () => !U.sel.length;
   const wins = () => U.plugs.length + (rackFloating() ? 1 : 0) + (rollFloating() ? 1 : 0);
+  onMount(() => void refreshRecent());
+  /** File → Open recent: newest first, the open project ticked, a moved or deleted file shown but not openable. */
+  const recentItems = (): MenuItem[] => {
+    const list = recent();
+    if (!list.length) return [{ t: 'item', label: t('a.mn.recentNone'), disabled: true, act: () => {} }];
+    const labels = recentLabels(list);
+    const items: MenuItem[] = list.map((r, i) => r.exists
+      ? { t: 'item', label: labels[i], title: r.path, checked: samePath(r.path, S.path), disabled: U.openingProject, act: () => void A.projectOpen(r.path) }
+      : { t: 'item', label: t('a.mn.recentMissing', { name: labels[i] }), title: t('a.mn.recentMissingTip', { path: r.path }), disabled: true, act: () => {} });
+    items.push({ t: 'sep' });
+    if (list.some(r => !r.exists)) {
+      items.push({ t: 'item', label: t('a.mn.recentPrune'), act: () => { void (async () => { for (const r of list.filter(x => !x.exists)) await forgetRecent(r.path); })(); } });
+    }
+    items.push({ t: 'item', label: t('a.mn.recentClear'), act: () => void forgetRecent() });
+    return items;
+  };
   const menus: [TranslationKey, () => MenuItem[]][] = [
     ['a.mn.file', () => [
       { t: 'item', label: t('a.mn.new'), glyph: G.new, kbd: 'Ctrl+Shift+N', disabled: U.openingProject, act: () => void A.projectNew() },
       { t: 'item', label: t('a.mn.open'), glyph: G.open, kbd: 'Ctrl+O', disabled: U.openingProject, act: () => void A.projectOpen() },
+      { t: 'sub', label: t('a.mn.openRecent'), glyph: G.open, items: recentItems() },
       { t: 'item', label: t('a.mn.openDemo'), glyph: G.open, disabled: U.openingProject, act: () => void A.projectNew(true) },
       { t: 'sep' },
       { t: 'item', label: t('a.mn.save'), glyph: G.save, kbd: 'Ctrl+S', act: () => void A.projectSave(false) },
@@ -392,6 +414,8 @@ function MenuBar() {
       { t: 'sep' },
       { t: 'item', label: t('a.mn.updates'), glyph: G.updates, act: () => void checkUpdates() },
       { t: 'item', label: t('a.mn.whatsNew'), glyph: G.whatsNew, act: () => void showWhatsNew() },
+      { t: 'sep' },
+      { t: 'item', label: t('a.mn.discord'), glyph: G.discord, act: () => void be().openDiscord().catch(e => notify(t('a.mn.discordFailed', { error: String(e) }))) },
     ]],
   ];
   setCommandMenus(menus);
@@ -644,19 +668,22 @@ function MainVolume() {
   const master = () => S.project.inserts.find(m => m.id === 0);
   const target = { kind: 'insertVol' as const, id: 0 };
   const vol = () => autoDisplay(target) ?? master()?.vol ?? VOL_UNITY;
-  let g: Gesture | null = null;
+  let g: Tweak | null = null;
   const put = (v: number) => A.insertOp(0, { vol: clamp(v, 0, 1) });
+  const staticOps = (v: number) => { const op = put(v); return op ? [op] : null; };
   const tell = (v: number) => say(t('a.tb.mainVol') + ' · ' + volText(v));
+  // Alt-click / double-click reset is a tweak too: it records while capturing, overrides while playing
+  const resetOnce = () => { const tw = autoTweak(target, t('a.tb.mainVol'), staticOps); tw.move(VOL_UNITY); tw.end(); tell(VOL_UNITY); };
   return (
     <Show when={master()}>
       <div class="mainvol" title={t('a.tb.mainVolTip', { v: volText(vol()) })}>
-        <MiniKnob t={vol} key="mainvol" title={t('a.tb.mainVolTip', { v: volText(vol()) })} automated={() => isAutomated(target)}
-          onStart={() => { g = new Gesture(t('a.tb.mainVol')); }}
-          onChange={v => { const op = put(v); if (op) g?.update([op]); tell(v); }}
+        <MiniKnob t={vol} key="mainvol" title={t('a.tb.mainVolTip', { v: volText(vol()) })} automated={() => isAutomated(target)} overridden={() => isOverridden(target)}
+          onStart={() => { g = autoTweak(target, t('a.tb.mainVol'), staticOps); }}
+          onChange={v => { g?.move(v); tell(v); }}
           onEnd={() => { g?.end(); g = null; }}
-          onReset={() => { const op = put(VOL_UNITY); if (op) commit([op], t('a.tb.mainVol')); tell(VOL_UNITY); }}
-          onWheel={v => { const op = put(v); if (op) wheelEdit('mainvol', t('a.tb.mainVol'), [op]); tell(v); }}
-          onMenu={(x, y) => paramMenu(x, y, target, () => { const op = put(VOL_UNITY); if (op) commit([op], t('a.tb.mainVol')); })} />
+          onReset={() => resetOnce()}
+          onWheel={v => { autoWheel(target, 'mainvol', t('a.tb.mainVol'), v, staticOps); tell(v); }}
+          onMenu={(x, y) => paramMenu(x, y, target, () => resetOnce())} />
       </div>
     </Show>
   );

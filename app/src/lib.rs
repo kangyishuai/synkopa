@@ -213,14 +213,16 @@ async fn transport_set(
     rec_audio: Option<bool>,
     rec_notes: Option<bool>,
     rec_quantize: Option<f64>,
+    rec_automation: Option<bool>,
+    rec_auto_latch: Option<bool>,
 ) -> R<wave_engine::TransportDto> {
     let e = app.engine.clone();
     let t = tauri::async_runtime::spawn_blocking(move || {
         if let Some(b) = start_beat {
             e.set_start(b);
         }
-        if rec_audio.is_some() || rec_notes.is_some() {
-            e.set_rec_filter(rec_audio, rec_notes);
+        if rec_audio.is_some() || rec_notes.is_some() || rec_automation.is_some() || rec_auto_latch.is_some() {
+            e.set_rec_filter(rec_audio, rec_notes, rec_automation, rec_auto_latch);
         }
         if let Some(q) = rec_quantize {
             e.set_rec_quantize(q);
@@ -806,9 +808,35 @@ async fn project_open(app: St<'_>, handle: AppHandle, path: Option<String>, if_r
     let warnings = tauri::async_runtime::spawn_blocking(move || e.open_at_revision(&p2, Some(revision))).await.map_err(es)?.map_err(es)?;
     app.recovery.clear();
     let mut s = app.settings.lock();
-    s.last_project = Some(path.display().to_string());
+    s.remember(&path.display().to_string());
     s.save();
     Ok(open_reply(app.engine.state(), warnings))
+}
+
+/// File → Open recent: the projects opened or saved lately, newest first, each with whether
+/// the file is still there.
+#[tauri::command]
+async fn recent_projects(app: St<'_>) -> R<Value> {
+    let list = app.settings.lock().recent.clone();
+    let rows: Vec<Value> = list
+        .iter()
+        .map(|p| {
+            let path = std::path::Path::new(p);
+            let name = path.file_stem().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| p.clone());
+            let dir = path.parent().map(|d| d.display().to_string()).unwrap_or_default();
+            json!({ "path": p, "name": name, "dir": dir, "exists": path.is_file() })
+        })
+        .collect();
+    Ok(json!(rows))
+}
+
+/// Takes a project off File → Open recent (`path` absent: clears the list).
+#[tauri::command]
+async fn recent_forget(app: St<'_>, path: Option<String>) -> R<()> {
+    let mut s = app.settings.lock();
+    s.forget(path.as_deref());
+    s.save();
+    Ok(())
 }
 
 #[tauri::command]
@@ -838,7 +866,7 @@ async fn project_save(app: St<'_>, handle: AppHandle, save_as: Option<bool>, ver
     tauri::async_runtime::spawn_blocking(move || e.save(&p2)).await.map_err(es)?.map_err(es)?;
     app.recovery.clear();
     let mut s = app.settings.lock();
-    s.last_project = Some(path.display().to_string());
+    s.remember(&path.display().to_string());
     s.save();
     Ok(json!({ "path": path.display().to_string() }))
 }
@@ -1110,6 +1138,14 @@ async fn plugin_set_param(app: St<'_>, fx_id: u64, id: u32, value: f64) -> R<()>
     app.plugins.set_param(fx_id, id, value)
 }
 
+/// Whether automation `id` drives its target while playing (false = re-enable it): a manual
+/// tweak on an automated control overrides the envelope until re-enabled or stopped.
+#[tauri::command]
+async fn automation_override(app: St<'_>, id: u64, on: bool) -> R<wave_engine::TransportDto> {
+    let e = app.engine.clone();
+    tauri::async_runtime::spawn_blocking(move || e.automation_override(id, on)).await.map_err(es)
+}
+
 // The VST3-era names, kept for scripts and older front ends: same behaviour, except that
 // `vst3_scan` lists only VST3 effects (as a plain array, as before).
 
@@ -1224,6 +1260,12 @@ async fn open_ask(service: links::AskService, prompt: Option<String>) -> R<()> {
     links::open_browser(&links::ask_url(service, prompt.as_deref())?)
 }
 
+/// Help ▸ Join the Discord: opens the community server in the system browser.
+#[tauri::command]
+async fn open_discord() -> R<()> {
+    links::open_browser(links::DISCORD_URL)
+}
+
 #[tauri::command]
 async fn cli_status(app: St<'_>) -> R<CliStatus> {
     Ok(app.cli.lock().clone())
@@ -1305,6 +1347,7 @@ pub fn run(project_arg: Option<&str>) {
             transport_stop,
             transport_silence,
             transport_set,
+            automation_override,
             telemetry_subscribe,
             watch_fx,
             import_audio,
@@ -1363,6 +1406,8 @@ pub fn run(project_arg: Option<&str>) {
             project_open,
             take_project_open_requests,
             project_save,
+            recent_projects,
+            recent_forget,
             project_export_zip,
             recovery_write,
             recovery_list,
@@ -1394,7 +1439,8 @@ pub fn run(project_arg: Option<&str>) {
             update_download,
             update_install,
             open_release_page,
-            open_ask
+            open_ask,
+            open_discord
         ])
         .build(tauri::generate_context!())
         .expect("error while building Synkopa");

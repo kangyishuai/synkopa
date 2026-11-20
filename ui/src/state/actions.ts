@@ -4,7 +4,7 @@ import { shownFloating } from './winOrder';
 import { be } from '../api/backend';
 import { t, tName } from '../lib/i18n';
 import { PLUGIN_FORMAT_LABEL, VOL_UNITY, type AnyBuiltinKind, type PluginInfo, type Clip, type Fx, type Id, type Insert, type Op, type RecoveredProject, type Track } from '../api/types';
-import { clampMove, duplicateSpan, insertTrackOps, moveClips, muteOps, pasteClips, sliceClip, swapTrackOps, TOTAL } from '../lib/clipOps';
+import { clampMove, duplicateSpan, insertTrackOps, moveClips, moveTrackOps, muteOps, pasteClips, sliceClip, swapTrackOps, TOTAL } from '../lib/clipOps';
 import { parseViews, rememberView, viewFor } from '../lib/projView';
 import { clamp, fmtPos } from '../lib/format';
 import { loadPreset as loadPresetFx, newFx, presetInfo, presetList } from '../lib/presets';
@@ -25,6 +25,7 @@ import { recTarget, recUntil } from '../lib/recTarget';
 import { curBeat, markPlayCmd } from './telemetry';
 import { confirmRecover, confirmUnsaved } from '../ui/Confirm';
 import { showPlugin } from './pluginWindows';
+import { refreshRecent } from './recent';
 
 // ---------- transport ----------
 /** Recording is on but no track is armed: the engine plays and records nothing. */
@@ -166,10 +167,10 @@ export async function toggleRec() {
 // ---- the recording filter (FL's right-click on Record): what a recording captures. A setting of
 // this computer, not of the song: kept in localStorage and handed to the engine at start-up.
 const REC_FILTER_KEY = 'wave.recFilter';
-/** Ticks or unticks one kind; the last one ticked stays on (a recording must capture something). */
+/** Ticks or unticks one kind; one input kind stays on unless automation captures instead. */
 export async function setRecFilter(kind: 'audio' | 'notes', on: boolean) {
   const cur = { audio: S.transport.recAudio, notes: S.transport.recNotes }, next = { ...cur, [kind]: on };
-  if (!next.audio && !next.notes) return say(t('d.act.recFilterLast'));
+  if (!next.audio && !next.notes && !S.transport.recAutomation) return say(t('d.act.recFilterLast'));
   try {
     const tr = await be().transportSet({ recAudio: next.audio, recNotes: next.notes });
     setTransport(tr);
@@ -177,9 +178,20 @@ export async function setRecFilter(kind: 'audio' | 'notes', on: boolean) {
     say(t('d.act.recFilter', { what: recFilterName() }));
   } catch (e) { say(t('d.act.err', { err: String(e) })); }
 }
+/** The recording filter's automation: control tweaks during playback become envelope points. */
+export async function setRecAutomation(on: boolean) {
+  if (!on && !S.transport.recAudio && !S.transport.recNotes) return say(t('d.act.recFilterLast'));
+  try { setTransport(await be().transportSet({ recAutomation: on })); saveRecFilter(); say(t('d.act.recFilter', { what: recFilterName() })); }
+  catch (e) { say(t('d.act.err', { err: String(e) })); }
+}
+/** Automation capture keeps writing the held value after release, until the transport stops. */
+export async function setRecAutoLatch(on: boolean) {
+  try { setTransport(await be().transportSet({ recAutoLatch: on })); saveRecFilter(); say(t(on ? 'd.act.recLatchOn' : 'd.act.recLatchOff')); }
+  catch (e) { say(t('d.act.err', { err: String(e) })); }
+}
 const saveRecFilter = () => {
   const tr = S.transport;
-  try { localStorage.setItem(REC_FILTER_KEY, JSON.stringify({ audio: tr.recAudio, notes: tr.recNotes, quantize: tr.recQuantize })); } catch { /* private window */ }
+  try { localStorage.setItem(REC_FILTER_KEY, JSON.stringify({ audio: tr.recAudio, notes: tr.recNotes, quantize: tr.recQuantize, automation: tr.recAutomation, latch: tr.recAutoLatch })); } catch { /* private window */ }
 };
 /** Input quantize of recorded notes (FL's snap while recording): beats, 0 = as played. */
 export const REC_QUANTIZE = [
@@ -195,17 +207,20 @@ export async function setRecQuantize(beats: number) {
 }
 /** At start-up: the filter last chosen on this computer. */
 export async function restoreRecFilter() {
-  let v: { audio?: unknown; notes?: unknown; quantize?: unknown } | null = null;
+  let v: { audio?: unknown; notes?: unknown; quantize?: unknown; automation?: unknown; latch?: unknown } | null = null;
   try { v = JSON.parse(localStorage.getItem(REC_FILTER_KEY) ?? 'null'); } catch { /* none or unreadable */ }
-  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes)) return;
+  const au = typeof v?.automation === 'boolean' ? v.automation : S.transport.recAutomation;
+  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes || au)) return;
   const q = REC_QUANTIZE.some(x => x.beats === v!.quantize) ? v.quantize as number : 0;
-  if (v.audio === S.transport.recAudio && v.notes === S.transport.recNotes && q === S.transport.recQuantize) return;
-  try { setTransport(await be().transportSet({ recAudio: v.audio, recNotes: v.notes, recQuantize: q })); } catch (e) { console.warn(e); }
+  const latch = typeof v.latch === 'boolean' ? v.latch : S.transport.recAutoLatch;
+  if (v.audio === S.transport.recAudio && v.notes === S.transport.recNotes && q === S.transport.recQuantize && au === S.transport.recAutomation && latch === S.transport.recAutoLatch) return;
+  try { setTransport(await be().transportSet({ recAudio: v.audio, recNotes: v.notes, recQuantize: q, recAutomation: au, recAutoLatch: latch })); } catch (e) { console.warn(e); }
 }
-/** "audio and notes", "audio", "notes": what Record captures. */
+/** "audio and notes", "automation only", "+ automation": what Record captures. */
 export function recFilterName() {
   const a = S.transport.recAudio, n = S.transport.recNotes;
-  return t(a && n ? 'd.act.recWhat.both' : a ? 'd.act.recWhat.audio' : 'd.act.recWhat.notes');
+  const base = a && n ? t('d.act.recWhat.both') : a ? t('d.act.recWhat.audio') : n ? t('d.act.recWhat.notes') : t('d.act.recWhat.none');
+  return S.transport.recAutomation ? base + t('d.act.recWhat.autoSuffix') : base;
 }
 
 export function toggleMonitor() {
@@ -264,7 +279,7 @@ export async function projectOpen(path?: string) {
     say(r.warnings.length ? t('d.act.openedwarn', { path: openedPath, n: r.warnings.length, first: r.warnings[0] }) : t('d.act.opened', { path: openedPath }));
     offerRelink();
   } catch (e) { say(t('d.act.openfail', { err: String(e) })); }
-  finally { setU('openingProject', false); }
+  finally { setU('openingProject', false); void refreshRecent(); }
 }
 /** A project just loaded with audio files missing: show them with the ways to find them. */
 export function offerRelink() {
@@ -295,7 +310,7 @@ export async function projectSave(saveAs = false, version = false): Promise<bool
     const r = await enqueue(() => be().projectSave(saveAs, version));
     if (r.cancelled) return false; // the save dialog was dismissed: nothing was written
     if (r.path) rememberProjView(r.path);
-    say(t('d.act.saved', { path: r.path })); await resync(); return true;
+    say(t('d.act.saved', { path: r.path })); void refreshRecent(); await resync(); return true;
   } catch (e) { say(t('d.act.savefail', { err: String(e) })); return false; }
 }
 export async function projectExportZip() {
@@ -573,6 +588,19 @@ export function moveTrack(i: number, d: -1 | 1) {
   // ids stay with their slots, so what is keyed by a slot's id trades places with the lanes: the open take lanes
   setU('takesOpen', { ...U.takesOpen, [a]: open.b, [b]: open.a });
   say(t(d < 0 ? 'd.act.trackUp' : 'd.act.trackDown', { name: S.project.tracks[i + d]?.name ?? '' }));
+}
+
+/** Drag a lane header: lane `from` goes to index `to`, with its clips (one undo step). */
+export function moveTrackTo(from: number, to: number) {
+  const ops = moveTrackOps(plain(S.project), from, to);
+  if (!ops.length) return;
+  const ids = S.project.tracks.map(tr => tr.id), name = S.project.tracks[from].name;
+  // what is keyed by a slot's id follows the lanes: the open take lanes
+  const order = ids.map((_, k) => k); order.splice(to, 0, ...order.splice(from, 1));
+  const open = Object.fromEntries(order.map((old, k) => [ids[k], U.takesOpen[ids[old]]]));
+  commit(ops, t('d.act.op.movetrack'));
+  setU('takesOpen', { ...U.takesOpen, ...open });
+  say(t('d.act.trackMoved', { name, n: to + 1 }));
 }
 
 // ---------- mixer ----------

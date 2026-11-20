@@ -8,7 +8,7 @@ import type { BandType, EqBand, Fx, Id } from '../../api/types';
 import { BTYPE_LABEL, defaultFreq, defaultQ, f2t, hasGain, q2t, SHAPE_STEPS, shapePatch, shapeStep, t2f, t2q } from '../../lib/eq';
 import { clamp, dbText, hzText } from '../../lib/format';
 import { t as tr } from '../../lib/i18n';
-import { autoDisplay, isAutomated, paramMenu } from '../../state/automation';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../../state/automation';
 import { commit, Gesture, wheelEdit } from '../../state/edit';
 import { say, setU, U } from '../../state/ui';
 import { dblCheck, fineMul, track } from '../../ui/drag';
@@ -80,12 +80,14 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
     if (e.button !== 0) return;
     e.preventDefault();
     if (e.altKey || dblCheck('eqfader' + fxId() + i())) { resetGain(); return; }
-    const h = Math.max(40, slot.getBoundingClientRect().height), r0 = range();
+    const h = Math.max(40, slot.getBoundingClientRect().height);
     let v = b().g, ly = e.clientY;
-    const g = new Gesture(tr('c.eq.gain'));
+    // capture normalises against the fixed ±30 dB band scale playback uses (BAND_RANGE.g),
+    // not the band's display range — or a recorded point would replay at another gain
+    const g = autoTweak(target('g'), tr('c.eq.gain'), n => { const op = edit(fxId(), i(), { g: Math.round((n * 2 * 30 - 30) * 10) / 10 }); return op ? [op] : null; }, { color: col() });
     track(ev => {
-      v = clamp(v + (ly - ev.clientY) / h * 2 * r0 * fineMul(ev), -30, 30); ly = ev.clientY;
-      const op = edit(fxId(), i(), { g: Math.round(v * 10) / 10 }); if (op) g.update([op]);
+      v = clamp(v + (ly - ev.clientY) / h * 60 * fineMul(ev), -30, 30); ly = ev.clientY;
+      g.move((v + 30) / 60);
       say(name() + ' · ' + dbText(v));
     }, () => g.end(), 'ns-resize');
   };
@@ -94,13 +96,13 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
     const d = e.deltaY || e.deltaX; if (!d) return;
     e.preventDefault(); e.stopPropagation();
     const v = clamp(Math.round((b().g + (d < 0 ? 1 : -1) * (e.shiftKey ? 0.1 : 0.5)) * 10) / 10, -30, 30);
-    const op = edit(fxId(), i(), { g: v }); if (op) wheelEdit('eqg' + fxId() + i(), tr('c.eq.gain'), [op]);
+    autoWheel(target('g'), 'eqg' + fxId() + i(), tr('c.eq.gain'), (v + 30) / 60, n => { const op = edit(fxId(), i(), { g: Math.round((n * 2 * 30 - 30) * 10) / 10 }); return op ? [op] : null; }, { color: col() });
     say(name() + ' · ' + dbText(v));
   };
 
   // ---- FREQ / BW knobs
   const knob = (k: 'f' | 'q') => {
-    let g: Gesture | null = null;
+    let g: Tweak | null = null;
     const label = k === 'f' ? 'FREQ' : 'BW';
     const val = (t: number) => k === 'f' ? Math.round(t2f(t)) : Math.round(t2q(t) * 100) / 100;
     const txt = (v: number) => k === 'f' ? hzText(v) : 'Q ' + v.toFixed(v < 10 ? 2 : 1);
@@ -112,11 +114,12 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
         t={() => disabled() ? 0 : k === 'f' ? f2t(b().f) : q2t(b().q)}
         title={name() + ' · ' + label + ' ' + (disabled() ? '—' : txt(k === 'f' ? b().f : b().q)) + ' — ' + (k === 'f' ? tr('c.eq.freqTip') : disabled() ? tr('c.eq.bwTilt') : tr('c.eq.bwTip'))}
         automated={() => isAutomated(target(k))}
-        onStart={() => { select(); if (!disabled()) g = new Gesture(label); }}
-        onChange={t => { if (disabled()) return; const v = val(t), op = edit(fxId(), i(), { [k]: v }); if (op) g?.update([op]); show(v); }}
+        overridden={() => isOverridden(target(k))}
+        onStart={() => { select(); if (!disabled()) g = autoTweak(target(k), label, t => { const op = edit(fxId(), i(), { [k]: val(t) }); return op ? [op] : null; }, { color: col() }); }}
+        onChange={t => { if (disabled()) return; const v = val(t); g?.move(t); show(v); }}
         onEnd={() => { g?.end(); g = null; }}
         onReset={() => { if (!disabled()) reset(); }}
-        onWheel={t => { if (disabled()) return; const v = val(t), op = edit(fxId(), i(), { [k]: v }); if (op) wheelEdit('eqs' + k + fxId() + i(), label, [op]); show(v); }}
+        onWheel={t => { if (disabled()) return; const v = val(t); autoWheel(target(k), 'eqs' + k + fxId() + i(), label, t, t2 => { const op = edit(fxId(), i(), { [k]: val(t2) }); return op ? [op] : null; }, { color: col() }); show(v); }}
         onMenu={(x, y) => { select(); if (!disabled()) paramMenu(x, y, target(k), reset, col()); }} />
     );
   };

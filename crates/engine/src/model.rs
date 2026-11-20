@@ -602,6 +602,9 @@ pub struct Channel {
     /// the sample plays at its original pitch.
     #[serde(default = "sample_root")]
     pub root: u8,
+    /// The Channel Rack filter group it belongs to (FL's filter groups); `None` = unsorted.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub group: Option<String>,
 }
 
 fn vol_unity() -> f32 {
@@ -625,6 +628,7 @@ impl Channel {
             solo: false,
             insert: None,
             root: SAMPLE_ROOT,
+            group: None,
         }
     }
     /// A sampler channel playing `source` with the default settings.
@@ -678,6 +682,12 @@ pub struct Note {
     /// Legacy notes without this flag follow the channel's One-shot / Gate mode.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub trig: Option<bool>,
+    /// A slide note (FL Studio's): it starts no sound of its own. When it starts, the notes of
+    /// its channel that are sounding glide by the distance from the highest of them to this
+    /// note's key, over this note's length, and keep that pitch until they end. Sampler, Synkopa
+    /// Keys and Synth channels play it; plugin instruments ignore it.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub slide: bool,
 }
 
 fn is_one(v: &f32) -> bool {
@@ -687,7 +697,7 @@ fn is_one(v: &f32) -> bool {
 impl Note {
     /// A held note: note-on at `step`, note-off `len` steps later.
     pub fn new(ch: Id, step: f32, len: f32, p: Option<u8>) -> Self {
-        Self { ch, step, len, p, v: 1.0, trig: Some(false), pan: 0.0 }
+        Self { ch, step, len, p, v: 1.0, trig: Some(false), pan: 0.0, slide: false }
     }
     /// A Channel Rack step: a trigger in one grid cell.
     pub fn trigger(ch: Id, step: f32, p: Option<u8>) -> Self {

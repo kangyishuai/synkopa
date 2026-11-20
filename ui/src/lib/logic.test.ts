@@ -3,7 +3,7 @@ import { encodeFrame, MAGIC, SCOPE_LEN, SPEC_BANDS, TelemetryDecoder } from '../
 import { sketchProject, mockCatalog } from '../api/mockData';
 import { TOTAL_BEATS, type Clip } from '../api/types';
 import { applyAll, OpError } from './applyOps';
-import { clampMove, duplicateSpan, insertTrackOps, moveClips, paintCells, pasteClips, placeClipCopy, resizeClip, resizeClips, sliceAcross, sliceClip, stretchClip, stretchClips, swapTrackOps } from './clipOps';
+import { clampMove, duplicateSpan, insertTrackOps, moveClips, paintCells, pasteClips, placeClipCopy, resizeClip, resizeClips, sliceAcross, sliceClip, stretchClip, stretchClips, swapTrackOps, moveTrackOps } from './clipOps';
 import { eqCurve } from './eq';
 import { exportRange, exportSeconds, fmtExportLen, songEnd } from './export';
 import { fmtClock, fmtPos, panText, TapTracker, volText } from './format';
@@ -288,6 +288,27 @@ describe('op builders', () => {
     expect(back.automations).toEqual(p.automations);
     expect(swapTrackOps(p, 0, 0)).toEqual([]);
     expect(swapTrackOps(p, 0, 99)).toEqual([]);
+  });
+  it('dragging a lane far moves it with its clips and automation; the lanes between shift; back again restores', () => {
+    const p = sketchProject(cat);
+    const names = p.tracks.map(t => t.name), ids = p.tracks.map(t => t.id);
+    const on = (i: number) => p.clips.filter(c => c.track === i).map(c => c.id).sort();
+    p.automations = [{ id: 9001, name: 'Vol', target: { kind: 'trackVol', id: ids[0] }, points: [] } as unknown as NonNullable<typeof p.automations>[number]];
+    const q = applyAll(p, moveTrackOps(p, 0, 3));
+    expect(q.tracks.map(t => t.id)).toEqual(ids);
+    expect(q.tracks.slice(0, 5).map(t => t.name)).toEqual([names[1], names[2], names[3], names[0], names[4]]);
+    expect(q.clips.filter(c => c.track === 3).map(c => c.id).sort()).toEqual(on(0));
+    expect(q.clips.filter(c => c.track === 0).map(c => c.id).sort()).toEqual(on(1));
+    expect(q.clips.filter(c => c.track === 4).map(c => c.id).sort()).toEqual(on(4)); // outside the move: untouched
+    expect(q.automations![0].target).toEqual({ kind: 'trackVol', id: ids[3] });
+    const back = applyAll(q, moveTrackOps(q, 3, 0)), byId = (cs: typeof p.clips) => [...cs].sort((a, b) => a.id - b.id);
+    expect(back.tracks).toEqual(p.tracks);
+    expect(byId(back.clips)).toEqual(byId(p.clips));
+    expect(back.automations).toEqual(p.automations);
+    // a move of one place is the same as a swap
+    expect(applyAll(p, moveTrackOps(p, 2, 3)).tracks).toEqual(applyAll(p, swapTrackOps(p, 2, 3)).tracks);
+    expect(moveTrackOps(p, 2, 2)).toEqual([]);
+    expect(moveTrackOps(p, 0, 99)).toEqual([]);
   });
   it('inserting a track shifts lanes and clips (valid batch)', () => {
     const p = sketchProject(cat);

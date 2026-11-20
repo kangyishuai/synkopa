@@ -294,6 +294,7 @@ fn synth_chan(id: Id, preset: &str, root: u8) -> Channel {
         solo: false,
         insert: None,
         root,
+        group: None,
     }
 }
 

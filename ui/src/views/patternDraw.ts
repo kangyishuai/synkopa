@@ -116,9 +116,12 @@ export function drawRackHead(g: CanvasRenderingContext2D, W: number, H: number, 
 /** One velocity bar per note of the selected channel. `x0`: where step 0 is (px), `cw` px per step. */
 export function drawLane(g: CanvasRenderingContext2D, W: number, H: number, o: {
   x0: number; cw: number; sx: number; steps: number; notes: { n: Note; i: number }[]; color: string; sel?: Set<number>; cells: boolean; muted: boolean; beatGap?: boolean;
+  /** What a bar shows, 0..1 (default: the velocity); `bipolar` bars grow from the centre line (pan). */
+  value?: (n: Note) => number; bipolar?: boolean;
 }) {
   g.clearRect(0, 0, W, H);
   const top = 6, bh = H - top - 3;
+  const valueOf = o.value ?? velOf, mid = top + bh / 2;
   const px = (s: number) => (o.beatGap ? stepX(s, o.cw) : s * o.cw);
   const endX = Math.min(W, o.x0 + (o.beatGap ? gridW(o.steps, o.cw) : o.steps * o.cw) - o.sx);
   g.fillStyle = T.vizPanel; g.fillRect(0, 0, W, H);
@@ -126,20 +129,29 @@ export function drawLane(g: CanvasRenderingContext2D, W: number, H: number, o: {
   g.fillStyle = T.vizGrid2;
   for (const f of [0.25, 0.5, 0.75]) g.fillRect(o.x0, Math.round(top + bh * (1 - f)) + 0.5, endX - o.x0, 1);
   g.fillStyle = T.vizAxis; g.fillRect(o.x0, top, endX - o.x0, 1);
+  if (o.bipolar) {
+    g.fillRect(o.x0, Math.round(mid) + 0.5, endX - o.x0, 1);
+  }
   const spans = o.cells ? stepSpans(o.notes.map(x => x.n)) : [];
   o.notes.forEach(({ n, i }, k) => {
-    const v = velOf(n);
-    const x = o.x0 + px(n.step) - o.sx, cw = o.cw * (spans[k] ?? 1);
+    const v = valueOf(n);
+    // in cells a bar stays in its step's column, wherever in the cell the note starts (its shift)
+    const x = o.x0 + px(o.cells ? Math.floor(n.step + 1e-3) : n.step) - o.sx, cw = o.cw * (spans[k] ?? 1);
     const w = o.cells ? Math.max(2, cw - 6) : Math.max(3, Math.min(8, n.len * o.cw - 2));
     const bx = o.cells ? x + (cw - w) / 2 : x;
     if (bx > W || bx + w < o.x0 - 4) return;
     const sel = !!o.sel?.has(i);
-    const y = top + bh * (1 - v);
+    const y = top + bh * (1 - v), base = o.bipolar ? mid : top + bh;
     g.fillStyle = rgba(o.color, (o.muted ? 0.35 : 0.75) * (sel ? 1.25 : 1));
-    g.fillRect(bx, y, w, top + bh - y);
+    g.fillRect(bx, Math.min(y, base), w, Math.max(1, Math.abs(base - y)));
     g.fillStyle = sel ? T.fgHi : mix(o.color, 60, T.fgHi);
     g.fillRect(bx, y - 1, w, 2);
   });
+  // which way is which, over the bars (the first step's bar sits right under the labels)
+  if (o.bipolar) {
+    g.fillStyle = T.fgHi; g.font = MONO8; g.textAlign = 'right'; g.textBaseline = 'middle';
+    g.fillText('R', endX - 4, top + 7); g.fillText('L', endX - 4, top + bh - 6);
+  }
 }
 
 /** The colour of the Piano roll lane's handles: one per target, so the lane says what it edits. */
@@ -305,6 +317,19 @@ export function drawRoll(g: CanvasRenderingContext2D, W: number, H: number, G: R
     const k = keyOf(n, o.ch), x = rollX(G, n.step), y = rollY(G, k), w = noteWidth(n, G.pps);
     if (x > W || x + w < G.kw || y > H || y + G.rowH < 0) return;
     const sel = o.sel.has(i), v = velOf(n);
+    if (n.slide) {
+      // FL's slide note: a note like the others, darker (it has no sound of its own), with a ramp
+      // triangle at its start (the slide icon)
+      g.fillStyle = sel ? mix(o.ch.color, 40, theme.light ? '#000000' : '#ffffff') : mix(o.ch.color, 38, T.viz);
+      g.beginPath(); rr(g, x, y + 0.5, w, G.rowH - 1, 2.5); g.fill();
+      g.strokeStyle = sel ? T.fgHi : o.ch.color; g.lineWidth = 1;
+      g.beginPath(); rr(g, x + 0.5, y + 1, w - 1, G.rowH - 2, 2.5); g.stroke();
+      const th = G.rowH - 5, tw = Math.min(w - 3, Math.max(5, th * 1.3));
+      g.fillStyle = sel ? T.fgHi : mix(o.ch.color, 70, '#ffffff');
+      g.beginPath(); g.moveTo(x + 2, y + G.rowH - 2.5); g.lineTo(x + 2 + tw, y + G.rowH - 2.5); g.lineTo(x + 2 + tw, y + G.rowH - 2.5 - th); g.closePath(); g.fill();
+      if (w > tw + 26 && G.rowH >= 11) { g.fillStyle = sel ? rgba(T.onFill, 0.9) : T.fgHi; g.fillText(noteName(k), x + 5 + tw, y + G.rowH / 2 + 0.5); }
+      return;
+    }
     g.fillStyle = sel ? mix(o.ch.color, 55, theme.light ? '#000000' : '#ffffff') : mix(o.ch.color, Math.round(45 + 55 * v), T.viz);
     g.beginPath(); rr(g, x, y + 0.5, w, G.rowH - 1, 2.5); g.fill();
     g.strokeStyle = sel ? T.fgHi : rgba('#000000', theme.light ? 0.25 : 0.45); g.lineWidth = 1;

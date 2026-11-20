@@ -230,7 +230,15 @@ impl Engine {
         let mut errs = HashMap::new();
         let mut hosted = HashMap::new();
         let graph = build_graph(&project, &HashMap::new(), sr, block, &*self.factory, false, &mut errs, &mut hosted);
-        let mut tl = build_timeline(&project, &mut |clip| store_snapshot.get(&clip.id).cloned(), &takes, &HashMap::new(), keys.as_ref());
+        // the offline render is the song itself: a live tweak's override does not apply to it
+        let mut tl = build_timeline(
+            &project,
+            &mut |clip| store_snapshot.get(&clip.id).cloned(),
+            &takes,
+            &HashMap::new(),
+            keys.as_ref(),
+            &HashSet::new(),
+        );
         let wrap = matches!(tail, RenderTail::Wrap);
         let decay = matches!(tail, RenderTail::Decay { .. });
         tl.loop_range = wrap.then_some((from, to));

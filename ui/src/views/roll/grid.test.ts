@@ -6,6 +6,7 @@ import type { Channel, Note, Op, Pattern } from '../../api/types';
 import { noteAt, noteWidth } from '../../lib/pattern';
 import { chordPitches } from '../../lib/transforms';
 import { rollDown, rollMove } from './grid';
+import { noteEndNear, onNoteEdge } from './edge';
 import { KW, type Mods, type Pt, type RollCtx, type RollMove, type Tool } from './types';
 
 // ---- fake geometry and the fake context ----
@@ -51,7 +52,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     pat.len = Math.max(pat.minLen ?? 4, content);
   };
   let sel = new Set<number>();
-  let lastLen = 2, lastTrig = false, lastVel = 1;
+  let lastLen = 2, lastTrig = false, lastVel = 1, slideMode = false;
   let drag: RecDrag | null = null;
   let dblArmed = false;
   let modCb: ((m: Mods) => void) | null = null;
@@ -64,11 +65,8 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     geo: () => GEO,
     snap: () => 1,
     hit: (s, k) => noteAt(live, CH.id, CH, s, k, GEO.pps),
-    edgeHit: (i, x) => {
-      const n = live[i], G = GEO;
-      const width = noteWidth(n, G.pps);
-      return x >= G.kw + n.step * G.pps + width - Math.min(6, width * 0.4);
-    },
+    edgeHit: (i, x) => onNoteEdge(x, GEO.kw + live[i].step * GEO.pps, noteWidth(live[i], GEO.pps)),
+    edgeAfter: (k, x) => noteEndNear(live, CH.id, CH, k, x, s => GEO.kw + s * GEO.pps, GEO.pps),
     ghostAt: (s, k) => {
       for (let i = live.length - 1; i >= 0; i--) {
         const n = live[i]; if (n.ch === CH.id) continue;
@@ -81,6 +79,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     setSel: s => { sel = s; rec.sels.push([...s]); },
     lastLen: () => lastLen, lastTrig: () => lastTrig, setLastLen: (l, tr = false) => { lastLen = l; lastTrig = tr; },
     lastVel: () => lastVel, setLastVel: v => { lastVel = v; },
+    slideMode: () => slideMode,
     commitNotes: (nts, label) => { setNotes(nts); rec.commits.push({ notes: nts, label }); },
     notesOp: nts => {
       setNotes(nts);
@@ -120,7 +119,7 @@ function makeCtx(notes: Note[], tool: Tool = 'draw') {
     bindMods: cb => { modCb = cb; return () => { modCb = null; }; },
     autoScroll: () => ({ move: () => {}, stop: () => {} }),
   };
-  return { ctx, rec, live, drag: () => drag, armDbl: () => { dblArmed = true; }, fireMods: (m: Mods) => modCb?.(m), setLen: (n: number) => { pat.len = n; pat.minLen = n; }, patLen: () => pat.len };
+  return { ctx, rec, live, setSlide: (on: boolean) => { slideMode = on; }, drag: () => drag, armDbl: () => { dblArmed = true; }, fireMods: (m: Mods) => modCb?.(m), setLen: (n: number) => { pat.len = n; pat.minLen = n; }, patLen: () => pat.len };
 }
 
 // ---- helpers over the fakes ----
@@ -138,6 +137,19 @@ describe('draw tool', () => {
     c.drag()?.up(mv(c, at(0.2, 60)));
     down(c, 0, at(6.4, 62));
     expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 6, len: 1, p: 62, trig: true });
+  });
+  it('in slide mode (S) new notes are slide notes, held for the last length even after a step', () => {
+    const c = makeCtx([{ ch: CH.id, step: 0, len: 1, p: 60, trig: true }]);
+    c.setSlide(true);
+    down(c, 0, at(0.2, 60));
+    c.drag()?.up(mv(c, at(0.2, 60)));
+    down(c, 0, at(6.4, 67));
+    expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 6, len: 1, p: 67, trig: false, slide: true });
+    c.setSlide(false);
+    c.drag()?.up(mv(c, at(6.4, 67)));
+    down(c, 0, at(10.4, 60));
+    // slide off: back to what the last touched note was (a step)
+    expect(notesOf(c.rec.gestures.at(-1)!).at(-1)).toEqual({ ch: CH.id, step: 10, len: 1, p: 60, trig: true });
   });
   it('creates a snapped note on empty grid, selects it, auditions it, and drags it', () => {
     const c = makeCtx([]);
@@ -183,6 +195,31 @@ describe('draw tool', () => {
     down(c, 0, at(66.4, 60)); // past the 4-bar pattern: the note ends at step 68 = beat 17
     expect(c.patLen()).toBe(20); // → five bars
     expect(c.rec.says.at(-1)).toBe('Pattern grew to 5 bars');
+  });
+
+  it('the length handle reaches 10 px into a note and 4 px past its end', () => {
+    // note(4, 60, 8) at 16 px/step: 127 px wide, its end at step 11.94
+    const resizes = (p: Pt, notes = [note(4, 60, 8)]) => {
+      const c = makeCtx(notes);
+      down(c, 0, p);
+      c.drag()?.move(mv(c, at(14, 60)));
+      c.drag()?.up(mv(c, at(14, 60)));
+      return c;
+    };
+    // 9 px inside the end: was the body (only the last 6 px resized)
+    expect(resizes(at(11.4, 60)).live[0].len).toBeGreaterThan(8);
+    // 2.6 px past the end, over empty grid: still that note's handle, no new note
+    const past = resizes(at(12.1, 60));
+    expect(past.live).toHaveLength(1);
+    expect(past.live[0].len).toBeGreaterThan(8);
+    expect(rollMove(makeCtx([note(4, 60, 8)]).ctx, mv(makeCtx([note(4, 60, 8)]), at(12.1, 60)))).toBe('ew-resize');
+    // farther out: a click writes a new note, as before
+    expect(resizes(at(12.5, 60)).live).toHaveLength(2);
+    // a note starting right there wins: the click grabs it, the one before keeps its length
+    const next = resizes(at(12.1, 60), [note(4, 60, 8), note(12, 60, 4)]);
+    expect(next.live[0].len).toBe(8);
+    // a short note keeps most of its body for moving (the handle is at most 45 % of it)
+    expect(rollMove(makeCtx([note(4, 60, 1)]).ctx, mv(makeCtx([note(4, 60, 1)]), at(4.3, 60)))).toBe('grab');
   });
 
   it('a click on a note moves it with its drag; the right edge resizes it', () => {

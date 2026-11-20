@@ -1,13 +1,14 @@
 // The MIXER picker in the header of the sample and channel windows (FL's FX-track box): a list of
 // the mixer inserts, and the mouse wheel over it steps through them (down = next), one undo
 // step per burst of wheel ticks.
-import { For, Show } from 'solid-js';
+import { onCleanup } from '../lib/reactive';
 import type { Id, Op } from '../api/types';
 import { t } from '../lib/i18n';
 import { routeToFreeInsert } from '../lib/mixer';
 import { commit, wheelEdit } from '../state/edit';
 import { allocId, insName, rawOf, S } from '../state/store';
-import { say, setU } from '../state/ui';
+import { showInsert } from '../state/mixView';
+import { openMenu, say, setU, type MenuItem } from '../state/ui';
 
 /** What an insert choice is made of: shared by the picker and the Channel Rack's mixer box. */
 export interface InsertChoice {
@@ -65,18 +66,52 @@ export function wheelInsert(p: InsertChoice, e: WheelEvent) {
   say(t('d.smp.routedTo', { name: choiceName(p, l[j]) }));
 }
 
+/** The box's text: the insert's number in the mixer, M for Master, — for the null choice (FL's FX-track box). */
+export function insertBoxLabel(p: InsertChoice): string {
+  if (p.value == null) return '—';
+  const i = S.project.inserts.findIndex(m => m.id === p.value);
+  return i < 0 ? '?' : i === 0 ? 'M' : String(i);
+}
+
+/** The list a click on an insert box opens: the null choice, a free insert of its own, then every insert. */
+export function insertChoiceMenu(p: InsertChoice, title: string, x: number, y: number) {
+  const items: MenuItem[] = [{ t: 'title', label: title }];
+  if (p.nullLabel != null) items.push({ t: 'item', label: p.nullLabel, kbd: p.value == null ? '✓' : '', act: () => pickInsert(p, null) });
+  if (p.free) items.push({ t: 'item', label: t('d.smp.freeOpt'), kbd: t('d.smp.dblClick'), act: () => pickFreeInsert(p) });
+  items.push({ t: 'sep' });
+  S.project.inserts.forEach((m, i) => { if (i > 0 || p.master) items.push({ t: 'item', label: i === 0 ? 'Master' : i + ' · ' + m.name, kbd: p.value === m.id ? '✓' : '', act: () => pickInsert(p, m.id) }); });
+  openMenu(x, y, items, Math.min(window.innerHeight - 20, 60 + items.length * 26));
+}
+
+/**
+ * Click / double-click of an insert box, shared by the Channel Rack and the editor headers. One
+ * click opens `menu` (after the double-click window), a double-click routes to a free insert of
+ * its own when it has none (FL), else shows that insert in the mixer.
+ */
+export function insertBoxClick(p: () => InsertChoice, menu: (r: DOMRect) => void) {
+  let timer = 0;
+  onCleanup(() => clearTimeout(timer));
+  return (e: MouseEvent) => {
+    if (timer) {
+      clearTimeout(timer); timer = 0;
+      const c = p();
+      if (c.value == null && c.free) pickFreeInsert(c); else showInsert(c.value);
+      return;
+    }
+    const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    timer = window.setTimeout(() => { timer = 0; menu(r); }, 250);
+  };
+}
+
+/** The MIXER box in the sample and channel window headers: the insert's number in the Channel Rack's box, its name beside it. */
 export function InsertPicker(props: InsertChoice & { title: string }) {
-  const pick = (id: Id | null) => pickInsert(props, id);
-  // the select shows the old choice again: the store change re-renders it with the new one
-  const wheel = (e: WheelEvent) => wheelInsert(props, e);
+  const name = () => { const m = props.value == null ? undefined : S.project.inserts.find(x => x.id === props.value); return m ? (m.id === 0 ? 'Master' : m.name) : props.nullLabel ?? ''; };
+  const click = insertBoxClick(() => props, r => insertChoiceMenu(props, props.label, r.left, r.bottom + 2));
   return (
-    <label class="chip inspick" title={props.title}>{t('a.mn.mixer')}
-      <select value={props.value == null ? '' : String(props.value)} title={props.title}
-        onChange={e => { const v = e.currentTarget.value; if (v === 'free') { e.currentTarget.value = props.value == null ? '' : String(props.value); pickFreeInsert(props); } else pick(v === '' ? null : +v); }} onWheel={wheel}>
-        <Show when={props.nullLabel != null}><option value="">{props.nullLabel}</option></Show>
-        <Show when={props.free}><option value="free">{t('d.smp.freeOpt')}</option></Show>
-        <For each={S.project.inserts.filter(m => props.master || m.id !== 0)}>{m => <option value={String(m.id)}>{insName(m)}</option>}</For>
-      </select>
-    </label>
+    <button class="chip inspick" title={props.title + '\n' + t('d.smp.mixer.boxTip')} aria-haspopup="menu" onClick={click} onWheel={e => wheelInsert(props, e)}>
+      {t('a.mn.mixer')}
+      <span class={['cins', { auto: props.value == null }]}>{insertBoxLabel(props)}</span>
+      <span class="insnm ell">{name()}</span>
+    </button>
   );
 }

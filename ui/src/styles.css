@@ -1,12 +1,12 @@
 :root {
-  --bg0: #0a0c0f; --bg1: #0e1013; --bg2: #111419; --bg3: #14181e; --bg4: #161a21; --bg5: #171b21; --bg6: #1c2128; --bg7: #1e242d;
-  --line: #252b34; --line2: #2c333d; --line3: #2e3641;
-  --fg: #d5dae2; --fg-hi: #f2f4f7; --fg2: #b4bac4; --fg3: #9aa2ad; --fg4: #8a93a1; --fg5: #727c8c; --fg6: #5e6877;
-  --blue: #4f8ef7; --blue-hi: #8fb6ff; --green: #4ec08a; --amber: #e0a44a; --pan: #b18cf5; --red: #e05263; --on-bg: #2f3a4b;
-  --sel-bg: #232a33; --sel-bg2: #1f252e; --sel-ring: #3a4554; --drag-bg: #2a3240; --mixer-bg: #121519; --dialog-bg: #1a1f26;
-  --on-accent: #0b1220; --on-warm: #12151a; --danger: #e8607a; --arm-bg: #1f1a1e; --playhead: #eef1f5;
-  --knob-track: #2c333d; --knob-cap: #2c333d; --knob-ptr: #f2f4f7; --fader-cap: #c9ced6; --shadow: rgba(0,0,0,.55); --shadow2: rgba(0,0,0,.4);
-  --viz: #0c0e12; --win-close: #c42b1c; --on-band: #0b1220;
+  --bg0: #0d0f13; --bg1: #111318; --bg2: #13161c; --bg3: #191c23; --bg4: #1a1e26; --bg5: #1c2028; --bg6: #242a34; --bg7: #2a303b;
+  --line: #2a303b; --line2: #343b47; --line3: #3c4452;
+  --fg: #dde1e8; --fg-hi: #f4f6f9; --fg2: #c0c6cf; --fg3: #a8b0bb; --fg4: #98a1ae; --fg5: #808a99; --fg6: #687282;
+  --blue: #4f8ef7; --blue-hi: #8fb6ff; --green: #4ec08a; --amber: #e0a44a; --pan: #b18cf5; --red: #e05263; --on-bg: #2c3a52;
+  --sel-bg: #283040; --sel-bg2: #222936; --sel-ring: #45526a; --drag-bg: #2f394a; --mixer-bg: #13161c; --dialog-bg: #1f242d;
+  --on-accent: #0b1220; --on-warm: #12151a; --danger: #e8607a; --arm-bg: #241c22; --playhead: #eef1f5;
+  --knob-track: #343b47; --knob-cap: #343b47; --knob-ptr: #f4f6f9; --fader-cap: #d0d5dc; --shadow: rgba(0,0,0,.55); --shadow2: rgba(0,0,0,.4);
+  --viz: #0f1115; --win-close: #c42b1c; --on-band: #0b1220;
   color-scheme: dark;
   --sans: 'Geist Variable', Geist, system-ui, sans-serif;
   --mono: 'Geist Mono Variable', 'Geist Mono', ui-monospace, monospace;
@@ -57,6 +57,8 @@ a { color: var(--blue); }
 .seg > button.on { background: var(--on-bg); color: var(--blue-hi); }
 .seg > button.count { width: auto; padding: 0 6px; font: 600 9px var(--mono); letter-spacing: .04em; white-space: nowrap; color: var(--fg4); }
 .seg > button.count.on { color: var(--blue-hi); }
+/* in the top bar the transport buttons stand on the bar itself: the clock is the one framed readout */
+.toolbar .tbmid > .seg:not(.patsong) { background: transparent; padding: 0; }
 .clockbox { display: flex; align-items: center; gap: 10px; height: 28px; padding: 0 10px; background: var(--bg0); border: 1px solid transparent; border-radius: 6px; }
 .clock { font: 500 14px var(--mono); color: var(--fg-hi); min-width: 68px; font-variant-numeric: tabular-nums; }
 .bpm { font: 500 14px var(--mono); color: var(--blue); cursor: ns-resize; touch-action: none; font-variant-numeric: tabular-nums; }
@@ -176,7 +178,7 @@ a { color: var(--blue); }
 .lanesCol { position: sticky; left: 0; z-index: 4; flex: none; background: var(--bg4); border-right: 1px solid var(--sep); }
 .lane { position: relative; display: flex; border-bottom: 1px solid var(--sep); background: var(--bg4); }
 .lane.armrec { background: var(--arm-bg); }
-.lane .stripe { width: 3px; flex: none; }
+.lane .stripe { width: 4px; flex: none; }
 .lane .body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; gap: 7px; padding: 0 6px 0 7px; }
 .lane .num { width: 14px; flex: none; font: 500 10px var(--mono); color: var(--fg5); }
 .lane .nm { flex: 1; min-width: 0; font: 500 12px var(--sans); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -429,9 +431,14 @@ select option { background: var(--bg4); color: var(--fg); }
 .knob .ptr { position: absolute; left: 17px; top: 9px; width: 2px; height: 7px; border-radius: 1px; background: var(--knob-ptr); transform-origin: 1px 9px; }
 .knob .ends { display: flex; justify-content: space-between; width: 66px; margin: -2px 0 1px; gap: 6px; font: 500 8px var(--sans); color: var(--fg5); letter-spacing: .02em; }
 .autodot { position: absolute; right: -2px; top: -1px; width: 7px; height: 7px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 2px var(--bg4); }
+.autodot.ovr { background: var(--fg5); }
 .knob.auto .val { color: var(--amber); }
+/* a tweak overrode the envelope while playing: the knob shows its manual value (Ableton's grey LED) */
+.knob.ovr .val { color: var(--fg5); }
 .miniknob { display: inline-flex; width: 22px; height: 22px; flex: none; cursor: ns-resize; touch-action: none; position: relative; }
-.miniknob.auto::after { content: ''; position: absolute; right: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+.miniknob.auto::after, .miniknob.ovr::after { content: ''; position: absolute; right: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; }
+.miniknob.auto::after { background: var(--amber); }
+.miniknob.ovr::after { background: var(--fg5); }
 .lvol.auto .thumb, .fader.auto .cap { box-shadow: 0 0 0 2px var(--amber); }
 .pandial { position: relative; width: 30px; height: 30px; cursor: ns-resize; touch-action: none; }
 .pandial .pcap { position: absolute; left: 8px; top: 8px; width: 14px; height: 14px; border-radius: 50%; background: var(--knob-cap); box-shadow: inset 0 0 0 1px var(--line2); }
@@ -607,13 +614,13 @@ select option { background: var(--bg4); color: var(--fg); }
 .crow.addrow .addch { height: 20px; display: flex; align-items: center; gap: 4px; }
 .graphtabs > button { width: auto; padding: 0 8px; font: 600 10px var(--sans); color: var(--fg3); }
 .patselbox { display: flex; align-items: center; gap: 1px; }
-.patselbtn { height: 26px; max-width: 200px; min-width: 110px; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 1px solid var(--line2); border-radius: 4px 0 0 4px; background: var(--bg1); color: var(--fg-hi); font: 600 11px var(--sans); cursor: pointer; }
-.patselbtn:hover { border-color: var(--line3); }
+.patselbtn { height: 26px; max-width: 200px; min-width: 110px; overflow: hidden; display: flex; align-items: center; gap: 6px; padding: 0 8px; border: 0; border-radius: 6px 0 0 6px; background: var(--bg0); color: var(--fg-hi); font: 600 11px var(--sans); cursor: pointer; }
+.patselbtn:hover, .patselarrow:hover, .patselnew:hover { background: var(--bg6); color: var(--fg-hi); }
 .patselbtn .num { flex: none; font-size: 10px; color: var(--fg4); }
 .patselbtn .ell { flex: 1; min-width: 0; text-align: left; }
-.patselarrow { width: 20px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line2); border-left: 0; background: var(--bg1); color: var(--fg3); cursor: pointer; padding: 0; }
+.patselarrow { width: 20px; height: 26px; display: grid; place-items: center; border: 0; background: var(--bg0); color: var(--fg3); cursor: pointer; padding: 0; }
 .patselarrow:hover { color: var(--fg-hi); border-color: var(--line3); }
-.patselnew { width: 24px; height: 26px; display: grid; place-items: center; border: 1px solid var(--line2); border-left: 0; border-radius: 0 4px 4px 0; background: var(--bg1); color: var(--fg3); cursor: pointer; padding: 0; }
+.patselnew { width: 24px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 0 6px 6px 0; background: var(--bg0); color: var(--fg3); cursor: pointer; padding: 0; }
 .patselnew:hover { color: var(--fg-hi); border-color: var(--line3); }
 .patwin .winhd { gap: 6px; }
 .patwin .winhd .sel { height: 24px; }
@@ -680,6 +687,22 @@ select option { background: var(--bg4); color: var(--fg); }
 .rollprops .rpf { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; padding-left: 8px; font: 500 11px var(--sans); color: var(--fg3); }
 .rollprops .rpf input { min-width: 0; font: 500 11px var(--mono); border-color: var(--line3); }
 .rollprops .rpf input:focus { border-color: var(--blue); }
+/* FL's note properties: a head, a row of knobs with the Slide switch, the fields, Reset / Accept */
+.rollprops .rphead { display: flex; align-items: center; gap: 6px; padding-right: 2px; }
+.rollprops .rphead .rpwhat { flex: 1; font: 500 10px var(--mono); color: var(--fg3); text-transform: none; letter-spacing: 0; }
+.rollprops .rpx { width: 18px; height: 18px; border: 0; border-radius: 4px; background: none; color: var(--fg4); font-size: 14px; line-height: 1; cursor: pointer; }
+.rollprops .rpx:hover { background: var(--line2); color: var(--fg-hi); }
+.rollprops .rpknobs { display: flex; align-items: flex-end; gap: 4px; margin: 0 6px 6px; padding: 8px 6px 6px; border-radius: 6px; background: var(--viz); min-height: 72px; }
+.rollprops .rpknobs .knob { min-width: 48px; }
+.rollprops .rpsilent { align-self: center; max-width: 150px; font: 500 10px var(--sans); color: var(--fg4); line-height: 1.35; white-space: normal; }
+.rollprops .rpled { align-self: center; display: flex; align-items: center; gap: 6px; height: 24px; padding: 0 10px; border: 1px solid var(--line3); border-radius: 5px; background: var(--bg2, transparent); color: var(--fg3); font: 700 9.5px var(--sans); letter-spacing: .08em; text-transform: uppercase; cursor: pointer; }
+.rollprops .rpled i { width: 7px; height: 7px; border-radius: 50%; background: var(--fg6); box-shadow: inset 0 0 0 1px var(--line3); }
+.rollprops .rpled:hover { color: var(--fg-hi); border-color: var(--fg5); }
+.rollprops .rpled.on { color: var(--fg-hi); border-color: var(--green); }
+.rollprops .rpled.on i { background: var(--green); box-shadow: 0 0 6px var(--green); }
+.rollprops .rpled.part i { background: linear-gradient(90deg, var(--green) 50%, var(--fg6) 50%); }
+.rollprops .rpbtns { display: flex; justify-content: flex-end; gap: 6px; padding: 6px 8px 0; }
+.ptools .slidetog:disabled { opacity: .35; cursor: not-allowed; }
 .rollprops .rpf input::placeholder { color: var(--fg5); font-style: italic; }
 .rollprops .rpfoot { padding: 4px 8px 3px; font: 500 10px var(--mono); color: var(--fg5); }
 .rollprops .rpfoot.err { color: var(--danger); font-family: var(--sans); white-space: normal; }
@@ -1409,8 +1432,8 @@ select option { background: var(--bg4); color: var(--fg); }
 .fxcl-ft .note { flex: 1; min-width: 0; }
 
 /* Ask AI: the labelled button in the menu row and its dialog */
-.askbtn { flex: none; display: flex; align-items: center; gap: 5px; height: 20px; margin-left: 4px; padding: 0 8px; border: 1px solid color-mix(in srgb, var(--blue) 45%, transparent); border-radius: 10px; background: color-mix(in srgb, var(--blue) 14%, transparent); color: var(--blue-hi); font: 600 11px var(--sans); cursor: pointer; white-space: nowrap; }
-.askbtn:hover, .askbtn.on { background: color-mix(in srgb, var(--blue) 26%, transparent); color: var(--fg-hi); }
+.askbtn { flex: none; display: flex; align-items: center; gap: 5px; height: 22px; margin-left: 0; padding: 0 7px; border: 0; border-radius: 6px; background: transparent; color: var(--blue-hi); font: 600 11px var(--sans); cursor: pointer; white-space: nowrap; }
+.askbtn:hover, .askbtn.on { background: color-mix(in srgb, var(--blue) 18%, transparent); color: var(--fg-hi); }
 .askbtn:focus-visible { outline: 2px solid var(--blue); outline-offset: 1px; }
 .askdlg { width: min(520px, 92vw); display: flex; flex-direction: column; gap: 10px; }
 .askintro { margin: 0; font: 400 12px/1.45 var(--sans); color: var(--fg2); }
@@ -1551,7 +1574,11 @@ button.chip { color: var(--fg); }
 .laneswitch { left: 4px; top: 8px; gap: 4px; }
 .laneswitch button { width: 40px; height: 34px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border-radius: 6px; font-size: 8.5px; text-transform: uppercase; }
 .laneswitch button.vel.on { background: color-mix(in srgb, var(--blue) 22%, transparent); color: var(--blue-hi); }
-.laneswitch button.pan.on { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+.laneswitch button.pan.on { background: color-mix(in srgb, var(--pan) 22%, transparent); color: var(--pan); }
+.laneswitch button.key.on { background: color-mix(in srgb, var(--green) 22%, transparent); color: var(--green); }
+.laneswitch button.shift.on { background: color-mix(in srgb, var(--amber) 22%, transparent); color: var(--amber); }
+/* the Channel Rack's graph editor shows the same switch side by side, in its label column */
+.laneswitch.row { position: static; flex-direction: row; gap: 4px; }
 
 /* round 7: window-bar controls are chips like the editor bars (no boxes until hovered) */
 .patwin .winhd .patname, .patwin .winhd .chsel, .patwin .winhd .bars, .patwin .winhd .numf { border-color: transparent; background: transparent; transition: background .12s; }
@@ -1602,7 +1629,8 @@ button.chip { color: var(--fg); }
 .cmd.dis { cursor: default; }
 .cmd.dis .name, .cmd.dis .path { color: var(--fg6); }
 .cmdnone { padding: 18px 10px; font: 13px var(--sans); color: var(--fg4); text-align: center; }
-.toolbar .cmdbtn { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 7px; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--fg) 6%, transparent); color: var(--fg3); cursor: pointer; }
+.toolbar .cmdbtn { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 7px; border: 0; border-radius: 6px; background: transparent; color: var(--fg3); cursor: pointer; }
+.toolbar .cmdbtn:hover { background: var(--line); color: var(--fg-hi); }
 .toolbar .cmdbtn:hover { background: color-mix(in srgb, var(--fg) 13%, transparent); color: var(--fg-hi); }
 @container toolbar (max-width: 1300px) { .toolbar .cmdbtn kbd { display: none; } }
 
@@ -1676,7 +1704,11 @@ button.chip { color: var(--fg); }
 /* ---- round 10 ---- */
 /* channel / sample windows: the insert picker and the cut group are chips, like Snap in the editors */
 .chanwin .chip.inspick, .chanwin .chip.smpcut { height: 24px; flex: none; }
-.chanwin .chip.inspick select { max-width: 150px; text-overflow: ellipsis; }
+/* the editors' MIXER box: the Channel Rack's insert box, the insert's name beside it */
+.chip.inspick { gap: 6px; padding-right: 9px; }
+.chip.inspick .cins { display: inline-grid; place-items: center; min-width: 24px; width: auto; padding: 0 4px; }
+.chip.inspick:hover .cins { border-color: var(--line3); color: var(--fg-hi); }
+.chip.inspick .insnm { max-width: 130px; color: var(--fg-hi); font-weight: 600; }
 .chanwin .chip.smpcut select { min-width: 0; }
 /* one "add" look: the effect chain's Add effect and the mixer's new insert */
 /* the effect chain's Add effect keeps its row; neutral, not the accent colour */
@@ -1826,3 +1858,13 @@ button.chip { color: var(--fg); }
 .stems-box.err { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, transparent); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
 .stems-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; padding: 12px 18px; border-top: 1px solid var(--line); }
 .stems-foot .smallbtn { height: 28px; padding: 0 14px; border-radius: 5px; font-size: 12px; }
+
+/* dragging a Playlist lane header: the lane lifts, a line marks where it lands */
+.lane.lifted { opacity: .55; outline: 1px dashed var(--blue); outline-offset: -2px; }
+.laneDropLine { position: absolute; left: 0; height: 2px; background: var(--blue); box-shadow: 0 0 0 1px rgba(79, 142, 247, .35); z-index: 6; pointer-events: none; }
+.graphtabs button.off { opacity: .45; }
+/* the Channel Rack's group filter (FL's filter groups), a chip in the window bar */
+.patwin .winhd .groupchip { display: flex; align-items: center; gap: 5px; height: 24px; max-width: 160px; padding: 0 8px; border: 0; border-radius: 4px; background: transparent; color: var(--fg3); font: 600 11px var(--sans); cursor: pointer; }
+.patwin .winhd .groupchip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.patwin .winhd .groupchip:hover { background: var(--bg4); color: var(--fg-hi); }
+.patwin .winhd .groupchip.on { color: var(--blue-hi); background: color-mix(in srgb, var(--blue) 16%, transparent); }

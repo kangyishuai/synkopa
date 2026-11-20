@@ -182,7 +182,7 @@ PLUGINS  (VST3 everywhere, LV2 on Linux)
   plugin-load-anyway --fx ID               load a plugin Synkopa's safety check refused (it crashed or hung
                                            when tried in a separate process); from now on, every project
   vst3 [--rescan] | vst3-add | vst3-params | vst3-set    the same, VST3 only (older names)
-  auto-add --fx ID --param ID [--points "0:0.2,4:0.8" | --value V] [--track N --name TEXT]
+  auto-add [--fx ID --param ID | --target mix --fx ID | --target insertVol|insertPan|trackVol|chanVol|chanPan --id ID] [--points "0:0.2,4:0.8" | --value V] [--track N --name TEXT]
                                            automate a hosted plugin parameter (adds the playlist clip too)
 
 NOTES  (deterministic transforms and generators for a pattern's notes)
@@ -850,6 +850,9 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
             if let Some(c) = a.get("ch") {
                 args["ch"] = id_or_name(c);
             }
+            if a.has("group") {
+                args["group"] = json!(a.get("group").unwrap_or(""));
+            }
             for k in ["preset", "param"] {
                 if let Some(v) = a.get(k) {
                     args[k] = json!(v);
@@ -1065,9 +1068,26 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
             json!({"fxId": a.num("fx").map_err(u)?.ok_or_else(|| u("missing --fx".into()))? as u64, "id": a.num("id").map_err(u)?.ok_or_else(|| u("missing --id".into()))? as u64, "value": a.num("value").map_err(u)?.ok_or_else(|| u("missing --value".into()))?}),
         ),
         "auto-add" => {
-            // an automation envelope on a hosted plugin parameter, plus the playlist clip that plays it
-            let fx = a.num("fx").map_err(u)?.ok_or_else(|| u("missing --fx".into()))? as u64;
-            let param = a.num("param").map_err(u)?.ok_or_else(|| u("missing --param".into()))? as u64;
+            // an automation envelope (a hosted plugin parameter by default, `--target` for the
+            // rest), plus the playlist clip that plays it
+            let target = match a.get("target") {
+                None | Some("plugin") => {
+                    let fx = a.num("fx").map_err(u)?.ok_or_else(|| u("missing --fx".into()))? as u64;
+                    let param = a.num("param").map_err(u)?.ok_or_else(|| u("missing --param".into()))? as u64;
+                    json!({"kind": "plugin", "fxId": fx, "paramId": param})
+                }
+                Some("mix") => {
+                    let fx = a.num("fx").map_err(u)?.ok_or_else(|| u("--target mix needs --fx".into()))? as u64;
+                    json!({"kind": "mix", "fxId": fx})
+                }
+                Some(kind @ ("insertVol" | "insertPan" | "trackVol" | "chanVol" | "chanPan")) => {
+                    let id = a.num("id").map_err(u)?.ok_or_else(|| u(format!("--target {kind} needs --id")))? as u64;
+                    json!({"kind": kind, "id": id})
+                }
+                Some(other) => {
+                    return Err(u(format!("unknown --target `{other}` (plugin, mix, insertVol, insertPan, trackVol, chanVol, chanPan)")))
+                }
+            };
             let mut points: Vec<Value> = vec![];
             if let Some(p) = a.get("points") {
                 for pair in p.split(',') {
@@ -1097,7 +1117,7 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                 a,
                 "apply",
                 json!({"ops": [
-                    {"op": "putAutomation", "automation": {"id": auto_id, "name": name, "color": "#e0a44a", "target": {"kind": "plugin", "fxId": fx, "paramId": param}, "points": points}},
+                    {"op": "putAutomation", "automation": {"id": auto_id, "name": name, "color": "#e0a44a", "target": target, "points": points}},
                     {"op": "putClips", "clips": [{"id": clip_id, "track": track, "start": 0.0, "len": len, "offset": 0.0, "kind": "auto", "ref": auto_id, "muted": false, "gain": 0.0, "fadeIn": 0.0, "fadeOut": 0.0, "pan": 0.0, "norm": false, "rev": false}]}
                 ]}),
             )
@@ -1106,7 +1126,7 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
             let verb = a
                 .pos
                 .get(1)
-                .ok_or_else(|| u("notes <humanize|quantize|euclid|strum|drums|melody|chord|progression|stamp> …".into()))?
+                .ok_or_else(|| u("notes <humanize|quantize|euclid|strum|chop|glue|arp|drums|melody|chord|progression|stamp> …".into()))?
                 .clone();
             let pattern = a.num("pattern").map_err(u)?.ok_or_else(|| u("missing --pattern".into()))? as u64;
             let f = |k: &str| a.num(k);
@@ -1138,6 +1158,12 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                 ),
                 "strum" => (
                     json!({"kind": "strum", "width": f("width").map_err(u)?.unwrap_or(0.5), "ramp": f("ramp").map_err(u)?.unwrap_or(0.05)}),
+                    false,
+                ),
+                "chop" => (json!({"kind": "chop", "len": f("len").map_err(u)?.unwrap_or(1.0)}), false),
+                "glue" => (json!({"kind": "glue"}), false),
+                "arp" => (
+                    json!({"kind": "arpeggiate", "mode": a.get("mode").unwrap_or("up"), "rate": f("rate").map_err(u)?.unwrap_or(1.0), "gate": f("gate").map_err(u)?.unwrap_or(0.9), "octaves": f("octaves").map_err(u)?.unwrap_or(1.0) as u32}),
                     false,
                 ),
                 "chord" => {
@@ -1193,7 +1219,7 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                 ),
                 other => {
                     return Err(u(format!(
-                        "unknown notes verb `{other}` (humanize|quantize|euclid|strum|drums|melody|chord|progression|stamp)"
+                        "unknown notes verb `{other}` (humanize|quantize|euclid|strum|chop|glue|arp|drums|melody|chord|progression|stamp)"
                     )))
                 }
             };
@@ -1626,6 +1652,8 @@ mod tests {
         bpm: RefCell<f64>,
         dirty: RefCell<bool>,
         saves: Rc<RefCell<Vec<PathBuf>>>,
+        /// `transformNotes` ops it was sent, as sent.
+        ops: Rc<RefCell<Vec<Value>>>,
     }
 
     impl Doc for FakeDoc {
@@ -1635,6 +1663,7 @@ mod tests {
                     for op in args["ops"].as_array().cloned().unwrap_or_default() {
                         match op["op"].as_str() {
                             Some("setBpm") => *self.bpm.borrow_mut() = op["bpm"].as_f64().unwrap(),
+                            Some("transformNotes") => self.ops.borrow_mut().push(op.clone()),
                             other => return Err(format!("BAD_OPS: unknown op {other:?}")),
                         }
                     }
@@ -1663,11 +1692,12 @@ mod tests {
     #[derive(Default)]
     struct FakeFiles {
         saves: Rc<RefCell<Vec<PathBuf>>>,
+        ops: Rc<RefCell<Vec<Value>>>,
     }
 
     impl FakeFiles {
         fn doc(&self) -> Box<dyn Doc> {
-            Box::new(FakeDoc { bpm: RefCell::new(120.0), dirty: RefCell::new(false), saves: self.saves.clone() })
+            Box::new(FakeDoc { bpm: RefCell::new(120.0), dirty: RefCell::new(false), saves: self.saves.clone(), ops: self.ops.clone() })
         }
         fn saves(&self) -> Vec<PathBuf> {
             self.saves.borrow().clone()
@@ -1756,6 +1786,22 @@ mod tests {
         file(&f, &["save", "--path", &other.display().to_string(), "--project", &p]).unwrap();
         assert_eq!(f.saves().len(), 3);
         assert!(same_file(f.saves().last().unwrap(), &other));
+    }
+
+    #[test]
+    fn chop_glue_and_arp_send_their_transform_verbs() {
+        let d = dir("notetools");
+        let p = project(&d);
+        let f = FakeFiles::default();
+        file(&f, &["notes", "chop", "--pattern", "3", "--len", "0.5", "--select", "0:16@7", "--project", &p]).unwrap();
+        file(&f, &["notes", "glue", "--pattern", "3", "--project", &p]).unwrap();
+        file(&f, &["notes", "arp", "--pattern", "3", "--mode", "upDown", "--octaves", "2", "--seed", "4", "--project", &p]).unwrap();
+        let ops = f.ops.borrow();
+        assert_eq!(ops[0]["verb"], json!({"kind": "chop", "len": 0.5}));
+        assert_eq!(ops[0]["select"], json!({"kind": "range", "from": 0.0, "to": 16.0, "ch": 7}));
+        assert_eq!(ops[1]["verb"], json!({"kind": "glue"}));
+        assert_eq!(ops[2]["verb"], json!({"kind": "arpeggiate", "mode": "upDown", "rate": 1.0, "gate": 0.9, "octaves": 2}));
+        assert_eq!(ops[2]["seed"], json!(4));
     }
 
     #[test]

@@ -5,6 +5,7 @@ import { t, tName } from '../lib/i18n';
 import type { Channel, LibFile, Note, Pattern } from '../api/types';
 import { FACTORY_KIT, LIB_SCHEME } from '../lib/factory';
 import { barsText, clearChannel, fillEvery, notesText, rotate, stepsOf } from '../lib/pattern';
+import { cleanGroup, rackGroups } from '../lib/rackGroups';
 import { libGroup, loadStdLib, stdLibGroups } from '../state/library';
 import { ensurePluginScan, pluginScan, runPluginScan } from '../state/pluginScan';
 import { isTypingKey } from '../state/typingKeys';
@@ -109,11 +110,27 @@ export function chanMenu(c: Channel, x: number, y: number, clipboardItems: MenuI
     { t: 'sep' },
     { t: 'item', label: t('b.pe.preview'), kbd: t('b.pe.ctrlClick'), act: () => audition(c.id, undefined, 0.8, true) },
     { t: 'item', label: t('b.pe.rename'), act: () => openRename(x, y, c.name, v => v.trim() && setChannel(c, { name: v.trim() }, t('b.pe.chName'))) },
+    { t: 'sub', label: t('b.rk.groupMenu'), items: groupItems(c, x, y) },
     { t: 'swatches', current: c.color, pick: col => setChannel(c, { color: col }, t('b.pe.chColor')) },
     { t: 'item', label: t('b.pe.clone'), act: () => cloneChannel(c) },
     { t: 'sep' },
     { t: 'item', label: t('b.pe.delete'), danger: true, act: () => deleteChannel(c) },
   ], 520);
+}
+
+/** FL's filter groups: put the channel in an existing group, a new one, or none. */
+function groupItems(c: Channel, x: number, y: number): MenuItem[] {
+  const groups = rackGroups(channels());
+  const put = (g: string | undefined) => {
+    setChannel(c, { group: g }, t('b.rk.groupSetGest'));
+    say(g ? t('b.rk.groupJoined', { name: c.name, group: g }) : t('b.rk.groupLeft', { name: c.name }));
+  };
+  return [
+    ...groups.map((g): MenuItem => ({ t: 'item', label: g.name, checked: c.group === g.name, act: () => put(g.name) })),
+    ...(groups.length ? [{ t: 'sep' } as MenuItem] : []),
+    { t: 'item', label: t('b.rk.groupNew'), act: () => openRename(x, y, '', v => { const g = cleanGroup(v); if (g) put(g); }, t('b.rk.groupNewTitle')) },
+    { t: 'item', label: t('b.rk.groupClear'), disabled: !c.group, act: () => put(undefined) },
+  ];
 }
 
 /**

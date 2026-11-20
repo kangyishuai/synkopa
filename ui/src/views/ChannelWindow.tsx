@@ -7,8 +7,8 @@ import { VOL_UNITY, type AutoTarget, type Channel, type Id } from '../api/types'
 import { clamp, panText, volText } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
 import { noteName } from '../lib/pitch';
-import { autoDisplay, controlMenu, isAutomated, paramMenu } from '../state/automation';
-import { commit, Gesture, wheelEdit } from '../state/edit';
+import { autoDisplay, autoTweak, autoWheel, controlMenu, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
+import { commit } from '../state/edit';
 import { audition, chanById, chanOp } from '../state/pattern';
 import { outerZ, setWin, win, type Win } from '../state/winOrder';
 import { docked, say, setU, tucked, U } from '../state/ui';
@@ -143,18 +143,20 @@ function Body(props: { w: Win; c: Channel }) {
 
 function ChannelKnob(props: { channel: Channel; lab: TranslationKey; undoLab: TranslationKey; position: () => number; text: () => string; patch: (v: number) => Partial<Channel>; def: number; zero?: number; target?: () => AutoTarget; color?: string }) {
   const { lab, undoLab, position, text, patch, def, zero, target } = props;
-  let g: Gesture | null = null;
+  let g: Tweak | null = null;
+  const staticOps = (v: number) => [chanOp(props.channel, patch(v))];
   const reset = () => commit([chanOp(props.channel, patch(def))], t(undoLab));
   return (
     <Knob key={'cw' + lab + props.channel.id} color={props.color} label={t(lab)} title={t('b.cw.knobTitle')} t={position} text={text}
       automated={() => !!target && isAutomated(target())}
+      overridden={() => !!target && isOverridden(target())}
       onMenu={(x, y) => target ? paramMenu(x, y, target(), reset, props.channel.color) : controlMenu(x, y, props.channel.name + ' · ' + t(lab), reset, t('a.au.noRoot'))}
       zero={zero != null ? () => zero : undefined}
-      onStart={() => { g = new Gesture(t(undoLab)); }}
-      onChange={v => { g?.update([chanOp(props.channel, patch(v))]); say(props.channel.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
+      onStart={() => { g = autoTweak(target?.() ?? null, t(undoLab), staticOps); }}
+      onChange={v => { g?.move(v); say(props.channel.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
       onEnd={() => { g?.end(); g = null; }}
       onReset={reset}
-      onWheel={v => wheelEdit('cw' + lab, t(undoLab), [chanOp(props.channel, patch(v))])} />
+      onWheel={v => autoWheel(target?.() ?? null, 'cw' + lab + props.channel.id, t(undoLab), v, staticOps)} />
   );
 }
 

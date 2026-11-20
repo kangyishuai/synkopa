@@ -469,6 +469,9 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
             if c.root > 127 {
                 return Err(OpError::Invalid("channel root must be 0..127".into()));
             }
+            if c.group.as_deref().is_some_and(|g| g.trim().is_empty() || g.chars().count() > 40) {
+                return Err(OpError::Invalid("channel group: 1..40 characters (absent = unsorted)".into()));
+            }
             if let ChannelSrc::Sample { source, sampler, slices } = &c.src {
                 if !p.sources.iter().any(|s| s.id == *source) {
                     return Err(OpError::Missing { what: "source", id: *source });
@@ -703,9 +706,29 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
                         }
                     }
                 }
+                crate::transform::TransformVerb::Chop { len } => {
+                    if !(len.is_finite() && *len >= crate::transform::MIN_PIECE) {
+                        return Err(OpError::Invalid("chop len must be at least 0.25 steps (a 64th)".into()));
+                    }
+                }
+                crate::transform::TransformVerb::Arpeggiate { mode, rate, gate, octaves } => {
+                    if !crate::transform::ARP_MODES.contains(&mode.as_str()) {
+                        return Err(OpError::Invalid(format!("arpeggiate mode must be one of {}", crate::transform::ARP_MODES.join(", "))));
+                    }
+                    if !(rate.is_finite() && *rate >= crate::transform::MIN_PIECE) {
+                        return Err(OpError::Invalid("arpeggiate rate must be at least 0.25 steps (a 64th)".into()));
+                    }
+                    if !(gate.is_finite() && (0.05..=1.0).contains(gate)) {
+                        return Err(OpError::Invalid("arpeggiate gate must be 0.05..1".into()));
+                    }
+                    if !(1..=4).contains(octaves) {
+                        return Err(OpError::Invalid("arpeggiate octaves must be 1..4".into()));
+                    }
+                }
                 crate::transform::TransformVerb::Humanize { .. }
                 | crate::transform::TransformVerb::Quantize { .. }
-                | crate::transform::TransformVerb::Strum { .. } => {}
+                | crate::transform::TransformVerb::Strum { .. }
+                | crate::transform::TransformVerb::Glue {} => {}
             }
             // positional verbs (humanize/quantize/strum) map every selected note 1:1.
             // Generators replace every note of their target channel(s) and leave the
@@ -721,7 +744,15 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
                     | crate::transform::TransformVerb::Melody { .. }
                     | crate::transform::TransformVerb::Progression { .. }
             );
-            let growing = matches!(verb, crate::transform::TransformVerb::Chord { .. });
+            // `chord` grows the selection; chop, glue and the arpeggiator reshape it (more or
+            // fewer notes in place of the selected ones): all of them merge the same way
+            let growing = matches!(
+                verb,
+                crate::transform::TransformVerb::Chord { .. }
+                    | crate::transform::TransformVerb::Chop { .. }
+                    | crate::transform::TransformVerb::Glue {}
+                    | crate::transform::TransformVerb::Arpeggiate { .. }
+            );
             let all_notes = select.is_none() || unscoped;
             // a copy: every refusal below leaves the pattern as it was (`apply` promises that)
             let mut notes = p.patterns[pi].notes.clone();
@@ -746,6 +777,18 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
             // (the selection is still validated above, so a bad index fails either way)
             let idx: Vec<usize> = if unscoped { (0..notes.len()).collect() } else { idx };
             let mut target: Vec<Note> = idx.iter().map(|&i| notes[i].clone()).collect();
+            // chop and the arpeggiator multiply notes: bounded before they allocate
+            const MAX_MADE: usize = 20_000;
+            let made = match verb {
+                crate::transform::TransformVerb::Chop { len } => crate::transform::chop_count(&target, *len),
+                crate::transform::TransformVerb::Arpeggiate { rate, .. } => crate::transform::arpeggiate_count(&target, *rate),
+                _ => 0,
+            };
+            if made > MAX_MADE {
+                return Err(OpError::Invalid(format!(
+                    "that would make {made} notes (at most {MAX_MADE}): pick fewer notes or a longer step"
+                )));
+            }
             let rng = &mut crate::transform::SplitMix64::new(seed.unwrap_or(0));
             match verb {
                 crate::transform::TransformVerb::Humanize { timing, velocity } => {
@@ -782,6 +825,11 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
                 }
                 crate::transform::TransformVerb::Chord { harmony } => {
                     crate::transform::chord(&mut target, &notes, ks, harmony, &roots);
+                }
+                crate::transform::TransformVerb::Chop { len } => crate::transform::chop(&mut target, *len),
+                crate::transform::TransformVerb::Glue {} => crate::transform::glue(&mut target, &roots),
+                crate::transform::TransformVerb::Arpeggiate { mode, rate, gate, octaves } => {
+                    crate::transform::arpeggiate(&mut target, &roots, mode, *rate, *gate, *octaves, rng);
                 }
                 crate::transform::TransformVerb::Progression { ch, bars, template, voice_lead, degrees } => {
                     let degs: Vec<usize> = if degrees.is_empty() {
@@ -1052,9 +1100,9 @@ mod transform_tests {
     fn project_with_notes() -> Project {
         let mut p = crate::demo::routed_project();
         p.patterns[0].notes = vec![
-            Note { ch: 1001, step: 0.0, len: 1.0, p: Some(61), v: 0.8, trig: Some(false), pan: 0.0 },
-            Note { ch: 1001, step: 4.3, len: 1.0, p: Some(64), v: 0.8, trig: Some(false), pan: 0.0 },
-            Note { ch: 1001, step: 8.0, len: 1.0, p: Some(60), v: 0.8, trig: Some(false), pan: 0.0 },
+            Note { ch: 1001, step: 0.0, len: 1.0, p: Some(61), v: 0.8, trig: Some(false), pan: 0.0, slide: false },
+            Note { ch: 1001, step: 4.3, len: 1.0, p: Some(64), v: 0.8, trig: Some(false), pan: 0.0, slide: false },
+            Note { ch: 1001, step: 8.0, len: 1.0, p: Some(60), v: 0.8, trig: Some(false), pan: 0.0, slide: false },
         ];
         p
     }
@@ -1356,7 +1404,7 @@ mod transform_tests {
         set_key_a_minor(&mut p);
         // notes at 0.0 (C#4), 4.3 (E4), 8.0 (C4) on ch 1001; a hit on another channel at 5.0
         let other = p.channels.iter().map(|c| c.id).find(|id| *id != 1001).unwrap();
-        p.patterns[0].notes.push(Note { ch: other, step: 5.0, len: 1.0, p: None, v: 0.8, trig: Some(false), pan: 0.0 });
+        p.patterns[0].notes.push(Note { ch: other, step: 5.0, len: 1.0, p: None, v: 0.8, trig: Some(false), pan: 0.0, slide: false });
         // range select pinned to ch 1001, steps 4..9: E4 → Em, C4 → C; the C# (out of
         // scale) is outside the range and the drum hit is on another channel — both stay
         crate::ops::apply_all(
@@ -1391,7 +1439,7 @@ mod transform_tests {
         // OUTSIDE the selection — Em must not double the B that is already sounding
         let other = p.channels.iter().map(|c| c.id).find(|id| *id != 1001).unwrap();
         p.patterns[0].notes[1].p = Some(52); // the 4.3 note becomes E3
-        p.patterns[0].notes.push(Note { ch: other, step: 4.3, len: 2.0, p: Some(59), v: 0.8, trig: Some(false), pan: 0.0 });
+        p.patterns[0].notes.push(Note { ch: other, step: 4.3, len: 2.0, p: Some(59), v: 0.8, trig: Some(false), pan: 0.0, slide: false });
         crate::ops::apply_all(
             &mut p,
             &[Op::TransformNotes {
