@@ -8,7 +8,7 @@ import { NOTE_NAMES } from '../lib/pitch';
 import { knobVal, paramDefs, pFmt, pNorm, presetInfo, presetList } from '../lib/presets';
 import { noteName, stepBeats } from '../lib/beatDiv';
 import * as A from '../state/actions';
-import { autoDisplay, autoTweak, autoWheel, captureArmed, controlMenu, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, captureArmed, controlMenu, isAutomated, isOverridden, noteManualTweak, paramMenu, type Tweak } from '../state/automation';
 import type { AutoTarget } from '../api/types';
 import { commit, Gesture } from '../state/edit';
 import { findFx, insName, plain, S } from '../state/store';
@@ -811,7 +811,11 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
                     <input type="range" min="0" max="1" step={sliderStep(p)} value={p.value}
                       onInput={e => { const v = +e.currentTarget.value; if (cap) cap.move(v); else set(p.id, v); }}
                       onDblClick={() => set(p.id, p.def)} aria-label={p.name}
-                      onPointerDown={e => { if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); } else if (!props.instrument && captureArmed()) cap = autoTweak(target, p.name, () => null, { current: p.value, paramLabel: p.name }); }}
+                      onPointerDown={e => {
+                        if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); }
+                        else if (!props.instrument && captureArmed()) cap = autoTweak(target, p.name, () => null, { current: p.value, paramLabel: p.name });
+                        else if (e.button === 0 && !props.instrument) noteManualTweak(target); // the tweak wins over the envelope (Ableton's override)
+                      }}
                       onPointerUp={done} onPointerCancel={done} />
                   }>
                     <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p.value >= 0.5} onChange={e => set(p.id, e.currentTarget.checked ? 1 : 0)} aria-label={p.name} />

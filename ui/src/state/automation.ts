@@ -120,6 +120,37 @@ export function paramMenu(x: number, y: number, target: AutoTarget, reset: (() =
 
 // ---- override (a manual tweak on an automated control, while the song plays) ----
 
+const reportOverrideError = (e: unknown) => {
+  console.warn('automation override failed:', e);
+  say(tl('a.err', { e: String((e as Error)?.message ?? e) }));
+};
+
+function automationIdsOf(target: AutoTarget): Id[] {
+  const k = targetKey(target);
+  return (S.project.automations ?? []).filter(a => targetKey(a.target) === k).map(a => a.id);
+}
+
+/** Overrides already asked for (a wheel ticks many times before the state event comes back). */
+const overrideAsked = new Set<string>();
+let wasPlaying = false;
+addFrameTask(() => {
+  if (wasPlaying && !U.playing) overrideAsked.clear();
+  wasPlaying = U.playing;
+});
+
+/** A manual tweak outside the drag helpers (a hosted plugin row writes its parameter directly):
+ * while playing, mark the target's automations overridden so the tweak is the one that counts. */
+export function noteManualTweak(target: AutoTarget) {
+  if (!U.playing) return;
+  for (const id of automationIdsOf(target)) {
+    const asked = targetKey(target) + ':' + id;
+    if (!S.overriddenAutos.includes(id) && !overrideAsked.has(asked)) {
+      overrideAsked.add(asked);
+      void enqueue(() => be().automationOverride(id, true)).catch(reportOverrideError);
+    }
+  }
+}
+
 /** The target's automations that a tweak overrode while playing (the knob shows the manual
  * value; the envelope rests until re-enabled or the transport stops, like Ableton's). */
 export function overriddenIds(target: AutoTarget): Id[] {
@@ -130,16 +161,11 @@ export function overriddenIds(target: AutoTarget): Id[] {
 /** "Re-enable automation": the envelope drives the control again (the static value the tweak
  * wrote stays underneath, unheard while the envelope plays). */
 export function reEnableAutomation(target: AutoTarget) {
-  for (const id of overriddenIds(target)) void enqueue(() => be().automationOverride(id, false)).catch(() => {});
+  for (const id of overriddenIds(target)) void enqueue(() => be().automationOverride(id, false)).catch(reportOverrideError);
 }
 
 /** A tweak won over this control's envelope while playing (the knob shows the manual value). */
 export const isOverridden = (target: AutoTarget) => overriddenIds(target).length > 0;
-
-function automationIdsOf(target: AutoTarget): Id[] {
-  const k = targetKey(target);
-  return (S.project.automations ?? []).filter(a => targetKey(a.target) === k).map(a => a.id);
-}
 
 // ---- capture (the record filter's "automation"): tweaks become envelope points ----
 
@@ -217,9 +243,7 @@ class StaticTweak implements Tweak {
   constructor(target: AutoTarget | null, label: string, private mk: (norm: number) => Op[] | null) {
     this.g = new Gesture(label);
     // a fader over an envelope wins until re-enabled or stopped (Ableton's override)
-    if (target && U.playing) for (const id of automationIdsOf(target)) {
-      if (!S.overriddenAutos.includes(id)) void enqueue(() => be().automationOverride(id, true)).catch(() => {});
-    }
+    if (target) noteManualTweak(target);
   }
   move(norm: number) {
     const ops = this.mk(norm);
@@ -318,12 +342,6 @@ export function autoTweak(target: AutoTarget | null, label: string, mkStatic: (n
 const wheelCaps = new Map<string, { t: CaptureTweak; at: number }>();
 let wheelTimer: ReturnType<typeof setTimeout> | null = null;
 /** Overrides already asked for (a wheel ticks many times before the state event comes back). */
-const overrideAsked = new Set<string>();
-let wasPlaying = false;
-addFrameTask(() => {
-  if (wasPlaying && !U.playing) overrideAsked.clear();
-  wasPlaying = U.playing;
-});
 /** Begin a control tweak from a wheel tick: like `autoTweak`, but the capture gesture closes
  * after the wheel goes quiet (450 ms), the way `wheelEdit` closes its gestures. */
 export function autoWheel(target: AutoTarget | null, key: string, label: string, norm: number, mkStatic: (norm: number) => Op[] | null, opts?: { current?: number; paramLabel?: string; color?: string }): void {
@@ -347,13 +365,7 @@ export function autoWheel(target: AutoTarget | null, key: string, label: string,
     }, 460);
     return;
   }
-  if (target && U.playing) for (const id of automationIdsOf(target)) {
-    const asked = targetKey(target) + ':' + id;
-    if (!S.overriddenAutos.includes(id) && !overrideAsked.has(asked)) {
-      overrideAsked.add(asked);
-      void enqueue(() => be().automationOverride(id, true)).catch(() => {});
-    }
-  }
+  if (target) noteManualTweak(target);
   const ops = mkStatic(norm);
   if (ops) wheelEdit(key, label, ops);
 }

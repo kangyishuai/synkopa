@@ -1165,12 +1165,14 @@ impl Engine {
     /// automation from it, so the static value the tweak wrote stands.
     pub fn automation_override(&self, id: Id, on: bool) -> TransportDto {
         let mut c = self.core.lock();
+        // both directions rebuild now: the override must take effect even when the tweak
+        // that follows sends no ops (a hosted plugin parameter is written to directly)
         if on {
-            c.auto_overrides.insert(id);
-        } else {
-            if c.auto_overrides.remove(&id) {
+            if c.auto_overrides.insert(id) {
                 self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
             }
+        } else if c.auto_overrides.remove(&id) {
+            self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
         }
         let t = c.transport.clone();
         self.changed(c);
