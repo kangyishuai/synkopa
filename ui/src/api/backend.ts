@@ -6,7 +6,7 @@ import { listen } from '@tauri-apps/api/event';
 import type { BeatRange } from '../lib/patLoop';
 import type {
   AudioConfig, AudioDevices, AudioHost, AudioStatus, LatencyReport, Catalog, CliStatus, ExportAudioOptions, ExportProgress, ExportResult, ExportStemsOptions, ExportStemsResult, F0ModelStatus, FxChainLoadResult, FxChainPreset, Id, ImportResult, MidiExportResult, MidiImportArgs, MidiImportResult, MidiInfo, Relinked, RelinkSearch,
-  KeysStatus, LibraryFiles, LibraryList, LibraryProgress, Melody, MelodyChannel, MidiDevice, MidiNoteEvent, MidiStatus, ModelProgress, AppInfo, UpdateInfo, UpdateProgress, MusicAnalysis, AutoVocalPlan, AutoVocalStyle, Op, OpenResult, PitchAnalysis, PitchTarget, RecoveredProject, RefTune, SaveResult, StateDto, TransportDto, PluginScan, PluginParam, PluginCrashSuspect,
+  KeysStatus, LibraryFiles, LibraryList, LibraryProgress, Melody, MelodyChannel, MidiDevice, MidiNoteEvent, MidiStatus, ModelProgress, AppInfo, UpdateInfo, UpdateProgress, MusicAnalysis, AutoVocalPlan, AutoVocalStyle, Op, OpenResult, PitchAnalysis, RecentProject, PitchTarget, RecoveredProject, RefTune, SaveResult, StateDto, TransportDto, PluginScan, PluginParam, PluginCrashSuspect,
   ExtractStemsResult, StemId, StemModelStatus, StemsProgress,
 } from './types';
 
@@ -184,6 +184,10 @@ export interface Backend {
   projectNew(demo?: boolean): Promise<StateDto>;
   /** The file dialog when `path` is omitted. */
   projectOpen(path?: string, ifRevision?: number): Promise<OpenResult>;
+  /** File → Open recent: projects opened or saved lately, newest first (at most 10). */
+  recentProjects(): Promise<RecentProject[]>;
+  /** Takes `path` off the recent list; without a path, clears it. */
+  recentForget(path?: string): Promise<void>;
   /** Project paths received at launch or forwarded by another instance. */
   takeProjectOpenRequests(): Promise<string[]>;
   /** The save dialog when the project has no path yet or `saveAs`. */
@@ -429,6 +433,8 @@ export function tauriBackend(): Backend {
     projectNew: demo => invoke('project_new', { demo: !!demo }),
     projectOpen: (path, ifRevision) => invoke('project_open', { path: path ?? null, ifRevision }),
     takeProjectOpenRequests: () => invoke('take_project_open_requests'),
+    recentProjects: () => invoke('recent_projects'),
+    recentForget: path => invoke('recent_forget', { path: path ?? null }),
     projectSave: (saveAs, version) => invoke('project_save', { saveAs: !!saveAs, version: !!version }),
     projectExportZip: ifRevision => invoke('project_export_zip', { ifRevision }),
     recoveryWrite: () => invoke('recovery_write'),

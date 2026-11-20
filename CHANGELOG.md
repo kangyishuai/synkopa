@@ -4,6 +4,14 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **File → Open recent.** The last ten projects you opened or saved, newest first, one click away.
+  Two projects with the same name show their folders. A project that was moved or deleted is
+  shown as missing, and "Remove missing projects" and "Clear list" tidy the list. Opening one
+  asks about unsaved changes first, like Open.
+
 ## 0.9.30 — 2026-11-19
 
 ### Added

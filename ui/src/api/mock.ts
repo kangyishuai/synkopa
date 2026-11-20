@@ -31,7 +31,7 @@ import { collectMelody, melodyFit, melodyTarget } from '../lib/melody';
 import { newFx } from '../lib/presets';
 import { synthVocal, vocalAt, vocalPeaks, type VocalSample } from './mockVocal';
 import type {
-  AudioConfig, AudioStatus, LatencyReport, AnyBuiltinKind, AutoVocalPlan, AutoVocalStyle, Catalog, Clip, ExportAudioOptions, ExportResult, ExportStemsOptions, ExportStemsResult, F0ModelStatus, Fx, Id, KeysStatus, LibraryFiles, LibraryList, Melody, MelodyChannel, MidiDevice, MidiStatus, MusicAnalysis, Op, OpenResult, PitchAnalysis, PitchTarget, Project, RefTune, MidiBecomes, MidiExportResult, MidiImportArgs, MidiImportResult, MidiInfo, Channel, Note, Pattern, SaveResult, Source, StateDto, Track, TransportDto, PluginInfo, PluginParam, PluginRef, PluginScan, PluginCrashSuspect, RelinkCandidate,
+  AudioConfig, AudioStatus, LatencyReport, AnyBuiltinKind, AutoVocalPlan, AutoVocalStyle, Catalog, Clip, ExportAudioOptions, ExportResult, ExportStemsOptions, ExportStemsResult, F0ModelStatus, Fx, Id, KeysStatus, LibraryFiles, LibraryList, Melody, MelodyChannel, MidiDevice, MidiStatus, MusicAnalysis, Op, OpenResult, PitchAnalysis, PitchTarget, Project, RefTune, MidiBecomes, MidiExportResult, MidiImportArgs, MidiImportResult, MidiInfo, Channel, Note, Pattern, SaveResult, RecentProject, Source, StateDto, Track, TransportDto, PluginInfo, PluginParam, PluginRef, PluginScan, PluginCrashSuspect, RelinkCandidate,
   ExtractStemsResult, StemId, StemModelStatus, StemsProgress,
 } from './types';
 import { exportRange, exportSeconds, patternProject, patternSilent, stemInserts, uniqueFileStems } from '../lib/export';
@@ -1619,11 +1619,34 @@ export class MockBackend implements Backend {
     // the engine's `open_at_revision`: a take in progress first, then the approved revision
     if (this.rec) throw new Error('recording: stop it first');
     if (ifRevision != null && ifRevision !== this.revision) throw new Error(`${ERR_REVISION_CONFLICT} project changed`);
+    if (path != null && this.gone.has(path)) throw new Error(`could not open ${path}: the file is not there`);
     this.resetTo(sketchProject(this.cat), path ?? 'C:\\Users\\michal\\Music\\Demo.synkopa');
+    this.remember(this.path!);
     this.recovery = null;
     return { state: this.dto(), warnings: [] };
   }
   async takeProjectOpenRequests(): Promise<string[]> { return []; }
+  // ---------- File → Open recent (app/src/settings.rs `remember` / `forget`) ----------
+  /** Newest first, at most 10. The mock pretends a user who has worked on a few songs, one since deleted. */
+  private recent: string[] = ['C:\\Users\\michal\\Music\\Demo.synkopa', 'C:\\Users\\michal\\Music\\Night drive.synkopa',
+    'D:\\Beats\\2026\\Beat.synkopa', 'C:\\Users\\michal\\Music\\Beat.synkopa', 'E:\\Old\\idea 3.synkopa'];
+  /** Files the mock's pretend disk no longer has. */
+  private gone = new Set(['E:\\Old\\idea 3.synkopa']);
+  private remember(path: string) {
+    const key = (p: string) => p.replace(/\\/g, '/').toLowerCase();
+    this.recent = [path, ...this.recent.filter(p => key(p) !== key(path))].slice(0, 10);
+    this.gone.delete(path);
+  }
+  async recentProjects(): Promise<RecentProject[]> {
+    return this.recent.map(path => {
+      const m = /^(.*)[\\/]([^\\/]+?)(\.[^.\\/]+)?$/.exec(path);
+      return { path, name: m?.[2] ?? path, dir: m?.[1] ?? '', exists: !this.gone.has(path) };
+    });
+  }
+  async recentForget(path?: string): Promise<void> {
+    const key = (p: string) => p.replace(/\\/g, '/').toLowerCase();
+    this.recent = path == null ? [] : this.recent.filter(p => key(p) !== key(path));
+  }
   async projectSave(saveAs?: boolean, version?: boolean): Promise<SaveResult> {
     // save new version: Name → Name_2 → Name_3 beside the current file (actions.rs next_version_path)
     if (this.path && !saveAs && version) {
@@ -1634,7 +1657,7 @@ export class MockBackend implements Backend {
       if (!this.dialog()) return { cancelled: true };
       this.path = 'C:\\Users\\michal\\Music\\Projekt ' + (1 + (this.revision % 9)) + '.synkopa';
     }
-    this.savedRev = this.revision; this.recovery = null; this.emit('state', this.dto());
+    this.savedRev = this.revision; this.recovery = null; this.remember(this.path); this.emit('state', this.dto());
     return { path: this.path };
   }
 
