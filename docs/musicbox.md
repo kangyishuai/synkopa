@@ -4,6 +4,9 @@ A built-in modeled instrument: a cylinder music box whose sound is synthesized f
 physics of a comb tine. Channel kind `musicbox`, like Synkopa Keys but with no samples and
 nothing to install — the DSP is in the program.
 
+A 47 s demo render (Für Elise, two Music Box channels) lives at
+[`docs/musicbox-demo.mp3`](musicbox-demo.mp3).
+
 ## Sound
 
 A comb tine is a steel bar clamped at one end and plucked by the cylinder's pin, so it rings
