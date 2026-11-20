@@ -1,7 +1,7 @@
 import { prefs } from '../state/prefs';
 import { t as tl } from '../lib/i18n';
-import { createEffect, createMemo, createSignal, For, on, onCleanup, onMount, Show } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { createMemo, For, Show } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount, watch } from '../lib/reactive';
 import { InstIcon, laneAutoIcons, trackIcon } from '../ui/instIcons';
 import { STRETCH_MAX, STRETCH_MIN, VOL_UNITY, type Automation, type AutoPoint, type Channel, type Clip, type Comp, type CurveShape, type Id, type Op, type Take, type Track } from '../api/types';
 import { boundaries, boundaryXfade, moveBoundary, setBoundaryXfade, takeEnd, toComp, toTimeline, unusedTakes, usedBeats, writeRange } from '../lib/comp';
@@ -14,7 +14,7 @@ import * as A from '../state/actions';
 import { MuteSolo } from '../ui/MuteSolo';
 import { commit, Gesture, wheelEdit } from '../state/edit';
 import { peaksVersion } from '../state/peaks';
-import { allocId, anyTrackSolo, arrVersion, clipSrcLen, onArrangementChange, plain, S, srcLenBeats, srcOf } from '../state/store';
+import { allocId, anyTrackSolo, arrVersion, clipSrcLen, onArrangementChange, plain, rawOf, S, srcLenBeats, srcOf } from '../state/store';
 import { curBeat, recState, tele } from '../state/telemetry';
 import { recTarget, recUntil } from '../lib/recTarget';
 import { closeMenu, openMenu, openRename, revealReq, say, setU, U, type MenuItem } from '../state/ui';
@@ -139,24 +139,24 @@ export function Playlist() {
     t.push(y); return t;
   });
   const [bndHover, setBndHover] = createSignal<{ clipId: Id; i: number } | null>(null);
-  createEffect(() => { geom.tops = tops(); });
+  effect(() => { geom.tops = tops(); });
   // recording starts: make sure the armed track is on screen (a tall mixer can hide it)
-  createEffect(on(() => S.transport.rec && U.playing, rec => {
+  watch(() => S.transport.rec && U.playing, rec => {
     if (!rec || !scrollEl) return;
     const r = recTarget(S.project, U.start, recUntil(S.project)), i = r === 'new' ? S.project.tracks.length - 1 : r; if (i < 0) return;
     const y0 = tops()[i], y1 = y0 + S.project.tracks[i].h, top = scrollEl.scrollTop, vis = scrollEl.clientHeight - 30;
     if (y0 < top || y1 > top + vis) scrollEl.scrollTop = Math.max(0, y0 - 10);
-  }, { defer: true }));
+  }, { defer: true });
   // something made off screen (an automation clip): scroll its track, and its start, into view
   // (next frame: a new bottom track has to be laid out before the view can scroll to it)
-  createEffect(on(revealReq, r => requestAnimationFrame(() => {
+  watch(revealReq, r => requestAnimationFrame(() => {
     if (!r || !scrollEl || !S.project.tracks[r.track]) return;
     const y0 = tops()[r.track], y1 = y0 + S.project.tracks[r.track].h, top = scrollEl.scrollTop, vis = scrollEl.clientHeight - 30;
     if (y0 < top || y1 > top + vis) scrollEl.scrollTop = Math.max(0, y1 - vis + 10);
     const x = r.beat * U.bw, left = scrollEl.scrollLeft, w = scrollEl.clientWidth - U.headW;
     if (x < left || x > left + w - 40) scrollEl.scrollLeft = Math.max(0, x - 40);
     syncScroll();
-  }), { defer: true }));
+  }), { defer: true });
   const gridW = () => TOTAL * U.bw;
   const gridH = () => tops()[tops().length - 1];
   const cw = () => Math.max(1, Math.min(vw() - U.headW, gridW()));
@@ -207,21 +207,21 @@ export function Playlist() {
   /** Bumped when the clip lookups of `drawGrid` (patterns, sources, …) may be stale: not for a clip-only edit. */
   let lookVer = 0;
   /** The icon a lane header shows when its track has none and its name says nothing: its clips' (one pass per arrangement edit). */
-  const laneIcons = createMemo(() => { arrVersion(); return laneAutoIcons(unwrap(S.project)); }, [] as (string | null)[],
+  const laneIcons = createMemo((): (string | null)[] => { arrVersion(); return laneAutoIcons(rawOf(S.project)); },
     { equals: (a, b) => a.length === b.length && a.every((x, i) => x === b[i]) });
   /** The automation clip under the pointer, and the point / tension handle there. */
   const [envHover, setEnvHover] = createSignal<{ clip: Id; hover: EnvHit | null } | null>(null);
   // what the grid canvas depends on (not mixer state), split so a zoom does not re-walk every clip.
   // The view's size is not here either: `planTile` asks for a full paint only when the tile's size changes.
   // Scrolling is not here: the canvases scroll with the content and redraw only strips (`draw`)
-  createEffect(() => { U.snap; U.tool; S.transport.rec; S.project.bpm; peaksVersion(); dirtyGrid = true; });
+  effect(() => { U.snap; U.tool; S.transport.rec; S.project.bpm; peaksVersion(); dirtyGrid = true; });
   // back from the Mix view: paint everything again (a webview may have dropped the hidden canvases' pixels)
-  createEffect(() => { if (!U.mixView) { dirtyGrid = dirtyFade = dirtyRuler = dirtyOv = true; tile = null; } });
+  effect(() => { if (!U.mixView) { dirtyGrid = dirtyFade = dirtyRuler = dirtyOv = true; tile = null; } });
   // a zoom step is handled in `draw`: a full paint, or the tile stretched until the zoom settles
-  createEffect(on(() => U.bw, () => { zoomed = true; }, { defer: true }));
+  watch(() => U.bw, () => { zoomed = true; }, { defer: true });
   // the loop range is shaded on the overlay: moving it repaints no clip
-  createEffect(() => { S.project.loop?.a; S.project.loop?.b; dirtyFade = true; });
-  createEffect(() => { for (const t of S.project.tracks) { t.h; t.arm; t.color; } dirtyGrid = true; });
+  effect(() => { S.project.loop?.a; S.project.loop?.b; dirtyFade = true; });
+  effect(() => { for (const t of S.project.tracks) { t.h; t.arm; t.color; } dirtyGrid = true; });
   /** The clip's box in grid coordinates (with its ring), or null when it is drawn beyond it (comps open take lanes). */
   const clipBox = (c: Clip, P: { tracks: Track[] }): Rect | null => {
     if (c.kind === 'comp') return null;
@@ -238,7 +238,7 @@ export function Playlist() {
   };
   // selection: only the clips whose state changed are repainted
   let drawnSel = new Set<Id>();
-  createEffect(() => {
+  effect(() => {
     const next = new Set<Id>(U.sel);
     const changed: Id[] = [];
     for (const id of next) if (!drawnSel.has(id)) changed.push(id);
@@ -246,7 +246,7 @@ export function Playlist() {
     drawnSel = next;
     if (!changed.length) return;
     if (changed.length > 64) { dirtyGrid = true; return; }
-    const P = unwrap(S.project), ids = new Set(changed);
+    const P = rawOf(S.project), ids = new Set(changed);
     for (const c of P.clips) if (ids.has(c.id)) damageClip(c, P);
   });
   /**
@@ -276,8 +276,8 @@ export function Playlist() {
       else { dirtyGrid = dirtyFade = dirtyOv = true; lookVer++; }
     }
   }));
-  createEffect(on(() => prefs().clipIcons, () => { dirtyGrid = true; }, { defer: true }));
-  createEffect(() => {
+  watch(() => prefs().clipIcons, () => { dirtyGrid = true; }, { defer: true });
+  effect(() => {
     for (const k in S.audition) void S.audition[k];
     for (const k in S.stretching) void S.stretching[k];
     for (const k in S.missing) void S.missing[k];
@@ -285,20 +285,20 @@ export function Playlist() {
   });
   // envelope focus and point selection: only the automation clips involved are repainted
   let envDrawn: Id[] = [];
-  createEffect(() => {
+  effect(() => {
     const hv = envHover(), sel = U.autoSel, ids: Id[] = [];
     if (hv) ids.push(hv.clip);
     if (sel) { ids.push(sel.clip); void [...sel.idx]; }
-    const P = unwrap(S.project), all = new Set([...envDrawn, ...ids]);
+    const P = rawOf(S.project), all = new Set([...envDrawn, ...ids]);
     for (const c of P.clips) if (all.has(c.id)) damageClip(c, P);
     envDrawn = ids;
   });
-  createEffect(() => { U.bw; U.start; S.project.loop?.a; S.project.loop?.b; cw(); dirtyRuler = true; });
+  effect(() => { U.bw; U.start; S.project.loop?.a; S.project.loop?.b; cw(); dirtyRuler = true; });
 
   /** The grid view of one frame; `at` places it on a region of the tile (tile-local CSS px). */
   const frameView = (): View => ({
     offX: 0, offY: 0, W: 0, H: 0, bw: U.bw, snap: U.snap, spb: 60 / S.project.bpm, tops: tops(), sel: new Set(U.sel), editable: editable(), recArmedBg: S.transport.rec, env: envHover(), autoSel: U.autoSel ? { clip: U.autoSel.clip, idx: [...U.autoSel.idx] } : null,
-    rows: rows().map(r => r && { clip: unwrap(r.clip), comp: unwrap(r.comp) }), laneH: LANE_H, audition: { ...S.audition }, stretching: { ...S.stretching }, missing: { ...S.missing }, compSel: U.compSel ? { ...U.compSel } : null, bndHover: bndHover(), ver: lookVer,
+    rows: rows().map(r => r && { clip: rawOf(r.clip), comp: rawOf(r.comp) }), laneH: LANE_H, audition: { ...S.audition }, stretching: { ...S.stretching }, missing: { ...S.missing }, compSel: U.compSel ? { ...U.compSel } : null, bndHover: bndHover(), ver: lookVer,
   });
   const at = (v: View, t: Tile, r: Rect): View => ({ ...v, offX: t.x + r.x, offY: t.y + r.y, W: r.w, H: r.h });
   /** Draws the grid into `r` of the grid canvas only (clipped to whole device pixels: nothing is painted twice). */
@@ -308,7 +308,7 @@ export function Playlist() {
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.beginPath(); g.rect(r.x, r.y, r.w, r.h); g.clip();
     g.fillStyle = T.grid; g.fillRect(r.x, r.y, r.w, r.h);
-    drawGrid(g, { ...at(v, t, r), orgX: t.x, orgY: t.y }, unwrap(S.project), rec);
+    drawGrid(g, { ...at(v, t, r), orgX: t.x, orgY: t.y }, rawOf(S.project), rec);
     g.restore();
   };
   /**
@@ -317,7 +317,7 @@ export function Playlist() {
    * lane background never does.
    */
   const closeOverClips = (rs: Rect[]): Rect[] => {
-    const P = unwrap(S.project), t = tops(), bw = U.bw;
+    const P = rawOf(S.project), t = tops(), bw = U.bw;
     const out = rs.map(r => ({ ...r }));
     for (let pass = 0; pass < 4; pass++) {
       let grew = false;
@@ -357,7 +357,7 @@ export function Playlist() {
     const dpr = window.devicePixelRatio || 1;
     if (fontEpoch !== fonts.epoch || themeEpoch !== theme.epoch || dpr !== lastDpr) { fontEpoch = fonts.epoch; themeEpoch = theme.epoch; lastDpr = dpr; dirtyGrid = dirtyRuler = dirtyOv = true; }
     if (editedPats.size) {
-      const P = unwrap(S.project);
+      const P = rawOf(S.project);
       for (const [id, len] of editedPats) {
         const p = P.patterns.find(x => x.id === id);
         if (!p) { dirtyGrid = dirtyFade = dirtyOv = true; continue; }
@@ -424,7 +424,7 @@ export function Playlist() {
       g.setTransform(1, 0, 0, 1, 0, 0);
       g.clearRect(0, 0, fadeCv.width, fadeCv.height);
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const P = unwrap(S.project);
+      const P = rawOf(S.project);
       if (P.loop) { g.fillStyle = rgba(T.green, 0.05); g.fillRect(P.loop.a * U.bw - t.x, 0, (P.loop.b - P.loop.a) * U.bw, Math.min(t.h, gridH() - t.y)); }
       const fv = at(frameView(), t, { x: 0, y: 0, w: t.w, h: t.h });
       drawFades(g, fv, P);
@@ -473,8 +473,8 @@ export function Playlist() {
     if (!U.follow || !U.playing || followHold) return;
     followHold = true; say(tl('a.pl.followPaused'));
   };
-  createEffect(on(() => U.playing, p => { if (p) followHold = false; }));
-  createEffect(on(() => U.follow, f => { if (f) followHold = false; }, { defer: true }));
+  watch(() => U.playing, p => { if (p) followHold = false; });
+  watch(() => U.follow, f => { if (f) followHold = false; }, { defer: true });
   // ---------- wheel ----------
   const onWheel = (e: WheelEvent) => {
     if (!e.ctrlKey && !e.metaKey && !e.altKey && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY))) holdFollow();
@@ -585,7 +585,7 @@ export function Playlist() {
   const pt = (e: { clientX: number; clientY: number }) => gridPoint(e.clientX, e.clientY);
   function hit(x: number, y: number): Hit | null {
     const ti = trackAtY(y); if (ti < 0) return null;
-    const P = unwrap(S.project), t = tops(), tr = P.tracks[ti], bw = U.bw, spb = 60 / P.bpm;
+    const P = rawOf(S.project), t = tops(), tr = P.tracks[ti], bw = U.bw, spb = 60 / P.bpm;
     const cs = P.clips;
     for (let i = cs.length - 1; i >= 0; i--) {
       const c = cs[i]; if (c.track !== ti) continue;
@@ -607,7 +607,7 @@ export function Playlist() {
     const t = tops(), tr = S.project.tracks[ti], bw = U.bw, cy = t[ti] + 1;
     if (y < cy || y > cy + tr.h - 2) return null;
     let best: { c: Clip; edge: 'l' | 'r' } | null = null, bd = EDGE_OUT + 1;
-    for (const c of unwrap(S.project).clips) {
+    for (const c of rawOf(S.project).clips) {
       if (c.track !== ti) continue;
       const cx = c.start * bw, cwid = Math.max(3, c.len * bw - 1);
       const dl = cx - x, dr = x - (cx + cwid);
@@ -752,7 +752,7 @@ export function Playlist() {
     let lead = clip.id;
     setU('sel', ids);
     // a clip with others hidden under it ("×N"): say so before the drag reveals them
-    const hidden = laneOverlaps(unwrap(S.project).clips.filter(c => c.track === clip.track)).covers.get(clip.id);
+    const hidden = laneOverlaps(rawOf(S.project).clips.filter(c => c.track === clip.track)).covers.get(clip.id);
     if (hidden) say(tl('a.pl.stacked', { n: hidden + 1 }));
     const sx = e.clientX, sy = e.clientY, n = S.project.tracks.length, gx0 = sx - gridLeft();
     const t0 = trackAtYClamped(sy - gridEl.getBoundingClientRect().top);
@@ -891,7 +891,7 @@ export function Playlist() {
       dragged = true;
       if (q.track >= 0) t1 = q.track;
       setU('marquee', { x0: x, y0: p.y, x1: x, y1: q.y });
-      const n = sliceAcross(unwrap(S.project).clips, b, t0, t1, () => 0).length / 2;
+      const n = sliceAcross(rawOf(S.project).clips, b, t0, t1, () => 0).length / 2;
       say(tl('a.pl.sliceLine', { pos: fmtPos(b), n }));
     }, ev => {
       setU('marquee', null);
@@ -940,7 +940,7 @@ export function Playlist() {
       dragging = true;
       const q = pt(ev), bw = U.bw, t = tops();
       const ax = Math.min(x0, q.x), bx = Math.max(x0, q.x), ay = Math.min(y0, q.y), by = Math.max(y0, q.y);
-      const clips = unwrap(S.project).clips;
+      const clips = rawOf(S.project).clips;
       const hits = clips.filter(c => c.start * bw < bx && (c.start + c.len) * bw > ax && t[c.track] < by && t[c.track + 1] > ay).map(c => c.id);
       const sel = [...new Set([...base, ...hits])], cur = U.sel;
       // the box moves every frame, the selection only when it crosses a clip
@@ -1012,7 +1012,7 @@ export function Playlist() {
   };
   const putEnv = (a: Automation, points: AutoPoint[]): Op => ({ op: 'putAutomation', automation: { ...plain(a), points } });
   const withTension = (q: AutoPoint, k: number): AutoPoint => { const { tension: _t, ...r } = q; return Math.abs(k) < 1e-3 ? r : { ...r, tension: k }; };
-  const valText = (a: Automation, v: number) => autoValueText(unwrap(S.project), S.catalog, a.target, v);
+  const valText = (a: Automation, v: number) => autoValueText(rawOf(S.project), S.catalog, a.target, v);
   /** Straightens the segments ending at `idx` (tension back to 0). */
   const straighten = (a: Automation, idx: number[]) => {
     commit([putEnv(a, plain(a.points).map((q, i) => (idx.includes(i) ? withTension(q, 0) : q)))], tl('a.pl.straighten'));
@@ -1132,7 +1132,7 @@ export function Playlist() {
     const items: MenuItem[] = [
       { t: 'title', label: valText(a, q.v) + ' · ' + fmtPos(c.start + q.t - c.offset) + (sel.length > 1 ? ' · ×' + sel.length : '') },
       { t: 'item', label: tl('a.pl.typeValue'), act: () => openRename(x, y, valText(a, q.v), txt => {
-        const v = parseAutoValue(unwrap(S.project), S.catalog, a.target, txt);
+        const v = parseAutoValue(rawOf(S.project), S.catalog, a.target, txt);
         if (v == null) { say(tl('a.pl.badValue', { v: txt })); return; }
         const cur = autoById(c.ref); if (!cur) return;
         commit([putEnv(cur, plain(cur.points).map((p, j) => (sel.includes(j) ? { ...p, v } : p)))], tl('a.pl.movePoint'));
@@ -1336,7 +1336,7 @@ export function Playlist() {
   const songEnd = createMemo(() => {
     arrVersion();
     let end = 0;
-    for (const c of unwrap(S.project).clips) end = Math.max(end, c.start + c.len);
+    for (const c of rawOf(S.project).clips) end = Math.max(end, c.start + c.len);
     return end;
   });
   const ovRange = createMemo(() => Math.min(TOTAL, Math.max(64, songEnd() * 1.15 + 16, (scroll().x + cw()) / U.bw)));
@@ -1367,7 +1367,7 @@ export function Playlist() {
     place(); requestAnimationFrame(place); // the taller lanes are laid out by the next frame
   };
   function paintOverview(g: CanvasRenderingContext2D, W: number, H: number, span: number) {
-    const P = unwrap(S.project), n = Math.max(1, P.tracks.length);
+    const P = rawOf(S.project), n = Math.max(1, P.tracks.length);
     const lh = Math.max(1, (H - 4) / n);
     for (const c of P.clips) {
       const t = P.tracks[c.track]; if (!t) continue;
@@ -1519,7 +1519,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
             </Show>
   );
   return (
-    <div class="lane" classList={{ armrec: t().arm && S.transport.rec, dimmed: !audible() }} style={{ height: t().h + 'px' }} onPointerDown={down}>
+    <div class={['lane', { armrec: t().arm && S.transport.rec, dimmed: !audible() }]} style={{ height: t().h + 'px' }} onPointerDown={down}>
       <div class="stripe" style={{ background: t().color }} />
       <div class="body">
         <div class="row" style={{ gap: '6px', 'min-width': 0 }}>
@@ -1532,7 +1532,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
             onDblClick={e => openRename(e.clientX, e.clientY, t().name, v => A.setTrack(props.i, { name: v }, tl('a.pl.trackName')))}>{t().name}</span>
           <div class="row" style={{ gap: '2px', flex: 'none' }}>
             <Show when={CA.activeComp(props.i)}>{r => (
-              <button class="mini tk" classList={{ on: !!U.takesOpen[t().id] }} onPointerDown={stop} onClick={() => CA.toggleTakes(props.i)}
+              <button class={['mini tk', { on: !!U.takesOpen[t().id] }]} onPointerDown={stop} onClick={() => CA.toggleTakes(props.i)}
                 title={tl('a.pl.takesTip', { n: CA.takesLabel(r().comp.takes.length) })}>
                 <svg width="7" height="7" viewBox="0 0 8 8" style={{ transform: U.takesOpen[t().id] ? 'rotate(90deg)' : 'none' }}><path d="M2 1l4 3-4 3z" fill="currentColor" /></svg>{r().comp.takes.length}
               </button>
@@ -1550,13 +1550,13 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
         </div>
         <Show when={t().h >= 50}>
           <div class="row" style={{ gap: '6px', 'padding-left': '20px' }}>
-            <div class="lvol" classList={{ auto: isAutomated(volTarget()) }} onPointerDown={vol} onContextMenu={e => e.preventDefault()} title={tl('a.pl.volTip')}>
+            <div class={['lvol', { auto: isAutomated(volTarget()) }]} onPointerDown={vol} onContextMenu={e => e.preventDefault()} title={tl('a.pl.volTip')}>
               <div class="track">
                 <div class="fill" style={{ width: shownVol() * 100 + '%', background: audible() ? t().color : 'var(--fg6)' }} />
                 <div class="thumb" style={{ left: shownVol() * 100 + '%' }} />
               </div>
             </div>
-            <span class="mono lvtxt" classList={{ unity: Math.abs(shownVol() - VOL_UNITY) < 1e-4 }}>{volText(shownVol())}</span>
+            <span class={['mono lvtxt', { unity: Math.abs(shownVol() - VOL_UNITY) < 1e-4 }]}>{volText(shownVol())}</span>
             {route()}
           </div>
         </Show>
@@ -1609,14 +1609,14 @@ function TakeHeaders(props: { i: number }) {
           const pct = () => Math.round(used() / Math.max(1e-9, take.len) * 100);
           const aud = () => S.audition[r().comp.id] === take.id;
           return (
-            <div class="takeLane" classList={{ used: used() > 0, aud: aud() }} style={{ height: LANE_H + 'px' }}
+            <div class={['takeLane', { used: used() > 0, aud: aud() }]} style={{ height: LANE_H + 'px' }}
               title={tl('a.pl.takeLaneTip')}
               onPointerDown={e => { stop(e); if (e.button === 2) { e.preventDefault(); openTakeMenu(e.clientX, e.clientY, r(), take); } else if (e.button === 0) CA.useWholeTake(r(), take); }}
               onContextMenu={e => e.preventDefault()}>
               <span class="tkbar" />
               <span class="tknm">{take.name}</span>
               <span class="tkuse" title={tl('a.pl.takeUseTip')}>{used() > 0 ? pct() + '%' : '—'}</span>
-              <button class="mini tka" classList={{ on: aud() }} title={aud() ? tl('a.pl.endSoloPrev') : tl('a.pl.takeSoloTip')}
+              <button class={['mini tka', { on: aud() }]} title={aud() ? tl('a.pl.endSoloPrev') : tl('a.pl.takeSoloTip')}
                 onPointerDown={stop} onClick={() => CA.audition(r().comp.id, aud() ? null : take.id)}>
                 <svg width="7" height="7" viewBox="0 0 8 8"><path d="M1.5 0.5l6 3.5-6 3.5z" fill="currentColor" /></svg>
               </button>

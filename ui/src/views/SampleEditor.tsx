@@ -1,5 +1,7 @@
 // One floating sample editor for Playlist audio clips and Channel Rack sampler channels.
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { captureOn, createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import { CLIP_PITCH, SAMPLE_ROOT, SAMPLER, samplerDefault, type AutoTarget, type Channel, type Clip, type Id, type Op, type SamplerState, type Source } from '../api/types';
 import { FIT_BEATS, fitClip, putSoundClips, TOTAL } from '../lib/clipOps';
@@ -103,7 +105,7 @@ function EditorFrame(props: {
   return (
     <div class="win chanwin smpwin" data-editor data-channel-window={props.channelId}
       style={{ left: editor().x + 'px', top: editor().y + 'px', width: editor().w + 'px', 'z-index': outerZ(editor().z) }}
-      on:pointerdown={{ capture: true, handleEvent: () => A.editorFront() }}>
+      ref={captureOn('pointerdown', () => A.editorFront())}>
       <div class="winhd" onPointerDown={e => moveWindow(e, editor, move)} title={t('b.cw.headTip')}
         onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(props.insert()); }}>
         <span class="chicon" style={{ color: props.color }}>{props.icon}</span>
@@ -117,15 +119,15 @@ function EditorFrame(props: {
       </div>
       <Show when={props.envelope}>{env => (
         <div class="seg smptabs" role="tablist" aria-label={t('b.sm.tabs')}>
-          <button role="tab" aria-selected={page() === 'sample'} classList={{ on: page() === 'sample' }} onClick={() => setPage('sample')}>{t('b.sm.tabSample')}</button>
-          <button role="tab" aria-selected={page() === 'env'} classList={{ on: page() === 'env' }} onClick={() => setPage('env')}
+          <button role="tab" aria-selected={page() === 'sample' ? 'true' : 'false'} class={{ on: page() === 'sample' }} onClick={() => setPage('sample')}>{t('b.sm.tabSample')}</button>
+          <button role="tab" aria-selected={page() === 'env' ? 'true' : 'false'} class={{ on: page() === 'env' }} onClick={() => setPage('env')}
             title={t(env().on() ? 'b.sm.tabEnvOn' : 'b.sm.tabEnvOff')}>
-            {t('b.sm.tabEnv')}<i class="envdot" classList={{ lit: env().on() }} />
+            {t('b.sm.tabEnv')}<i class={['envdot', { lit: env().on() }]} />
           </button>
           <Show when={props.slices}>{sl => (
-            <button role="tab" aria-selected={page() === 'slice'} classList={{ on: page() === 'slice' }} onClick={() => setPage('slice')}
+            <button role="tab" aria-selected={page() === 'slice' ? 'true' : 'false'} class={{ on: page() === 'slice' }} onClick={() => setPage('slice')}
               title={t(sl().on() ? 'd.sl.tabOn' : 'd.sl.tabOff')}>
-              {t('d.sl.tab')}<i class="envdot" classList={{ lit: sl().on() }} />
+              {t('d.sl.tab')}<i class={['envdot', { lit: sl().on() }]} />
             </button>
           )}</Show>
         </div>
@@ -140,9 +142,9 @@ function EditorFrame(props: {
           {props.fileAction}
         </div>
         <div class="smprow">
-          <button class="smptog" aria-pressed={props.wave.reversed()} classList={{ on: props.wave.reversed() }}
+          <button class={['smptog', { on: props.wave.reversed() }]} aria-pressed={props.wave.reversed() ? 'true' : 'false'}
             title={t('b.sm.reverseTitle')} onClick={() => props.toggle('reverse')}>{t('b.sm.reverse')}</button>
-          <button class="smptog" aria-pressed={props.wave.normalized()} classList={{ on: props.wave.normalized() }}
+          <button class={['smptog', { on: props.wave.normalized() }]} aria-pressed={props.wave.normalized() ? 'true' : 'false'}
             title={t('b.sm.normTitle')} onClick={() => props.toggle('norm')}>{t('b.sm.norm')}</button>
         </div>
         <div class="smpknobs">
@@ -173,7 +175,7 @@ function SampleWave(props: WaveProps) {
   const layer = new Layer();
   let dirty = true, epoch = -1;
 
-  createEffect(() => {
+  effect(() => {
     props.source(); props.color(); props.normalized(); props.reversed(); props.gain?.();
     props.region(); peaksVersion();
     dirty = true;
@@ -422,10 +424,10 @@ function ClipSample(props: { clip: () => Clip; source: () => Source }) {
     details={<>
       <div class="smprow">
         <div class="seg smpmode" role="radiogroup" aria-label={t('d.smp.method')} title={t('d.smp.methodTip')}>
-          <button role="radio" aria-checked={!c().resample} classList={{ on: !c().resample }} onClick={() => A.setStretchMethod(c(), false)}>{t('a.pl.keepPitch')}</button>
-          <button role="radio" aria-checked={!!c().resample} classList={{ on: !!c().resample }} onClick={() => A.setStretchMethod(c(), true)}>{t('a.pl.resample')}</button>
+          <button role="radio" aria-checked={!c().resample ? 'true' : 'false'} class={{ on: !c().resample }} onClick={() => A.setStretchMethod(c(), false)}>{t('a.pl.keepPitch')}</button>
+          <button role="radio" aria-checked={c().resample ? 'true' : 'false'} class={{ on: !!c().resample }} onClick={() => A.setStretchMethod(c(), true)}>{t('a.pl.resample')}</button>
         </div>
-        <span class="smpstat mono" classList={{ bad: !!S.stretching[c().id] }} title={S.stretching[c().id] || ''}>
+        <span class={['smpstat mono', { bad: !!S.stretching[c().id] }]} title={S.stretching[c().id] || ''}>
           {busy() ? (S.stretching[c().id] ? t('d.smp.renderFail') : t('d.smp.rendering')) : stretch() !== 1 ? '×' + stretch().toFixed(2) : ''}
         </span>
       </div>
@@ -433,7 +435,7 @@ function ClipSample(props: { clip: () => Clip; source: () => Source }) {
         <span class="tag9">{t('d.smp.fit')}</span>
         <div class="seg"><For each={FIT_BEATS}>{b => {
           const allowed = () => !!fitClip(plain(c()), b);
-          return <button classList={{ on: Math.abs(c().len - b) < 1e-6 }} disabled={!allowed()}
+          return <button class={{ on: Math.abs(c().len - b) < 1e-6 }} disabled={!allowed()}
             title={t(allowed() ? 'd.smp.fit.tip' : 'd.smp.fit.no', { len: fitLabel(b) })} onClick={() => fit(b)}>{fitLabel(b)}</button>;
         }}</For></div>
       </div>
@@ -615,10 +617,10 @@ function EnvelopePanel(props: { id: string; name: () => string; color: () => str
 
   return <>
     <div class="smprow">
-      <button class="smptog" aria-pressed={s().env} classList={{ on: s().env }} title={t('b.sm.envTitle')} onClick={toggle}>{t('b.sm.env')}</button>
+      <button class={['smptog', { on: s().env }]} aria-pressed={s().env ? 'true' : 'false'} title={t('b.sm.envTitle')} onClick={toggle}>{t('b.sm.env')}</button>
       <span class="envhint">{t(s().env ? 'b.sm.envOnHint' : 'b.sm.envOffHint')}</span>
     </div>
-    <div ref={box} class="envgraph" classList={{ off: !s().env }} title={t('b.sm.graphTitle')}>
+    <div ref={box} class={['envgraph', { off: !s().env }]} title={t('b.sm.graphTitle')}>
       <svg width={width()} height={GRAPH_H} aria-hidden="true">
         <line class="envoff" x1={graph().noteOff} x2={graph().noteOff} y1={2} y2={GRAPH_H - 2} />
         <text class="envofftext" x={graph().noteOff - 4} y={GRAPH_H - 6} text-anchor="end">{t('b.sm.noteOff')}</text>
@@ -631,7 +633,7 @@ function EnvelopePanel(props: { id: string; name: () => string; color: () => str
           </circle>
         )}</For>
         <For each={STAGES.map(x => x.key)}>{stage => (
-          <rect class="envpt" classList={{ sus: stage === 'decay' }} x={graph().points[stage].x - 5} y={graph().points[stage].y - 5} width={10} height={10} rx={2}
+          <rect class={['envpt', { sus: stage === 'decay' }]} x={graph().points[stage].x - 5} y={graph().points[stage].y - 5} width={10} height={10} rx={2}
             onPointerDown={e => dragPoint(e, stage)} onDblClick={() => resetStage(stage)}>
             <title>{t(STAGE_LABELS[stage][0]) + ' ' + stageText(stage) + (stage === 'decay' ? ' · ' + t('b.sm.sustain') + ' ' + Math.round(s().sustain * 100) + ' %' : '') + ' · ' + t(stage === 'decay' ? 'b.sm.decayPointTip' : 'b.sm.pointTip')}</title>
           </rect>

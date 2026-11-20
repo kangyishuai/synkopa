@@ -2,7 +2,8 @@
 // or MP3, sample rate), with a one-line summary of what will be written and its size. While it
 // renders, the dialog shows the engine's progress: the file in progress, a live peak waveform,
 // the song position, elapsed and remaining time, render speed and the peak level.
-import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import { t } from '../lib/i18n';
 import { baseName, fmtBytes } from '../lib/format';
@@ -207,13 +208,13 @@ function ExportDialog() {
               <span class="exname" title={prog()?.name}>{stageText()}</span>
               <span class="mono">{Math.floor(overall() * 100)} %</span>
             </div>
-            <div class="exwave" classList={{ idle: !prog() || prog()!.stage === 'prepare' }}>
+            <div class={['exwave', { idle: !prog() || prog()!.stage === 'prepare' }]}>
               <svg viewBox="0 0 240 48" preserveAspectRatio="none" aria-hidden="true">
                 <path d={wavePath(prog()?.wave ?? [], 240, 48)} />
                 <Show when={prog()?.stage === 'render'}><rect class="head" x={Math.min(239.5, (prog()!.frac) * 240)} y="0" width="0.6" height="48" /></Show>
               </svg>
             </div>
-            <div class="prog" classList={{ busy: !prog() }}><div style={prog() ? { width: (overall() * 100).toFixed(1) + '%' } : {}} /></div>
+            <div class={['prog', { busy: !prog() }]}><div style={prog() ? { width: (overall() * 100).toFixed(1) + '%' } : {}} /></div>
             <div class="exstats mono">
               <span>{posText()}</span>
               <span>
@@ -224,7 +225,7 @@ function ExportDialog() {
             </div>
             <Show when={prog()}>
               <div class="exstats mono">
-                <span classList={{ exover: over() && !(wav() && wavBits() === 32) }}>
+                <span class={{ exover: over() && !(wav() && wavBits() === 32) }}>
                   {t('a.ex.peak', { db: peakDb() })}{over() ? ' · ' + (wav() && wavBits() === 32 ? t('a.ex.peakFloat') : t('a.ex.peakClip')) : ''}
                 </span>
                 <span>{encText()} · {RATES[rateI()] / 1000} kHz</span>
