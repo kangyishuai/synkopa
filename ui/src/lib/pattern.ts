@@ -113,14 +113,14 @@ export function followPatternLength(p: Project, id: Id, oldLen: number, len: num
  * Applies a pattern/channel op in place (`putPattern`, `putChannel`, `removeChannel`, and the
  * channel side of `removeSource`). `strict` validates like the engine and throws; the
  * optimistic store applies without checks. Returns false for ops it does not handle.
- * `adopt` is given the pattern (a private copy) before it is put in the project: the store marks
- * it as plain data so that storing it does not walk all its notes.
+ * `copy` makes the pattern's private copy put in the project (the store applies every edit twice,
+ * see state/store.ts, and passes a faster one than `structuredClone` for a pattern's flat notes).
  */
-export function applyPatternOp(p: Project, op: Op, strict: boolean, adopt: <T extends object>(v: T) => T = v => v): boolean {
+export function applyPatternOp(p: Project, op: Op, strict: boolean, copy: (pt: Pattern) => Pattern = structuredClone): boolean {
   const fail = (m: string) => { if (strict) throw new PatternOpError(m); };
   switch (op.op) {
     case 'putPattern': {
-      const pt: Pattern = structuredClone(op.pattern);
+      const pt: Pattern = copy(op.pattern);
       if (!((pt.swing ?? 0) >= 0 && (pt.swing ?? 0) <= 1)) fail('swing must be 0..1');
       for (const n of pt.notes) {
         if (!(n.step >= 0 && n.len > 0 && isFinite(n.step) && isFinite(n.len))) fail(`pattern ${pt.id}: a note has an invalid step/len`);
@@ -137,9 +137,9 @@ export function applyPatternOp(p: Project, op: Op, strict: boolean, adopt: <T ex
       const i = p.patterns.findIndex(x => x.id === pt.id);
       if (i >= 0) {
         const old = p.patterns[i].len;
-        p.patterns[i] = adopt(pt);
+        p.patterns[i] = pt;
         if (Math.abs(old - pt.len) > 1e-9) followPatternLength(p, pt.id, old, pt.len);
-      } else p.patterns.push(adopt(pt));
+      } else p.patterns.push(pt);
       return true;
     }
     case 'putChannel': {

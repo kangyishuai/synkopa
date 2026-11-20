@@ -21,10 +21,11 @@ let store: typeof import('./store');
 // imported after resetModules with the store, so the effects below track the store's own Solid
 let createEffect: typeof import('solid-js').createEffect;
 let createRoot: typeof import('solid-js').createRoot;
+let snapshot: typeof import('solid-js').snapshot;
 beforeEach(async () => {
   vi.resetModules(); // the store, its listeners and its id counter are module state
   store = await import('./store');
-  ({ createEffect, createRoot } = await import('solid-js'));
+  ({ createEffect, createRoot, snapshot } = await import('solid-js'));
 });
 
 const track = (id: number, extra: Partial<Track> = {}): Track => ({ id, name: 'T' + id, color: '#888', muted: false, solo: false, arm: false, vol: 0.8, h: 56, insert: 0, ...extra });
@@ -50,10 +51,11 @@ function dto(p: Project, over: Partial<StateDto> = {}): StateDto {
     ...over,
   };
 }
-/** Run `read` in an effect; returns how many times it has run (1 = the initial run). */
+/** Run `read` in an effect; returns how many times it has run (1 = the initial run, done here). */
 function runs(read: () => unknown): { n: number; dispose: () => void } {
   const r = { n: 0, dispose: () => {} };
-  createRoot(d => { r.dispose = d; createEffect(() => { read(); r.n++; }); });
+  createRoot(d => { r.dispose = d; createEffect(() => { read(); }, () => { r.n++; }); });
+  settle(); // Solid 2 makes an effect's first run on the next flush
   return r;
 }
 const clipById = (id: number) => store.S.project.clips.find(c => c.id === id)!;
@@ -234,7 +236,8 @@ describe('applyLocal (optimistic edits)', () => {
 
   it('one batch: an effect reading the version and the data runs once, with both current', () => {
     const seen: [number, number][] = [];
-    const r = createRoot(d => { createEffect(() => seen.push([store.arrVersion(), store.S.project.clips.length])); return d; });
+    const r = createRoot(d => { createEffect(() => [store.arrVersion(), store.S.project.clips.length] as [number, number], v => { seen.push(v); }); return d; });
+    settle();
     const a0 = store.arrVersion();
     store.applyLocal([{ op: 'removeClips', ids: [10] }, { op: 'removeClips', ids: [11] }]);
     settle();
@@ -300,5 +303,59 @@ describe('plain copies', () => {
     expect(copy).toEqual([{ ch: 10, step: 0, len: 1 }, { ch: 10, step: 2, len: 1 }]);
     copy[0].step = 3;
     expect(store.S.project.patterns[0].notes[0].step).toBe(0);
+  });
+});
+
+// Solid 2: the store keeps a plain copy of the project (`M`, see store.ts) beside the reactive one.
+describe('the plain copy (rawOf / plain)', () => {
+  // the store's own data (Solid's snapshot walks the proxies), not the plain copy
+  const json = (v: unknown) => JSON.parse(JSON.stringify(v));
+  const same = () => expect(json(store.rawOf(store.S.project))).toEqual(json(snapshot(store.S.project)));
+
+  it('stays equal to the store through local edits and engine states, with no object shared', () => {
+    store.replaceState(dto(project()));
+    store.applyLocal([{ op: 'putClips', clips: [clip(10, { start: 3 }), clip(13, { track: 2, start: 1 })] }]);
+    store.applyLocal([{ op: 'putInsert', insert: { ...ins(2), sends: [{ to: 1, gain: 0.5 }] } as never }]);
+    store.applyLocal([{ op: 'removeTrack', id: 2 }, { op: 'setBpm', bpm: 99 }, { op: 'setLoop', loop: { a: 1, b: 5 } }]);
+    store.applyLocal([{ op: 'putPattern', pattern: { id: 1, name: 'Beat', color: '#4f8ef7', len: 4, notes: [{ ch: 10, step: 1, len: 1 }] } as never }]);
+    same();
+    // the plain copy never hands an object to the store: editing it in place would change the store unseen
+    const raw = store.rawOf(store.S.project);
+    expect(raw.inserts.find(m => m.id === 2)!.sends).not.toBe(store.S.project.inserts.find(m => m.id === 2)!.sends);
+    const next = project(); next.clips.reverse(); next.bpm = 77; next.loop = { a: 0, b: 2 };
+    store.replaceState(dto(next, { revision: 9 }));
+    same();
+    expect(store.S.project.clips.map(c => c.id)).toEqual([12, 11, 10]);
+  });
+
+  it('rawOf gives the plain item behind a store item (by id), and plain data back as is', () => {
+    store.replaceState(dto(project()));
+    const c = clipById(11), r = store.rawOf(c);
+    expect(r).not.toBe(c);
+    expect(r).toEqual(project().clips[1]);
+    expect(store.rawOf(r)).toBe(r);
+    store.applyLocal([{ op: 'putClips', clips: [{ ...store.plain(c), start: 9 }] }]);
+    expect(store.rawOf(c).start).toBe(9);
+    expect(store.rawOf(store.S.project.patterns[0]).notes).toEqual([{ ch: 10, step: 0, len: 1 }, { ch: 10, step: 2, len: 1 }]);
+  });
+
+  it('an engine state that reorders and edits keeps every surviving item’s identity, and a held item stays live', () => {
+    store.replaceState(dto(project()));
+    const c10 = clipById(10), t3 = store.S.project.tracks[2];
+    const next = project();
+    next.clips = [clip(12, { track: 2, start: 8 }), clip(10, { start: 5 }), clip(14, { start: 1 })];
+    next.tracks = [next.tracks[2], next.tracks[0]];
+    store.replaceState(dto(next, { revision: 2 }));
+    expect(clipById(10)).toBe(c10);
+    expect(c10.start).toBe(5);
+    expect(store.S.project.tracks[0]).toBe(t3);
+    expect(store.S.project.clips.map(c => c.id)).toEqual([12, 10, 14]);
+  });
+
+  it('plainNotes copies notes given as store items or as plain ones', () => {
+    store.replaceState(dto(project()));
+    const pt = store.S.project.patterns[0];
+    expect(store.plainNotes(pt.notes)).toEqual(store.plainNotes(store.rawOf(pt).notes));
+    expect(store.plainNotes(store.rawOf(pt).notes)[0]).not.toBe(store.rawOf(pt).notes[0]);
   });
 });
