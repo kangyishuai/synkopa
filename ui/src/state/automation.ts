@@ -7,7 +7,7 @@ import { t as tl } from '../lib/i18n';
 import { createMemo, createRoot, createSignal } from 'solid-js';
 import { unwrap } from 'solid-js/store';
 import type { AutoPoint, AutoTarget, Automation, Id, Op } from '../api/types';
-import { automationSpans, autoValueText, createAutomationOps, denormalize, normalize, parseAutoValue, readTarget, spansValue, targetKey, targetLabel, writeTargetOps } from '../lib/automation';
+import { automationSpans, autoValueText, createAutomationOps, denormalize, normalize, parseAutoValue, readTarget, spansValue, targetKey, targetLabel, trackForAutomation, writeTargetOps } from '../lib/automation';
 import { fmtPos } from '../lib/format';
 import { addFrameTask } from '../ui/frameLoop';
 import { commit, enqueue, Gesture, wheelEdit } from './edit';
@@ -130,24 +130,14 @@ function automationIdsOf(target: AutoTarget): Id[] {
   return (S.project.automations ?? []).filter(a => targetKey(a.target) === k).map(a => a.id);
 }
 
-/** Overrides already asked for (a wheel ticks many times before the state event comes back). */
-const overrideAsked = new Set<string>();
-let wasPlaying = false;
-addFrameTask(() => {
-  if (wasPlaying && !U.playing) overrideAsked.clear();
-  wasPlaying = U.playing;
-});
-
 /** A manual tweak outside the drag helpers (a hosted plugin row writes its parameter directly):
- * while playing, mark the target's automations overridden so the tweak is the one that counts. */
+ * while playing, mark the target's automations overridden so the tweak is the one that counts.
+ * Repeats while the request is in flight are harmless (the engine's set insert is idempotent);
+ * once the state event shows the override, this stays quiet until it is re-enabled. */
 export function noteManualTweak(target: AutoTarget) {
   if (!U.playing) return;
   for (const id of automationIdsOf(target)) {
-    const asked = targetKey(target) + ':' + id;
-    if (!S.overriddenAutos.includes(id) && !overrideAsked.has(asked)) {
-      overrideAsked.add(asked);
-      void enqueue(() => be().automationOverride(id, true)).catch(reportOverrideError);
-    }
+    if (!S.overriddenAutos.includes(id)) void enqueue(() => be().automationOverride(id, true)).catch(reportOverrideError);
   }
 }
 
@@ -220,12 +210,21 @@ export class CaptureBuf {
  * the song plays (a pattern preview's clock is not the playlist's; there a tweak writes static). */
 export const captureArmed = () => S.transport.rec && S.transport.recAutomation && U.playing;
 
-/** What one control's tweak captures into: its automation and a clip that drives it. */
-function captureTargetOf(target: AutoTarget): { auto: Automation; clip: { start: number; offset: number } | null } | null {
+const autoClip = (id: Id, ref: Id, track: number, start: number, len: number) =>
+  ({ id, track, start, len, offset: 0, kind: 'auto' as const, ref, muted: false, gain: 0, fadeIn: 0, fadeOut: 0, pan: 0, norm: false, rev: false });
+
+/** What one control's tweak captures into: its automation and the clip that drives it at the
+ * capture beat — the one under the playhead (the latest-starting one where they overlap),
+ * else the latest that already ended — the same choice the engine's `drive_value` makes. */
+function captureTargetOf(target: AutoTarget): { auto: Automation; clip: { id: Id; start: number; len: number; offset: number } | null } | null {
   const autos = (S.project.automations ?? []).filter(a => targetKey(a.target) === targetKey(target));
   if (!autos.length) return null;
-  const clip = S.project.clips.find(c => c.kind === 'auto' && !c.muted && autos.some(a => a.id === c.ref));
-  return { auto: (clip && autos.find(a => a.id === clip.ref)) || autos[0], clip: clip ? { start: clip.start, offset: clip.offset } : null };
+  const beat = beatNow();
+  const clips = S.project.clips.filter(c => c.kind === 'auto' && !c.muted && autos.some(a => a.id === c.ref));
+  const covering = clips.filter(c => c.start <= beat && beat < c.start + c.len).sort((a, b) => a.start - b.start);
+  const ended = clips.filter(c => c.start + c.len <= beat).sort((a, b) => a.start + a.len - (b.start + b.len));
+  const clip = covering.at(-1) ?? ended.at(-1);
+  return { auto: (clip && autos.find(a => a.id === clip.ref)) || autos[0], clip: clip ? { id: clip.id, start: clip.start, len: clip.len, offset: clip.offset } : null };
 }
 
 /** What a control tweak does between press and release: capture envelope points while the
@@ -262,24 +261,38 @@ class CaptureTweak implements Tweak {
   private local: (beat: number) => number; // song beat → envelope-local t (the clip's)
   private held: number | null = null;
   private lastTick = 0;
+  private clip: { id: Id; start: number; len: number; offset: number } | null = null;
   constructor(target: AutoTarget, label: string, private key: string, private color: string, private opts?: { current?: number; paramLabel?: string }) {
+    latches.get(key)?.kill(); // an older latch on this control stops writing before this drag does
+    latches.delete(key);
     this.g = new Gesture(label);
     const ct = captureTargetOf(target);
-    if (ct) {
+    if (ct && ct.clip) {
       this.auto = structuredClone(unwrap(ct.auto));
-      const clip = ct.clip;
-      this.local = clip ? beat => beat - clip.start + clip.offset : beat => beat;
+      this.clip = { ...ct.clip };
+      this.local = beat => beat - this.clip!.start + this.clip!.offset;
     } else {
-      // no envelope yet: create it with its clip, like the right-click "Automate" — same undo step
       const lp = S.project.loop;
       const start = lp ? lp.a : Math.max(0, U.start), len = lp ? lp.b - lp.a : 16;
-      const name = targetLabel(S.project, S.catalog, target, this.opts?.paramLabel);
-      const r = createAutomationOps(unwrap(S.project), S.catalog, target, name, this.color || '#e0a44a', start, len, allocId, this.opts?.current);
-      this.g.update(r.ops);
-      this.auto = structuredClone((r.ops.find(o => o.op === 'putAutomation') as { automation: Automation } | undefined)!.automation);
-      const clip = (r.ops.find(o => o.op === 'putClips') as { clips: { start: number }[] } | undefined)?.clips[0];
-      this.local = clip ? beat => beat - clip.start : beat => beat;
-      say(tl('a.au.recStart', { name }));
+      if (ct) {
+        // the envelope exists but nothing plays it (its clip was deleted or muted):
+        // give the recorded points a clip again
+        this.auto = structuredClone(unwrap(ct.auto));
+        const id = allocId();
+        this.g.update([{ op: 'putClips', clips: [autoClip(id, this.auto.id, trackForAutomation(unwrap(S.project), start, len), start, len)] }]);
+        this.clip = { id, start, len, offset: 0 };
+        this.local = beat => beat - start;
+      } else {
+        // no envelope yet: create it with its clip, like the right-click "Automate" — same undo step
+        const name = targetLabel(S.project, S.catalog, target, this.opts?.paramLabel);
+        const r = createAutomationOps(unwrap(S.project), S.catalog, target, name, this.color || '#e0a44a', start, len, allocId, this.opts?.current);
+        this.g.update(r.ops);
+        this.auto = structuredClone((r.ops.find(o => o.op === 'putAutomation') as { automation: Automation } | undefined)!.automation);
+        const clip = (r.ops.find(o => o.op === 'putClips') as { clips: { id: Id; start: number; len: number }[] } | undefined)?.clips[0];
+        this.clip = clip ? { id: clip.id, start: clip.start, len: clip.len, offset: 0 } : null;
+        this.local = clip ? beat => beat - clip.start : beat => beat;
+        say(tl('a.au.recStart', { name }));
+      }
     }
     this.buf = new CaptureBuf(this.auto.points);
   }
@@ -311,7 +324,15 @@ class CaptureTweak implements Tweak {
     this.g.end();
   }
   private send() {
-    this.g.update([{ op: 'putAutomation', automation: { ...this.auto, points: [...this.buf.points] } }]);
+    const ops: Op[] = [{ op: 'putAutomation', automation: { ...this.auto, points: [...this.buf.points] } }];
+    // a point past the clip's end would never play: grow the clip to cover the recording
+    const maxT = this.buf.points.reduce((m, p) => Math.max(m, p.t), 0);
+    if (this.clip && maxT > this.clip.len) {
+      this.clip.len = maxT + 1;
+      const c = S.project.clips.find(q => q.id === this.clip!.id);
+      ops.push({ op: 'putClips', clips: [c ? { ...unwrap(c), len: this.clip.len } : autoClip(this.clip.id, this.auto.id, 0, this.clip.start, this.clip.len)] });
+    }
+    this.g.update(ops);
   }
 }
 

@@ -209,17 +209,17 @@ export async function setRecQuantize(beats: number) {
 export async function restoreRecFilter() {
   let v: { audio?: unknown; notes?: unknown; quantize?: unknown; automation?: unknown; latch?: unknown } | null = null;
   try { v = JSON.parse(localStorage.getItem(REC_FILTER_KEY) ?? 'null'); } catch { /* none or unreadable */ }
-  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes)) return;
+  const au = typeof v?.automation === 'boolean' ? v.automation : S.transport.recAutomation;
+  if (!v || typeof v.audio !== 'boolean' || typeof v.notes !== 'boolean' || !(v.audio || v.notes || au)) return;
   const q = REC_QUANTIZE.some(x => x.beats === v!.quantize) ? v.quantize as number : 0;
-  const au = typeof v.automation === 'boolean' ? v.automation : S.transport.recAutomation;
   const latch = typeof v.latch === 'boolean' ? v.latch : S.transport.recAutoLatch;
   if (v.audio === S.transport.recAudio && v.notes === S.transport.recNotes && q === S.transport.recQuantize && au === S.transport.recAutomation && latch === S.transport.recAutoLatch) return;
   try { setTransport(await be().transportSet({ recAudio: v.audio, recNotes: v.notes, recQuantize: q, recAutomation: au, recAutoLatch: latch })); } catch (e) { console.warn(e); }
 }
-/** "audio and notes", "audio", "notes", "+ automation": what Record captures. */
+/** "audio and notes", "automation only", "+ automation": what Record captures. */
 export function recFilterName() {
   const a = S.transport.recAudio, n = S.transport.recNotes;
-  const base = t(a && n ? 'd.act.recWhat.both' : a ? 'd.act.recWhat.audio' : 'd.act.recWhat.notes');
+  const base = a && n ? t('d.act.recWhat.both') : a ? t('d.act.recWhat.audio') : n ? t('d.act.recWhat.notes') : t('d.act.recWhat.none');
   return S.transport.recAutomation ? base + t('d.act.recWhat.autoSuffix') : base;
 }
 

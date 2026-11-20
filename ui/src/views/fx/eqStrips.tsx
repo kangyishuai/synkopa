@@ -79,12 +79,14 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
     if (e.button !== 0) return;
     e.preventDefault();
     if (e.altKey || dblCheck('eqfader' + fxId() + i())) { resetGain(); return; }
-    const h = Math.max(40, slot.getBoundingClientRect().height), r0 = range();
+    const h = Math.max(40, slot.getBoundingClientRect().height);
     let v = b().g, ly = e.clientY;
-    const g = autoTweak(target('g'), tr('c.eq.gain'), n => { const op = edit(fxId(), i(), { g: Math.round((n * 2 * r0 - r0) * 10) / 10 }); return op ? [op] : null; }, { color: col() });
+    // capture normalises against the fixed ±30 dB band scale playback uses (BAND_RANGE.g),
+    // not the band's display range — or a recorded point would replay at another gain
+    const g = autoTweak(target('g'), tr('c.eq.gain'), n => { const op = edit(fxId(), i(), { g: Math.round((n * 2 * 30 - 30) * 10) / 10 }); return op ? [op] : null; }, { color: col() });
     track(ev => {
-      v = clamp(v + (ly - ev.clientY) / h * 2 * r0 * fineMul(ev), -30, 30); ly = ev.clientY;
-      g.move((clamp(v, -r0, r0) + r0) / (2 * r0));
+      v = clamp(v + (ly - ev.clientY) / h * 60 * fineMul(ev), -30, 30); ly = ev.clientY;
+      g.move((v + 30) / 60);
       say(name() + ' · ' + dbText(v));
     }, () => g.end(), 'ns-resize');
   };
@@ -92,9 +94,8 @@ function BandStrip(props: { fx: Fx; i: number; band: () => EqBand }) {
     if (!gainOk()) return;
     const d = e.deltaY || e.deltaX; if (!d) return;
     e.preventDefault(); e.stopPropagation();
-    const r0 = range();
     const v = clamp(Math.round((b().g + (d < 0 ? 1 : -1) * (e.shiftKey ? 0.1 : 0.5)) * 10) / 10, -30, 30);
-    autoWheel(target('g'), 'eqg' + fxId() + i(), tr('c.eq.gain'), (clamp(v, -r0, r0) + r0) / (2 * r0), n => { const op = edit(fxId(), i(), { g: Math.round((n * 2 * r0 - r0) * 10) / 10 }); return op ? [op] : null; }, { color: col() });
+    autoWheel(target('g'), 'eqg' + fxId() + i(), tr('c.eq.gain'), (v + 30) / 60, n => { const op = edit(fxId(), i(), { g: Math.round((n * 2 * 30 - 30) * 10) / 10 }); return op ? [op] : null; }, { color: col() });
     say(name() + ' · ' + dbText(v));
   };
 

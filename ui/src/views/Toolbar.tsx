@@ -660,6 +660,8 @@ function MainVolume() {
   const put = (v: number) => A.insertOp(0, { vol: clamp(v, 0, 1) });
   const staticOps = (v: number) => { const op = put(v); return op ? [op] : null; };
   const tell = (v: number) => say(t('a.tb.mainVol') + ' · ' + volText(v));
+  // Alt-click / double-click reset is a tweak too: it records while capturing, overrides while playing
+  const resetOnce = () => { const tw = autoTweak(target, t('a.tb.mainVol'), staticOps); tw.move(VOL_UNITY); tw.end(); tell(VOL_UNITY); };
   return (
     <Show when={master()}>
       <div class="mainvol" title={t('a.tb.mainVolTip', { v: volText(vol()) })}>
@@ -667,9 +669,9 @@ function MainVolume() {
           onStart={() => { g = autoTweak(target, t('a.tb.mainVol'), staticOps); }}
           onChange={v => { g?.move(v); tell(v); }}
           onEnd={() => { g?.end(); g = null; }}
-          onReset={() => { const op = put(VOL_UNITY); if (op) commit([op], t('a.tb.mainVol')); tell(VOL_UNITY); }}
+          onReset={() => resetOnce()}
           onWheel={v => { autoWheel(target, 'mainvol', t('a.tb.mainVol'), v, staticOps); tell(v); }}
-          onMenu={(x, y) => paramMenu(x, y, target, () => { const op = put(VOL_UNITY); if (op) commit([op], t('a.tb.mainVol')); })} />
+          onMenu={(x, y) => paramMenu(x, y, target, () => resetOnce())} />
       </div>
     </Show>
   );

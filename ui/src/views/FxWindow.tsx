@@ -800,6 +800,9 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
             const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: p.id };
             let cap: Tweak | null = null;
             const done = () => { cap?.end(); cap = null; };
+            // the 1 s param refresh replaces every row: a mid-drag replacement would drop the
+            // pointer-up handler, so the capture closes here instead of leaking the gesture
+            onCleanup(done);
             return (
               <div class="vparam" onContextMenu={e => { e.preventDefault(); e.stopPropagation();
                 if (!props.instrument) paramMenu(e.clientX, e.clientY, target, () => set(p.id, p.def), undefined, { current: p.value, paramLabel: p.name });

@@ -145,7 +145,7 @@ function ChannelKnob(props: { channel: Channel; lab: TranslationKey; undoLab: Tr
       onChange={v => { g?.move(v); say(props.channel.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
       onEnd={() => { g?.end(); g = null; }}
       onReset={reset}
-      onWheel={v => autoWheel(target?.() ?? null, 'cw' + lab, t(undoLab), v, staticOps)} />
+      onWheel={v => autoWheel(target?.() ?? null, 'cw' + lab + props.channel.id, t(undoLab), v, staticOps)} />
   );
 }
 

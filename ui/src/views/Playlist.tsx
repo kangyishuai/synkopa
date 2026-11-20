@@ -1540,7 +1540,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
     if (e.altKey || dblCheck('lvol' + props.i)) { A.setTrack(props.i, { vol: VOL_UNITY }, tl('a.pl.volume')); say(t().name + ' · 0.0 dB'); return; }
     const w = (e.currentTarget as HTMLElement).getBoundingClientRect().width;
     const g = autoTweak(volTarget(), tl('a.pl.trackVolume'), n => [{ op: 'putTrack', track: { ...plain(t()), vol: n } }]);
-    let v = t().vol, lx = e.clientX;
+    let v = shownVol(), lx = e.clientX;
     track(ev => {
       v = clamp(v + (ev.clientX - lx) / w * fineMul(ev), 0, 1); lx = ev.clientX;
       g.move(v);

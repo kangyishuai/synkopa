@@ -13,7 +13,7 @@ import { presetInfo } from '../lib/presets';
 import * as A from '../state/actions';
 import { MuteSolo } from '../ui/MuteSolo';
 import { commit, Gesture, wheelEdit } from '../state/edit';
-import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, noteManualTweak, paramMenu, type Tweak } from '../state/automation';
 import { MiniKnob } from '../ui/Knob';
 import { heardInserts, insName, S } from '../state/store';
 import { tele } from '../state/telemetry';
@@ -192,7 +192,7 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
     if (e.button === 2) { e.preventDefault(); e.stopPropagation(); return paramMenu(e.clientX, e.clientY, panT(), () => A.setInsert(m().id, { pan: 0 }, tr('c.mix.pan')), m().color); }
     if (e.button !== 0) return; e.preventDefault(); e.stopPropagation(); A.selectInsert(m().id);
     if (e.altKey || dblCheck('pan' + m().id)) return A.setInsert(m().id, { pan: 0 }, tr('c.mix.pan'));
-    const g = autoTweak(panT(), tr('c.mix.pan'), n => [put({ pan: n * 2 - 1 })]); let v = m().pan, ly = e.clientY;
+    const g = autoTweak(panT(), tr('c.mix.pan'), n => [put({ pan: n * 2 - 1 })]); let v = shownPan(), ly = e.clientY;
     track(ev => { v = clamp(v + (ly - ev.clientY) / 70 * fineMul(ev), -1, 1); ly = ev.clientY; g.move((v + 1) / 2); say('Pan ' + panText(v)); }, () => g.end(), 'ns-resize');
   };
   const faderDown = (e: PointerEvent) => {
@@ -202,12 +202,14 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
     const h = Math.max(40, (e.currentTarget as HTMLElement).getBoundingClientRect().height - 14);
     // the other selected strips move by the same fader travel, each from where it was (only
     // while writing static values: a capture records the grabbed fader's envelope)
-    const v0 = m().vol, group = A.selectedInserts().includes(m().id) ? A.selectedInserts().filter(id => id !== m().id).map(id => ({ id, vol: S.project.inserts.find(x => x.id === id)?.vol ?? VOL_UNITY })) : [];
+    const v0 = shownVol(), group = A.selectedInserts().includes(m().id) ? A.selectedInserts().filter(id => id !== m().id).map(id => ({ id, vol: S.project.inserts.find(x => x.id === id)?.vol ?? VOL_UNITY })) : [];
     const g = autoTweak(volT(), tr('c.mix.volume'), n => {
+      // the linked strips are manual writes too: their envelopes must yield like the grabbed one's
+      for (const o of group) noteManualTweak({ kind: 'insertVol', id: o.id });
       const linked = group.map(o => A.insertOp(o.id, { vol: clamp(o.vol + (n - v0), 0, 1) })).filter((o): o is Op => !!o);
       return [put({ vol: n }), ...linked];
     });
-    let v = m().vol, ly = e.clientY;
+    let v = shownVol(), ly = e.clientY;
     track(ev => {
       v = clamp(v + (ly - ev.clientY) / h * fineMul(ev), 0, 1); ly = ev.clientY;
       g.move(v); say(tr('c.mix.volume') + ' ' + volText(v) + (group.length ? ' · +' + group.length : ''));
@@ -217,8 +219,8 @@ function Strip(props: { m: Insert; idx: number; full: boolean }) {
     const d = e.deltaY || e.deltaX; if (!d) return;
     e.preventDefault(); e.stopPropagation();
     const n = d < 0 ? 1 : -1, f = e.shiftKey ? 0.2 : 1;
-    if (k === 'pan') { const v = clamp(m().pan + n * 0.04 * f, -1, 1); autoWheel(panT(), 'pan' + m().id, tr('c.mix.pan'), (v + 1) / 2, nv => [put({ pan: nv * 2 - 1 })]); say(tName(m().name) + ' · pan ' + panText(v)); }
-    else { const v = clamp(m().vol + n * 0.015 * f, 0, 1); autoWheel(volT(), 'vol' + m().id, tr('c.mix.volume'), v, nv => [put({ vol: nv })]); say(tName(m().name) + ' · ' + volText(v)); }
+    if (k === 'pan') { const v = clamp(shownPan() + n * 0.04 * f, -1, 1); autoWheel(panT(), 'pan' + m().id, tr('c.mix.pan'), (v + 1) / 2, nv => [put({ pan: nv * 2 - 1 })]); say(tName(m().name) + ' · pan ' + panText(v)); }
+    else { const v = clamp(shownVol() + n * 0.015 * f, 0, 1); autoWheel(volT(), 'vol' + m().id, tr('c.mix.volume'), v, nv => [put({ vol: nv })]); say(tName(m().name) + ' · ' + volText(v)); }
   };
   const stop = (e: Event) => e.stopPropagation();
   const icon = () => { if (m().id === 0) return null; const t = S.project.tracks.find(x => x.insert === m().id); return guessIcon(m().name) ?? (t ? trackIcon(t) : null); };

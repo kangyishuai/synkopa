@@ -687,6 +687,7 @@ impl Engine {
             sr: sample_rate,
             max_block,
         });
+        c.auto_overrides.clear(); // before the rebuild: the new stream starts clean
         self.sync(&mut c, Dirty { timeline: true, mixer: true, params: true });
         let flags = Cmd::Flags { metro: c.transport.metro, monitor: c.transport.monitor };
         let watch = watch_cmd(&c.watch);
@@ -694,7 +695,6 @@ impl Engine {
         send(&mut c, watch);
         c.transport.playing = false;
         c.pat_loop = None; // the new stream plays nothing
-        c.auto_overrides.clear();
         self.settle_rec_track(&mut c);
         self.changed(c);
         rt
@@ -1126,7 +1126,12 @@ impl Engine {
         self.finish_midi_take();
         let mut c = self.core.lock();
         self.settle_rec_track(&mut c);
-        c.auto_overrides.clear(); // a stopped transport re-arms every automation
+        if !c.auto_overrides.is_empty() {
+            // a stopped transport re-arms every automation: rebuild now, so the next
+            // play starts from a timeline that drives every envelope again
+            c.auto_overrides.clear();
+            self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
+        }
         let t = c.transport.clone();
         drop(control);
         self.changed(c);
@@ -1602,7 +1607,10 @@ impl Engine {
             {
                 let mut c = self.core.lock();
                 c.transport.playing = false;
-                c.auto_overrides.clear();
+                if !c.auto_overrides.is_empty() {
+                    c.auto_overrides.clear();
+                    self.sync(&mut c, Dirty { timeline: true, ..Default::default() });
+                }
             }
             if let Err(e) = self.finish_take() {
                 log::error!("{e}");

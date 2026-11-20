@@ -416,9 +416,10 @@ select option { background: var(--bg4); color: var(--fg); }
 .autodot.ovr { background: var(--fg5); }
 .knob.auto .val { color: var(--amber); }
 /* a tweak overrode the envelope while playing: the knob shows its manual value (Ableton's grey LED) */
-.knob.ovr .val, .miniknob.ovr::after { color: var(--fg5); }
+.knob.ovr .val { color: var(--fg5); }
 .miniknob { display: inline-flex; width: 22px; height: 22px; flex: none; cursor: ns-resize; touch-action: none; position: relative; }
-.miniknob.auto::after { content: ''; position: absolute; right: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; background: var(--amber); }
+.miniknob.auto::after, .miniknob.ovr::after { content: ''; position: absolute; right: -1px; top: -1px; width: 6px; height: 6px; border-radius: 50%; }
+.miniknob.auto::after { background: var(--amber); }
 .miniknob.ovr::after { background: var(--fg5); }
 .lvol.auto .thumb, .fader.auto .cap { box-shadow: 0 0 0 2px var(--amber); }
 .pandial { position: relative; width: 30px; height: 30px; cursor: ns-resize; touch-action: none; }

@@ -10,7 +10,9 @@ let unwrap: <T>(item: T) => T;
 // decimation keeps straight stretches one segment, reversals kept, under a hard cap.
 const noop = () => {};
 beforeAll(() => {
-  vi.stubGlobal('window', { addEventListener: noop, removeEventListener: noop, innerWidth: 1600, innerHeight: 900, setTimeout });
+  const doc = { addEventListener: noop, removeEventListener: noop };
+  vi.stubGlobal('window', { addEventListener: noop, removeEventListener: noop, innerWidth: 1600, innerHeight: 900, setTimeout, document: doc });
+  vi.stubGlobal('document', doc);
   vi.stubGlobal('localStorage', { getItem: () => null, setItem: noop, removeItem: noop });
   vi.stubGlobal('requestAnimationFrame', (cb: () => void) => setTimeout(cb, 0));
 });
@@ -157,7 +159,63 @@ describe('a control tweak routes by the record filter', () => {
     await flush();
     expect((await mock.getState()).overriddenAutos, 're-enabled: the envelope drives again').not.toContain(600);
     expect(store.S.overriddenAutos).not.toContain(600);
+
+    // a second tweak after re-enabling overrides again (a settled request must not block it)
+    const t2 = A.autoTweak(target, 'Test', v => lib.writeTargetOps(unwrap(store.S.project), target, v));
+    t2.move(0.4);
+    t2.end();
+    await edit.settled();
+    await flush();
+    expect((await mock.getState()).overriddenAutos, 'the next tweak overrides again').toContain(600);
     ui.setU('playing', false);
+  });
+
+  it('capture picks the clip under the playhead when a target has several', async () => {
+    const ch = store.S.project.channels?.[0]?.id ?? 1;
+    const target = chanVol(ch);
+    await mock.applyOps(lib.createAutomationOps(store.S.project, null, target, 'Early', '#e0a44a', 0, 8, () => 700).ops);
+    await mock.applyOps(lib.createAutomationOps(store.S.project, null, target, 'Later', '#e0a44a', 16, 8, () => 702).ops);
+    store.replaceState(await mock.getState());
+    await arm();
+    A.setBeatSourceForTests(() => 20); // inside the Later clip
+    const t = A.autoTweak(target, 'Test', () => null);
+    t.move(0.3);
+    t.end();
+    await edit.settled();
+    expect(envAt(702).length, 'points went into the clip under the playhead').toBeGreaterThan(2);
+    expect(envAt(700).length, 'the earlier envelope is untouched').toBe(2);
+  });
+
+  it('capture gives a clipped-over (muted) envelope a new clip', async () => {
+    const ch = store.S.project.channels?.[0]?.id ?? 1;
+    const target = chanVol(ch);
+    await mock.applyOps(lib.createAutomationOps(store.S.project, null, target, 'Test', '#e0a44a', 0, 8, () => 704).ops);
+    const muted = unwrap(store.S.project).clips.map(c => (c.id === 705 ? { ...c, muted: true } : c));
+    await mock.applyOps([{ op: 'putClips', clips: muted }]);
+    store.replaceState(await mock.getState());
+    await arm();
+    A.setBeatSourceForTests(() => 2);
+    const t = A.autoTweak(target, 'Test', () => null);
+    t.move(0.6);
+    t.end();
+    await edit.settled();
+    const playing = store.S.project.clips.filter(c => c.kind === 'auto' && c.ref === 704 && !c.muted);
+    expect(playing.length, 'a fresh unmuted clip plays the recorded points').toBe(1);
+  });
+
+  it('capture grows the clip when points land past its end', async () => {
+    const ch = store.S.project.channels?.[0]?.id ?? 1;
+    const target = chanVol(ch);
+    await mock.applyOps(lib.createAutomationOps(store.S.project, null, target, 'Test', '#e0a44a', 0, 8, () => 706).ops);
+    store.replaceState(await mock.getState());
+    await arm();
+    A.setBeatSourceForTests(() => 20); // past the 8-beat clip
+    const t = A.autoTweak(target, 'Test', () => null);
+    t.move(0.5);
+    t.end();
+    await edit.settled();
+    const clip = store.S.project.clips.find(c => c.kind === 'auto' && c.ref === 706);
+    expect(clip?.len, 'the clip grew to cover the recorded point').toBeGreaterThan(8);
   });
 
   it('static and stopped: the tweak writes the value, no override is asked', async () => {
@@ -181,5 +239,19 @@ describe('a control tweak routes by the record filter', () => {
     const tr3 = await mock.transportSet({ recAutomation: true, recAudio: false, recNotes: false });
     expect(tr3.recAutomation, 'automation on').toBe(true);
     expect(tr3.recAudio === false && tr3.recNotes === false, 'with automation capturing, both input kinds may rest').toBe(true);
+  });
+});
+
+describe('the record filter restores automation-only settings', () => {
+  it('restores audio=false notes=false automation=true from this computer', async () => {
+    const storeMap: Record<string, string> = {
+      'wave.recFilter': JSON.stringify({ audio: false, notes: false, quantize: 0, automation: true, latch: true }),
+    };
+    vi.stubGlobal('localStorage', { getItem: (k: string) => storeMap[k] ?? null, setItem: (k: string, v: string) => { storeMap[k] = v; }, removeItem: (k: string) => { delete storeMap[k]; } });
+    const actions = await import('./actions');
+    await actions.restoreRecFilter();
+    await new Promise(r => setTimeout(r, 5));
+    expect(JSON.parse(storeMap['wave.recFilter'])).toMatchObject({ audio: false, notes: false, automation: true, latch: true });
+    expect(actions.recFilterName()).toContain('automation');
   });
 });

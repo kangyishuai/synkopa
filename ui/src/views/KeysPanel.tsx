@@ -63,7 +63,7 @@ export function KeysPanel(props: { c: KeysChannel }) {
         onChange={v => { g?.move(v); say(props.c.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
         onEnd={() => { g?.end(); g = null; }}
         onReset={reset}
-        onWheel={v => autoWheel(target(), 'keys' + lab, t('b.kp.gest', { name: t(lab) }), v, vv => op(vv))} />
+        onWheel={v => autoWheel(target(), 'keys' + lab + props.c.id, t('b.kp.gest', { name: t(lab) }), v, vv => op(vv))} />
     );
   };
 
