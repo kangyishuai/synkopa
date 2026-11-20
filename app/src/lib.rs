@@ -1250,6 +1250,12 @@ async fn open_ask(service: links::AskService, prompt: Option<String>) -> R<()> {
     links::open_browser(&links::ask_url(service, prompt.as_deref())?)
 }
 
+/// Help ▸ Join the Discord: opens the community server in the system browser.
+#[tauri::command]
+async fn open_discord() -> R<()> {
+    links::open_browser(links::DISCORD_URL)
+}
+
 #[tauri::command]
 async fn cli_status(app: St<'_>) -> R<CliStatus> {
     Ok(app.cli.lock().clone())
@@ -1422,7 +1428,8 @@ pub fn run(project_arg: Option<&str>) {
             update_download,
             update_install,
             open_release_page,
-            open_ask
+            open_ask,
+            open_discord
         ])
         .build(tauri::generate_context!())
         .expect("error while building Synkopa");
