@@ -6,6 +6,11 @@ shown in the app after an update and is published as the release notes (see
 
 ## Unreleased
 
+### Changed
+- **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
+  from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
+  stops a preview wherever the keyboard is.
+
 ### Added
 - **File → Open recent.** The last ten projects you opened or saved, newest first, one click away.
   Two projects with the same name show their folders. A project that was moved or deleted is
