@@ -2,7 +2,7 @@
 // relies on these rules; each test pins one of them (see the module's header).
 import { describe, expect, it, vi } from 'vitest';
 import { createMemo, createRoot, flush } from 'solid-js';
-import { batch, createDetachedRoot, createSignal, createStore, effect, onCleanup, sync, watch } from './reactive';
+import { batch, createDetachedRoot, createSignal, createStore, effect, onCleanup, onMount, sync, watch } from './reactive';
 
 /** Errors the helpers rethrow on a microtask (instead of halting Solid). */
 async function caught(fn: () => void): Promise<unknown[]> {
@@ -163,6 +163,41 @@ describe('effects', () => {
     setN(1);
     dispose();
     expect(log).toEqual(['run 0', 'clean 0', 'run 1', 'clean 1']);
+  });
+
+  // solid-js 1.9 `cleanNode`: an owner's children are disposed last-created first, then its own
+  // cleanups last-registered first (the expected orders are what 1.9.18 printed for the same code)
+  it('onCleanup callbacks run last-registered first (Solid 1), in effect, watch and onMount', () => {
+    const [n, setN] = createSignal(0);
+    const log: string[] = [];
+    const dispose = createRoot(d => {
+      effect(() => { const v = n(); log.push('e.run' + v); onCleanup(() => log.push('e.a' + v)); onCleanup(() => log.push('e.b' + v)); });
+      watch(n, v => { log.push('w.run' + v); onCleanup(() => log.push('w.a' + v)); onCleanup(() => log.push('w.b' + v)); });
+      onMount(() => { log.push('m.run'); onCleanup(() => log.push('m.a')); onCleanup(() => log.push('m.b')); });
+      return d;
+    });
+    flush();
+    setN(1);
+    const of = (p: string) => log.filter(x => x.startsWith(p));
+    expect([...of('e.'), ...of('w.')]).toEqual(['e.run0', 'e.b0', 'e.a0', 'e.run1', 'w.run0', 'w.b0', 'w.a0', 'w.run1']);
+    log.length = 0;
+    dispose();
+    expect(log).toEqual(['m.b', 'm.a', 'w.b1', 'w.a1', 'e.b1', 'e.a1']);
+  });
+
+  it('on disposal of an owner: its helpers last-created first, then its own cleanups last-registered first (Solid 1)', () => {
+    const log: string[] = [];
+    const dispose = createRoot(d => {
+      onCleanup(() => log.push('bodyA'));
+      onMount(() => onCleanup(() => log.push('mount')));
+      effect(() => onCleanup(() => log.push('effect')));
+      watch(() => 1, () => onCleanup(() => log.push('watch')));
+      onCleanup(() => log.push('bodyD'));
+      return d;
+    });
+    flush();
+    dispose();
+    expect(log).toEqual(['watch', 'effect', 'mount', 'bodyD', 'bodyA']);
   });
 
   it('a value returned by an effect body is ignored (Solid 2 halts on a returned non-function)', async () => {

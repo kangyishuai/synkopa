@@ -71,13 +71,17 @@ function report(e: unknown): void {
 }
 
 let cleanups: (() => void)[] | null = null;
-/** Run `fn` as one of our callbacks: collects `onCleanup` calls, catches its error. */
+/**
+ * Run `fn` as one of our callbacks: collects `onCleanup` calls, catches its error. The cleanups
+ * run last-registered first, as Solid 1's did (1.9 `cleanNode`); one that throws is reported and
+ * the others still run.
+ */
 function guarded(fn: () => void): (() => void) | undefined {
   const outer = cleanups, mine: (() => void)[] = [];
   cleanups = mine;
   inCallback++;
   try { fn(); } catch (e) { report(e); } finally { inCallback--; cleanups = outer; }
-  return mine.length ? () => { for (const c of mine) { try { c(); } catch (e) { report(e); } } } : undefined;
+  return mine.length ? () => { for (let i = mine.length - 1; i >= 0; i--) { try { mine[i](); } catch (e) { report(e); } } } : undefined;
 }
 
 /**
