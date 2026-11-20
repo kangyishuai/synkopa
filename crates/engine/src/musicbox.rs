@@ -189,9 +189,9 @@ impl Tine {
         let mut freq = [1.0; PARTIALS];
         let mut sum = 0.0;
         for k in 0..PARTIALS {
-            // the bandwidth limit applies to the resulting frequency, not the ratio: C6's
-            // fourth partial is ~36 kHz at 48 kHz and would fold back as garbage
-            freq[k] = (f0 * PARTIAL_RATIOS[k]).min(sr * 0.45);
+            // the true partial frequency is kept: one above the rendering bandwidth is
+            // suppressed at render time (see `sample`), not clamped into an in-band tone
+            freq[k] = f0 * PARTIAL_RATIOS[k];
             let t60_k = t60 / (1.0 + 5.0 * k as f32);
             decay[k] = 10f32.powf(-3.0 / (t60_k.max(0.01) * sr));
             amp[k] = PARTIAL_BASE[k] * b.powf(k as f32);
@@ -228,12 +228,19 @@ impl Tine {
     pub fn sample(&mut self, bend: f32, sr: f32) -> f32 {
         let mut x = 0.0;
         for k in 0..PARTIALS {
-            self.phase[k] += self.freq[k] * bend / sr;
-            if self.phase[k] >= 1.0 {
-                self.phase[k] -= 1.0;
+            // a partial bent or played past Nyquist (C6's fourth partial is ~36 kHz at 48 kHz)
+            // would fold back as garbage: it stays silent, its phase frozen, until in band again
+            let inc = self.freq[k] * bend / sr;
+            if inc < 0.5 {
+                self.phase[k] += inc;
+                if self.phase[k] >= 1.0 {
+                    self.phase[k] -= 1.0;
+                }
+                self.amp[k] *= self.decay[k];
+                x += self.amp[k] * (std::f32::consts::TAU * self.phase[k]).sin();
+            } else {
+                self.amp[k] *= self.decay[k];
             }
-            self.amp[k] *= self.decay[k];
-            x += self.amp[k] * (std::f32::consts::TAU * self.phase[k]).sin();
         }
         // the pin tick: decaying noise through a one-pole lowpass
         self.lcg = self.lcg.wrapping_mul(1_103_515_245).wrapping_add(12_345);
@@ -320,21 +327,61 @@ mod tests {
     }
 
     #[test]
-    fn partials_stay_under_the_bandwidth_limit() {
-        // C7's fourth partial would be ~72 kHz: it must clamp to the rendering bandwidth
-        // instead of folding back as garbage
-        let t = Tine::new(96, 0.8, &Params::default(), 48_000.0);
-        for f in t.freq {
-            assert!(f <= 48_000.0 * 0.45 + 0.01, "partial {f} Hz is above the bandwidth");
-        }
-        // and the body resonator passes a sustained tone at unit gain (the F#3 case)
-        let mut mode = BodyMode::new(BODY_MODES[0], 1.0, 48_000.0);
+    fn out_of_band_partials_are_suppressed_and_in_band_ones_ring() {
+        let p = Params::default();
         let sr = 48_000.0;
-        let f_in = 185.0_f32;
-        for i in 0..(2.0 * sr) as usize {
-            mode.process((std::f32::consts::TAU * f_in * i as f32 / sr).sin(), sr);
+        // C6's fourth partial is ~36 kHz: the true frequency is kept, the partial is silent,
+        // so zeroing it changes nothing
+        let mut t = Tine::new(84, 0.8, &p, sr);
+        assert!((t.freq[3] - 1046.5 * PARTIAL_RATIOS[3]).abs() < 1.0, "the true frequency is kept");
+        let mut without = t;
+        without.freq[3] = 0.0;
+        for _ in 0..2000 {
+            assert!((t.sample(1.0, sr) - without.sample(1.0, sr)).abs() < 1e-4, "an out-of-band partial leaked");
         }
-        let y = mode.process((std::f32::consts::TAU * f_in * 40000.0 / sr).sin(), sr);
-        assert!((y.abs() - 1.0).abs() < 0.1, "resonator steady-state gain {} at its own pitch", y.abs());
+        // C4's fourth partial (~1.6 kHz at 48 kHz) is in band: zeroing it must change the sound
+        let mut t = Tine::new(60, 0.8, &p, sr);
+        let mut without = t;
+        without.freq[3] = 0.0;
+        let mut different = false;
+        for _ in 0..2000 {
+            if t.sample(1.0, sr) != without.sample(1.0, sr) {
+                different = true;
+                break;
+            }
+        }
+        assert!(different, "an in-band partial was suppressed");
+        // a +2-semitone bend pushes E6's third partial (~23 kHz) past Nyquist: suppressed too
+        let bend = 2.0_f32.powf(2.0 / 12.0);
+        let mut t = Tine::new(88, 0.8, &p, sr);
+        let mut without = t;
+        without.freq[2] = 0.0;
+        let mut same_while_bent = true;
+        let mut different_while_plain = false;
+        for _ in 0..1000 {
+            // f32 accumulation differs by ulps between the two partial sets; a real leak of
+            // the suppressed partial would be a percent of the signal, not a rounding step
+            if (t.sample(bend, sr) - without.sample(bend, sr)).abs() > 1e-4 {
+                same_while_bent = false;
+            }
+            if (t.sample(1.0, sr) - without.sample(1.0, sr)).abs() > 1e-4 {
+                different_while_plain = true;
+            }
+        }
+        assert!(same_while_bent, "the bent-out partial leaked");
+        assert!(different_while_plain, "the partial must come back (and sound) once in band");
+    }
+
+    #[test]
+    fn the_body_resonator_passes_its_own_pitch_at_unit_gain() {
+        let sr = 48_000.0;
+        for (mode_freq, f_in) in [(BODY_MODES[0], 185.0_f32), (BODY_MODES[1], 330.0_f32)] {
+            let mut mode = BodyMode::new(mode_freq, 1.0, sr);
+            for i in 0..(2.0 * sr) as usize {
+                mode.process((std::f32::consts::TAU * f_in * i as f32 / sr).sin(), sr);
+            }
+            let y = mode.process((std::f32::consts::TAU * f_in * 40000.0 / sr).sin(), sr);
+            assert!((y.abs() - 1.0).abs() < 0.1, "mode {} steady-state gain {}", mode_freq, y.abs());
+        }
     }
 }

@@ -253,10 +253,38 @@ fn the_body_resonance_stays_bounded_even_on_its_own_pitch() {
     let loud = project(vec![note(0.0, 64.0, 54, 1.0)], MusicBoxState { body: 100.0, ..Default::default() });
     let pk = render(loud).iter().fold(0f32, |a, b| a.max(b.abs()));
     assert!(pk < 0.8, "F#3 with Body 100 % peaks at {pk:.2}");
+    // E4 = 329.6 Hz sits on the second mode (330 Hz): bounded too
+    let loud2 = project(vec![note(0.0, 64.0, 64, 1.0)], MusicBoxState { body: 100.0, ..Default::default() });
+    let pk2 = render(loud2).iter().fold(0f32, |a, b| a.max(b.abs()));
+    assert!(pk2 < 0.8, "E4 with Body 100 % peaks at {pk2:.2}");
     // and Body 0 stays the dry tine, also bounded
     let dry = render(project(vec![note(0.0, 64.0, 54, 1.0)], MusicBoxState { body: 0.0, ..Default::default() }));
     let dpk = dry.iter().fold(0f32, |a, b| a.max(b.abs()));
     assert!(dpk < 0.8, "dry tine peaks at {dpk:.2}");
+}
+
+#[test]
+fn body_zero_is_the_dry_reference_and_the_modes_add_energy_in_their_bands() {
+    // crude bandpass around the 185 Hz mode: lowpass 300 minus lowpass 120
+    let band = |x: &[f32]| {
+        let hi = rms(&lowpass(&lowpass(x, 300.0), 300.0));
+        let lo = rms(&lowpass(&lowpass(x, 120.0), 120.0));
+        (hi * hi - lo * lo).max(0.0).sqrt()
+    };
+    let on = render_to(project(vec![note(0.0, 64.0, 54, 1.0)], MusicBoxState { body: 100.0, ..Default::default() }), 24.0);
+    let off = render_to(project(vec![note(0.0, 64.0, 54, 1.0)], MusicBoxState { body: 0.0, ..Default::default() }), 24.0);
+    let window = 2000..200_000;
+    let on_band = band(&on[window.clone()]);
+    let off_band = band(&off[window.clone()]);
+    // Body 0 is the dry reference; the modes must add real energy in their own band
+    assert!(on_band > off_band * 1.15, "185 Hz band: body {on_band:.5} vs dry {off_band:.5}");
+    // the body's own added signal (on − off) must sit in the mode bands, not above them: the
+    // resonators ring at 185/330 Hz, so anything the difference carries over 1.5 kHz is the
+    // resonator leaking broadband input through
+    let diff: Vec<f32> = on.iter().zip(&off).map(|(a, b)| a - b).collect();
+    let low_part = rms(&lowpass(&lowpass(&diff, 500.0), 500.0));
+    let high_part = rms(&highpass(&diff, 1500.0));
+    assert!(high_part < low_part * 0.15, "the body leaks highs: {high_part:.5} vs mode-band {low_part:.5}");
 }
 
 #[test]
