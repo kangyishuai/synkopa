@@ -23,6 +23,7 @@ import { SynthPanel } from './SynthPanel';
 import { S } from '../state/store';
 import { closeEditor, openSampleEditor } from '../state/actions';
 import { togglePlugin } from '../state/pluginWindows';
+import { PanelBoundary, WindowBoundary } from '../ui/PanelBoundary';
 
 /** The insert a channel is heard on: its own, else the track of the first playlist clip of a pattern with its
  *  notes (rt.rs `ChanRt::heard`); null when it plays nowhere yet. */
@@ -90,7 +91,13 @@ export function ChannelWindow() {
     <Show when={win()}>
       {w => (
         <Show when={chanById(w().id)}>
-          {c => <Body w={w()} c={c()} />}
+          {/* a failure of the window itself (its title bar) keeps a frame that moves and closes */}
+          {c => (
+            <WindowBoundary name={t('d.ui.pn.chan')} class="chanwin" geom={() => w()} z={outerZ(w().z)} front={chanFront} close={closeChannelWindow} closeTip={t('b.cw.close')}
+              move={(x, y) => setWin(v => v && { ...v, x, y })}>
+              <Body w={w()} c={c()} />
+            </WindowBoundary>
+          )}
         </Show>
       )}
     </Show>
@@ -116,17 +123,20 @@ function Body(props: { w: Win; c: Channel }) {
         <button class="iconbtn" title={t('b.cw.previewTitle')} onClick={() => audition(c().id, undefined, 0.9, true)}>▶</button>
         <button class="closebtn" title={t('b.cw.close')} onClick={closeChannelWindow}>×</button>
       </div>
-      <Show when={c().kind === 'synth'}><SynthPanel c={c()} /></Show>
-      <Show when={c().kind === 'keys' && c()}>{k => <KeysPanel c={k() as Extract<Channel, { kind: 'keys' }>} />}</Show>
-      {/* keyed by the plugin class: a replaced instrument gets a fresh list, an edit elsewhere keeps its editor open */}
-      <Show when={plugin()?.cid} keyed>
-        {_cid => <PluginBody id={c().id} plugin={plugin()} instrument />}
-      </Show>
-      <div class="chknobs"><ChannelLevelKnobs channel={c()} /><Show when={c().kind === 'synth'}><ChannelRootKnob channel={c()} /></Show></div>
-      <Show when={c().kind !== 'synth'}>
-        <PianoKeys player={{ ch: c().id }} lo={c().kind === 'keys' ? 21 : 36} hi={c().kind === 'keys' ? 108 : 96} root={c().root}
-          onRoot={key => { commit([chanOp(live(), { root: key })], t('b.cw.rootCh')); say(t('b.pk.rootSay', { name: c().name, note: noteName(key) })); }} />
-      </Show>
+      {/* the body behind an error boundary: a failure shows in the window, whose title bar still moves and closes it */}
+      <PanelBoundary name={t('d.ui.pn.chan')}>
+        <Show when={c().kind === 'synth'}><SynthPanel c={c()} /></Show>
+        <Show when={c().kind === 'keys' && c()}>{k => <KeysPanel c={k() as Extract<Channel, { kind: 'keys' }>} />}</Show>
+        {/* keyed by the plugin class: a replaced instrument gets a fresh list, an edit elsewhere keeps its editor open */}
+        <Show when={plugin()?.cid} keyed>
+          {_cid => <PluginBody id={c().id} plugin={plugin()} instrument />}
+        </Show>
+        <div class="chknobs"><ChannelLevelKnobs channel={c()} /><Show when={c().kind === 'synth'}><ChannelRootKnob channel={c()} /></Show></div>
+        <Show when={c().kind !== 'synth'}>
+          <PianoKeys player={{ ch: c().id }} lo={c().kind === 'keys' ? 21 : 36} hi={c().kind === 'keys' ? 108 : 96} root={c().root}
+            onRoot={key => { commit([chanOp(live(), { root: key })], t('b.cw.rootCh')); say(t('b.pk.rootSay', { name: c().name, note: noteName(key) })); }} />
+        </Show>
+      </PanelBoundary>
     </div>
   );
 }

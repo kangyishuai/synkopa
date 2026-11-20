@@ -18,7 +18,8 @@ import { ContextMenu } from './ui/Menu';
 import { osDragEnd, osDragOver, osDrop } from './views/Browser';
 import { FxWindow } from './views/FxWindow';
 import { MixerWindow, MixView } from './views/Mixer';
-import { hideMixer, leaveMixView, toggleMixer } from './state/mixView';
+import { hideMixer, leaveMixView, mixFront, toggleMixer } from './state/mixView';
+import { WindowBoundary } from './ui/PanelBoundary';
 import { chanById, routeSelectedChannels } from './state/pattern';
 import { reportPin } from './state/pluginWindows';
 import { playlistZoom } from './views/Playlist';
@@ -323,7 +324,9 @@ export function App() {
       <Toolbar />
       <div class="stage">
         <Workspace />
-        <Show when={U.mixView}><MixView /></Show>
+        <Show when={U.mixView}>
+          <WindowBoundary name={tl('c.mv.mixer')} class="mixview" close={leaveMixView}><MixView /></WindowBoundary>
+        </Show>
       </div>
       {/* the editors float outside the window layer (own z order, see outerZ); F5 tucks them away too */}
       {/* each window steps behind the workspace on its own (`tucked`): it stays mounted, only not drawn */}
@@ -333,10 +336,25 @@ export function App() {
         <div class={['tuck', { hidden: tucked(U.pitchEd?.z) }]}><PitchEditor /></div>
       </div>
       <div class={['winlayer', { mv: U.mixView }]}>
-        <For each={U.plugs}>{pw => <div class={['tuck', { hidden: tucked(pw.z) }]}><FxWindow pw={pw} z={plugRank(pw.z)} /></div>}</For>
+        {/* a failure of a window itself (its title bar, its body) keeps a frame that moves and closes */}
+        <For each={U.plugs}>{pw => (
+          <div class={['tuck', { hidden: tucked(pw.z) }]}>
+            <WindowBoundary name={tl('d.ui.pn.fx')} class="fxwin" geom={() => pw} z={plugRank(pw.z)} front={() => A.plugFront(pw.fxId)} close={() => A.closePlug(pw.fxId)}
+              closeTip={tl('c.fx.close')} move={(x, y) => A.movePlug(pw.fxId, x, y)}>
+              <FxWindow pw={pw} z={plugRank(pw.z)} />
+            </WindowBoundary>
+          </div>
+        )}</For>
         <Show when={!docked('rack')}><div class={['tuck', { hidden: tucked(U.rackWin?.z) }]}><ChannelRack z={U.rackWin ? plugRank(U.rackWin.z) : 1} /></div></Show>
         <Show when={!docked('roll')}><div class={['tuck', { hidden: tucked(U.rollWin?.z) }]}><PianoRoll z={U.rollWin ? plugRank(U.rollWin.z) : 1} /></div></Show>
-        <Show when={mixFloating()}><div class={['tuck', { hidden: tucked(U.mixWin.z) }]}><MixerWindow z={plugRank(U.mixWin.z)} /></div></Show>
+        <Show when={mixFloating()}>
+          <div class={['tuck', { hidden: tucked(U.mixWin.z) }]}>
+            <WindowBoundary name={tl('c.mv.mixer')} class="patwin mixwin" geom={() => U.mixWin} z={plugRank(U.mixWin.z)} front={mixFront} close={hideMixer} closeTip={tl('c.mv.hideTip')}
+              move={(x, y) => setU('mixWin', w => ({ ...w, x, y }))}>
+              <MixerWindow z={plugRank(U.mixWin.z)} />
+            </WindowBoundary>
+          </div>
+        </Show>
       </div>
       <DockGuides />
       <NotebookHost />

@@ -14,8 +14,10 @@ import {
 import type { ExportAudioOptions, ExportProgress } from '../api/types';
 import { S } from '../state/store';
 import { say, setU, U } from '../state/ui';
+import { cancelExportOrClose } from '../state/actions';
 import { modePattern, patMode, previewPattern } from '../state/pattern';
 import { Segmented } from '../ui/Knob';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const TAILS = [0, 2, 8, 0] as const;
 const WRAP = 3;
@@ -30,7 +32,7 @@ type Saved = {
 };
 
 export function Export() {
-  return <Show when={U.exportOpen}><ExportDialog /></Show>;
+  return <Show when={U.exportOpen}><DialogBoundary name={t('a.ex.title')} close={() => void cancelExportOrClose()}><ExportDialog /></DialogBoundary></Show>;
 }
 
 function ExportDialog() {

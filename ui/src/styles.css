@@ -245,6 +245,17 @@ a { color: var(--blue); }
 .panelerr b { color: var(--fg-hi); font-weight: 600; font-size: 13px; }
 .panelerr span { max-width: 52ch; }
 .panelerr code { max-width: min(60ch, 100%); color: var(--red); font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; user-select: text; }
+.panelerr .acts { display: flex; gap: 8px; }
+/* the same in a menu or list popup, and as one line in a bar (the toolbar) */
+.panelerr.small { flex: none; width: 300px; padding: 8px; align-items: flex-start; text-align: left; }
+.panelerr.chip { flex: 0 1 auto; flex-direction: row; padding: 0 4px; gap: 6px; white-space: nowrap; }
+.panelerr.chip b { font-size: 11px; color: var(--red); overflow: hidden; text-overflow: ellipsis; }
+/* a failed window (its frame minimal), dialog, and the whole app */
+.win.failwin:not(.docked) { min-width: 300px; min-height: 200px; }
+.win.failwin.mixview { position: absolute; border: 0; border-radius: 0; box-shadow: none; }
+.dialog.faildlg { width: min(460px, 92vw); padding: 14px 18px; outline: none; }
+.dialog.faildlg .panelerr { padding: 4px 0 0; }
+.panelerr.apperr { position: fixed; inset: 0; z-index: 1000; background: var(--bg1); }
 .strips { flex: 1; min-width: 0; display: flex; overflow-x: auto; overflow-y: hidden; }
 .strip { width: 86px; flex: none; display: flex; flex-direction: column; gap: 6px; padding: 0 6px 8px; background: var(--bg4); border-right: 1px solid var(--sep); min-height: 0; }
 .strip.on { background: var(--sel-bg2); box-shadow: inset 0 0 0 1px var(--sel-ring); }

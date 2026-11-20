@@ -15,6 +15,7 @@ import { say, setU, U } from '../state/ui';
 import { openNotebook } from '../state/notebook';
 import { NOTEBOOK_ICON } from './Notebook';
 import { FX_ORDER, FXMETA, FxTile, Icon, ICONS } from '../ui/icons';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 /** What each built-in effect is for, in one line. */
 const DESC: Record<BuiltinKind, TranslationKey> = {
@@ -106,7 +107,7 @@ export function openFxPicker(insId: Id, x?: number, y?: number) {
 }
 
 export function FxPickerHost() {
-  return <Show when={U.fxPicker}>{p => <FxPicker insId={p().insId} x={p().x} y={p().y} />}</Show>;
+  return <Show when={U.fxPicker}>{p => <DialogBoundary name={tr('d.ui.pn.fxPicker')} close={() => setU('fxPicker', null)}><FxPicker insId={p().insId} x={p().x} y={p().y} /></DialogBoundary>}</Show>;
 }
 
 const W = 900, H = 520;

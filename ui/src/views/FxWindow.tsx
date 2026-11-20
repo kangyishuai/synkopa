@@ -17,10 +17,11 @@ import { findFx, insName, plain, S } from '../state/store';
 import { onFxFrame, tele } from '../state/telemetry';
 import { openMenu, say, U, type PlugWin } from '../state/ui';
 import { closeEditor, editorOpen, isNoEditor, knownWithoutEditor, openEditor } from '../state/pluginWindows';
-import { dblCheck, track } from '../ui/drag';
+import { dblCheck, moveWindow, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts } from '../ui/frameLoop';
 import { FXMETA, FxTile } from '../ui/icons';
 import { Knob, MiniKnob, Segmented, type KnobSize } from '../ui/Knob';
+import { PanelBoundary } from '../ui/PanelBoundary';
 import { theme } from '../ui/theme';
 import type { Viz } from './fx/common';
 import { deessDb, DeessViz, deessFx, deessGeom, deessXf, deessY } from './fx/deess';
@@ -89,13 +90,7 @@ const HINTS: Partial<Record<Fx['type'], TranslationKey>> = {
   multiband: 'c.fx.hint.multiband',
 };
 
-/** Move a fixed window by its header. */
-export function moveWindow(e: PointerEvent, get: () => { x: number; y: number; w: number }, set: (x: number, y: number) => void) {
-  if (e.button !== 0 || (e.target as HTMLElement).closest('button,select,input,.miniknob')) return;
-  e.preventDefault();
-  const sx = e.clientX, sy = e.clientY, o = { ...get() };
-  track(ev => set(clamp(o.x + ev.clientX - sx, 80 - o.w, window.innerWidth - 80), clamp(o.y + ev.clientY - sy, 0, window.innerHeight - 40)), null, 'grabbing');
-}
+export { moveWindow };
 
 export function FxWindow(props: { pw: PlugWin; z: number }) {
   const ff = () => findFx(props.pw.fxId);
@@ -138,16 +133,19 @@ export function FxWindow(props: { pw: PlugWin; z: number }) {
               </Show>
               <button class="closebtn" title={t('c.fx.close')} onClick={() => A.closePlug(fx().id)}>×</button>
             </div>
-            <Show when={!isVst()} fallback={<PluginBody id={fx().id} plugin={fx().plugin} />}>
-              <Show when={fx().type === 'eq'} fallback={<VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H[fx().type] ?? 190} />}>
-                {/* EQ: band bank beside the graph, like FL Parametric EQ 2 */}
-                <div class="eqmain">
-                  <div class="eqgraph"><VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H.eq!} /></div>
-                  <EqStrips fx={fx()} />
-                </div>
+            {/* the body behind an error boundary: a failure shows in the window, whose title bar still moves and closes it */}
+            <PanelBoundary name={t('d.ui.pn.fx')}>
+              <Show when={!isVst()} fallback={<PluginBody id={fx().id} plugin={fx().plugin} />}>
+                <Show when={fx().type === 'eq'} fallback={<VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H[fx().type] ?? 190} />}>
+                  {/* EQ: band bank beside the graph, like FL Parametric EQ 2 */}
+                  <div class="eqmain">
+                    <div class="eqgraph"><VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H.eq!} /></div>
+                    <EqStrips fx={fx()} />
+                  </div>
+                </Show>
+                <Body fx={fx()} />
               </Show>
-              <Body fx={fx()} />
-            </Show>
+            </PanelBoundary>
           </div>
         );
       }}

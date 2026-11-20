@@ -12,6 +12,7 @@ import { enqueue, resync } from '../state/edit';
 import { openRoll, setCurPattern } from '../state/pattern';
 import { S } from '../state/store';
 import { say, setU, U } from '../state/ui';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 export function MidiImport() {
   const [info, setInfo] = createSignal<MidiInfo | null>(null);
@@ -77,6 +78,7 @@ export function MidiImport() {
 
   return (
     <Show when={U.midiWin}>
+      <DialogBoundary name={t('d.ui.pn.midi')} close={close}>
       <div class="overlay" onPointerDown={close}>
         <div class="dialog mididlg" role="dialog" aria-modal="true" aria-label={t('d.midi.title', { name: fileName() })} onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter' && !e.repeat && (e.target as HTMLElement).tagName !== 'BUTTON') { e.preventDefault(); void run(); } }} data-midi-dialog>
@@ -126,6 +128,7 @@ export function MidiImport() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

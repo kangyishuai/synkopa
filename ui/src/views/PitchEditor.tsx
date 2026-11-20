@@ -39,6 +39,7 @@ import { ZoomScrollbar } from '../ui/ZoomScrollbar';
 import type { ZRange } from '../lib/zoomBar';
 import { TOTAL } from '../lib/clipOps';
 import { PitchCorrectButton } from './PitchCorrectButton';
+import { PanelBoundary, WindowBoundary } from '../ui/PanelBoundary';
 
 type Tool = 'main' | 'drift' | 'formant' | 'gain' | 'split' | 'pencil';
 const TOOLS: { id: Tool; key: string; label: TranslationKey; icon: string; tip: TranslationKey }[] = [
@@ -56,7 +57,15 @@ const anCache = new Map<string, PitchAnalysis>();
 
 export function PitchEditor() {
   const clip = () => U.pitchEd ? S.project.clips.find(c => c.id === U.pitchEd!.clipId && c.kind === 'audio') : undefined;
-  return <Show when={clip()}>{c => <PitchBody clipId={c().id} />}</Show>;
+  // a failure of the window itself (its title bar, its body) keeps a frame that moves and closes
+  return (
+    <Show when={clip()}>{c => (
+      <WindowBoundary name={t('d.pitch.title')} class="pitchwin" geom={() => U.pitchEd} z={outerZ(U.pitchEd?.z ?? 0)} front={() => A.pitchFront()} close={A.closePitchEditor}
+        closeTip={t('d.pitch.close')} move={(x, y) => setU('pitchEd', ed => ed && { ...ed, x, y })}>
+        <PitchBody clipId={c().id} />
+      </WindowBoundary>
+    )}</Show>
+  );
 }
 
 function PitchBody(props: { clipId: number }) {
@@ -716,6 +725,8 @@ function PitchBody(props: { clipId: number }) {
         <PitchCorrectButton insert={() => S.project.tracks[c().track]?.insert ?? null} keyScale={() => ({ key: key(), scale: scale() })} />
         <button class="closebtn" title={t('d.pitch.close')} onClick={A.closePitchEditor}>×</button>
       </div>
+      {/* the body behind an error boundary: a failure shows in the window, whose title bar still moves and closes it */}
+      <PanelBoundary name={t('d.pitch.title')}>
       <div class="ptools">
         <div class="seg tools">
           <For each={TOOLS}>{tl => (
@@ -825,6 +836,7 @@ function PitchBody(props: { clipId: number }) {
         <span>{t(TOOLS.find(x => x.id === tool())!.tip)}</span>
         <span>{t('d.pitch.hint')}</span>
       </div>
+      </PanelBoundary>
       <div class="resizer" onPointerDown={resize} title={t('d.pitch.resize')} />
     </div>
   );

@@ -8,6 +8,13 @@ import { closeSelectPopup, installSelectPopups, SelectPopup } from './SelectPopu
 
 beforeAll(() => installSelectPopups()); // document-level, once per page like main.tsx
 
+// the check mark of the current row fails to render while `bug.on` (a stand-in for any render-time bug in the list)
+const bug = vi.hoisted(() => ({ on: false }));
+vi.mock('./menuIcons', async orig => {
+  const real = await orig<typeof import('./menuIcons')>();
+  return { ...real, get CHECK_GLYPH() { if (bug.on) throw new Error('list exploded'); return real.CHECK_GLYPH; } };
+});
+
 function setup(disabled = false) {
   const [v, setV] = createSignal('1/4');
   const change = vi.fn((x: string) => setV(x));
@@ -138,5 +145,24 @@ describe('SelectPopup', () => {
     r.unmount();
     expect(remove.mock.calls.map(c => c[0]).sort()).toEqual(['blur', 'resize', 'scroll']);
     remove.mockRestore();
+  });
+
+  it('a list that fails to render says so in a small box in its place; Close closes it, the next one works', async () => {
+    vi.spyOn(globalThis, 'queueMicrotask').mockImplementation(cb => { Promise.resolve().then(() => { try { cb(); } catch { /* reported as uncaught */ } }); });
+    const { sel } = setup();
+    bug.on = true;
+    open(sel);
+    await Promise.resolve(); settle();
+    const box = document.querySelector('.menu.selpop .panelerr.small')!;
+    expect(box.textContent).toContain('List: error');
+    expect(box.textContent).toContain('list exploded');
+    fireEvent.click(within(box as HTMLElement).getByRole('button', { name: 'Close' }));
+    settle();
+    expect(document.querySelector('.selpop')).toBeNull();
+    bug.on = false;
+    open(sel);
+    expect(list().getAllByRole('option')).toHaveLength(5);
+    closeSelectPopup();
+    vi.restoreAllMocks();
   });
 });

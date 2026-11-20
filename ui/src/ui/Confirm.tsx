@@ -4,6 +4,7 @@ import { Show } from 'solid-js';
 import { createSignal } from '../lib/reactive';
 import { lang, t } from '../lib/i18n';
 import { S } from '../state/store';
+import { DialogBoundary } from './PanelBoundary';
 
 type Answer = 'save' | 'discard' | 'cancel';
 const [ask, setAsk] = createSignal<{ what: string; done: (a: Answer) => void } | null>(null);
@@ -35,6 +36,7 @@ export function ConfirmDialog() {
   return (<>
     <Show when={askRec()}>
       {q => (
+        <DialogBoundary name={t('d.ui.recover')} close={() => q().done('later')} z={300}>
         <div class="overlay" style={{ 'z-index': 300 }}>
           <div class="dialog" role="alertdialog" aria-labelledby="rec-hd" style={{ width: 'min(440px,92vw)' }}
             onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') q().done('later'); if (e.key === 'Enter') q().done('restore'); }}>
@@ -50,10 +52,12 @@ export function ConfirmDialog() {
             </div>
           </div>
         </div>
+        </DialogBoundary>
       )}
     </Show>
     <Show when={ask()}>
       {q => (
+        <DialogBoundary name={t('d.ui.unsaved')} close={() => q().done('cancel')} z={300}>
         <div class="overlay" style={{ 'z-index': 300 }} onPointerDown={() => q().done('cancel')}>
           <div class="dialog" style={{ width: 'min(420px,92vw)' }} onPointerDown={e => e.stopPropagation()}
             onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') q().done('cancel'); if (e.key === 'Enter') q().done('save'); }}>
@@ -68,6 +72,7 @@ export function ConfirmDialog() {
             </div>
           </div>
         </div>
+        </DialogBoundary>
       )}
     </Show>
   </>);

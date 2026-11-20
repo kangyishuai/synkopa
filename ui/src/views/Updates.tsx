@@ -6,6 +6,7 @@ import { parseNotes, type Block, type Inline } from '../lib/changelog';
 import type { Release } from '../lib/changelog';
 import { projectNew } from '../state/actions';
 import { checkUpdates, closeUpdateDialog, closeWelcome, closeWhatsNew, installUpdate, openReleasePage, openUpdateDialog, setAutoUpdate, showWhatsNew, startUpdate, upd } from '../state/updates';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const mb = (n: number) => (n / 1e6).toFixed(n >= 1e8 ? 0 : 1);
 
@@ -85,6 +86,7 @@ function UpdateDialog() {
   const open = () => s().dialog && (s().phase === 'available' || s().phase === 'downloading' || s().phase === 'ready' || s().phase === 'installing');
   return (
     <Show when={open()}>
+      <DialogBoundary name={t('d.ui.pn.update')} close={() => closeUpdateDialog()} z={250}>
       <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={() => closeUpdateDialog()}>
         <div class="dialog upddlg" role="dialog" aria-modal="true" aria-label={t('d.upd.title.available')} onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') closeUpdateDialog(); }}>
@@ -121,6 +123,7 @@ function UpdateDialog() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }
@@ -130,7 +133,7 @@ function UpdateDialog() {
  * several get a larger window with a list of versions to jump between (the one in view is marked).
  */
 function WhatsNewDialog() {
-  return <Show when={upd().news}>{news => <WhatsNew news={news()} from={upd().newsFrom} />}</Show>;
+  return <Show when={upd().news}>{news => <DialogBoundary name={t('d.news.title')} close={() => void closeWhatsNew()} z={250}><WhatsNew news={news()} from={upd().newsFrom} /></DialogBoundary>}</Show>;
 }
 
 function WhatsNew(p: { news: Release[]; from: string | null }) {
@@ -237,6 +240,7 @@ function WelcomeDialog() {
   const openDemo = () => { closeWelcome(); void projectNew(true); };
   return (
     <Show when={upd().welcome}>
+      <DialogBoundary name={t('d.welcome.title')} close={() => closeWelcome()} z={250}>
       <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={() => closeWelcome()}>
         <div class="dialog upddlg" role="dialog" aria-modal="true" aria-label={t('d.welcome.title')} onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') closeWelcome(); }}>
@@ -250,6 +254,7 @@ function WelcomeDialog() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

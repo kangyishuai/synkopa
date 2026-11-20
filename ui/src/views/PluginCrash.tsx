@@ -7,6 +7,7 @@ import { be } from '../api/backend';
 import type { PluginCrashSuspect } from '../api/types';
 import { t } from '../lib/i18n';
 import { say } from '../state/ui';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 export function PluginCrash() {
   const [suspects, setSuspects] = createSignal<PluginCrashSuspect[]>([]);
@@ -31,6 +32,7 @@ export function PluginCrash() {
   };
   return (
     <Show when={suspects().length}>
+      <DialogBoundary name={t('d.pcrash.title')} close={() => setSuspects([])}>
       <div class="overlay" onPointerDown={() => setSuspects([])}>
         <div class="dialog" role="dialog" aria-modal="true" aria-label={t('d.pcrash.title')} onPointerDown={e => e.stopPropagation()} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }}>
           <div class="hd">
@@ -61,6 +63,7 @@ export function PluginCrash() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

@@ -31,6 +31,7 @@ import { outerZ } from '../state/winOrder';
 import { moveWindow } from './FxWindow';
 import { PitchCorrectButton } from './PitchCorrectButton';
 import { SlicePanel } from './SlicePanel';
+import { PanelBoundary, WindowBoundary } from '../ui/PanelBoundary';
 
 type SampleChannel = Extract<Channel, { kind: 'sample' }>;
 type Fade = 'fadeIn' | 'fadeOut';
@@ -42,7 +43,15 @@ export function SampleEditor() {
     const ed = U.editor;
     return ed ? { kind: ed.kind, id: ed.id } : null;
   });
-  return <Show when={target()} keyed>{ed => <EditorTarget target={ed} />}</Show>;
+  // a failure of the window itself (its title bar, its body) keeps a frame that moves and closes
+  return (
+    <Show when={target()} keyed>{ed => (
+      <WindowBoundary name={t('d.ui.pn.sample')} class="chanwin smpwin" geom={() => U.editor} z={outerZ(U.editor?.z ?? 0)} front={() => A.editorFront()} close={A.closeEditor}
+        closeTip={t('d.smp.close')} move={(x, y) => setU('editor', e => e && { ...e, x, y })}>
+        <EditorTarget target={ed} />
+      </WindowBoundary>
+    )}</Show>
+  );
 }
 
 function EditorTarget(props: { target: SampleTarget }) {
@@ -117,6 +126,8 @@ function EditorFrame(props: {
           disabled={!props.wave.source()}>{props.channelId == null && U.previewing ? '■' : '▶'}</button>
         <button class="closebtn" aria-label={t('d.smp.close')} title={t('d.smp.close')} onClick={A.closeEditor}>×</button>
       </div>
+      {/* the body behind an error boundary: a failure shows in the window, whose title bar still moves and closes it */}
+      <PanelBoundary name={t('d.ui.pn.sample')}>
       <Show when={props.envelope}>{env => (
         <div class="seg smptabs" role="tablist" aria-label={t('b.sm.tabs')}>
           <button role="tab" aria-selected={page() === 'sample' ? 'true' : 'false'} class={{ on: page() === 'sample' }} onClick={() => setPage('sample')}>{t('b.sm.tabSample')}</button>
@@ -161,6 +172,7 @@ function EditorFrame(props: {
         <span class="hint">{t('b.pk.rootHint')}</span>
       </div>
       <PianoKeys player={props.keys.player} lo={36} hi={96} root={props.keys.root()} onRoot={props.keys.setRoot} />
+      </PanelBoundary>
       <div class="resizer" onPointerDown={resize} title={t('d.smp.resize')} />
     </div>
   );

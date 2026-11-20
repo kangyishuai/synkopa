@@ -11,6 +11,7 @@ import { enqueue } from '../state/edit';
 import { S } from '../state/store';
 import { say, setU, U } from '../state/ui';
 import { LIB_SCHEME } from '../lib/factory';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 type Status = { kind: 'busy' | 'ok' | 'warn' | 'err'; text: string } | null;
 
@@ -88,6 +89,7 @@ export function MissingAudio() {
 
   return (
     <Show when={U.missingOpen}>
+      <DialogBoundary name={t('d.ui.pn.missing')} close={close}>
       <div class="overlay" onPointerDown={close}>
         <div class="dialog missdlg" role="dialog" aria-modal="true" aria-label={t('d.miss.title', { n: rows().length })} onPointerDown={e => e.stopPropagation()} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }} data-missing-dialog>
           <div class="hd">
@@ -148,6 +150,7 @@ export function MissingAudio() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

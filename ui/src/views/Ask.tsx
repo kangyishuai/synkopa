@@ -9,6 +9,7 @@ import { t } from '../lib/i18n';
 import { say, tucked, U } from '../state/ui';
 import { rackFloating, rollFloating } from '../state/pattern';
 import { APP_GLYPH } from '../ui/menuIcons';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const SERVICE_KEY = 'wave.ask.service';
 const loadService = (): AskService => {
@@ -87,6 +88,7 @@ export function AskDialog() {
   const services: [AskService, string][] = [['chatgpt', 'ChatGPT'], ['deepwiki', 'DeepWiki']];
   return (
     <Show when={open()}>
+      <DialogBoundary name={t('d.ask.title')} close={close} z={250}>
       <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={close}>
         <div class="dialog askdlg" role="dialog" aria-modal="true" aria-labelledby="askhd" onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') close(); }}>
@@ -116,6 +118,7 @@ export function AskDialog() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

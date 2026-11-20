@@ -9,6 +9,7 @@ import { clamp } from '../lib/format';
 import { t } from '../lib/i18n';
 import { track } from '../ui/drag';
 import { Icon } from '../ui/icons';
+import { PanelBoundary } from '../ui/PanelBoundary';
 import { moveWindow } from './FxWindow';
 import { guardKeys, useSize } from './patternShared';
 import type { PaneId } from '../lib/dock';
@@ -46,6 +47,8 @@ export function WinControls(props: {
 }
 
 export function PanelFrame(props: {
+  /** The panel as the user knows it ("Piano roll"): what a failure of its content names. */
+  name: string;
   geom: () => Geom;
   /** A move or resize by the user (only the fields that changed are passed). */
   setGeom: (g: Partial<Geom>) => void;
@@ -92,7 +95,8 @@ export function PanelFrame(props: {
         <div style={{ flex: 1 }} />
         {props.controls}
       </div>
-      {props.children}
+      {/* the content behind an error boundary: a failure shows in the window, whose title bar still moves, docks and closes it */}
+      <PanelBoundary name={props.name}>{props.children}</PanelBoundary>
       {!props.docked && <div class="resizer" onPointerDown={resize} title={t('b.pe.resize')} />}
     </div>
   );

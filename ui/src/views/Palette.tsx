@@ -15,6 +15,7 @@ import { S } from '../state/store';
 import { setU, U } from '../state/ui';
 import { askAbout } from './Ask';
 import { patItems } from './patternShared';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 type MenuSource = [TranslationKey, () => MenuItem[]][];
 let source: MenuSource = [];
@@ -91,6 +92,7 @@ export function Palette() {
   };
   return (
     <Show when={paletteOpen()}>
+      <DialogBoundary name={t('a.cmd.title')} close={close}>
       <div class="overlay cmdover" onPointerDown={close}>
         <div class="dialog cmddlg" role="dialog" aria-modal="true" aria-label={t('a.cmd.title')} onPointerDown={e => e.stopPropagation()} onKeyDown={key}>
           <div class="cmdfind">
@@ -130,6 +132,7 @@ export function Palette() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

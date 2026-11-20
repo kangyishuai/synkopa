@@ -23,6 +23,7 @@ import { noteName } from '../lib/pitch';
 import { libFileGlyph, libGroupGlyph, type MenuGlyph } from '../ui/menuIcons';
 import { patternItemMenu } from './patternShared';
 import { InstIcon, patternIcon, sampleIcon } from '../ui/instIcons';
+import { PanelBoundary } from '../ui/PanelBoundary';
 
 /**
  * Drag something from the browser with a ghost label; `onDrop` gets the release point. `over`
@@ -721,6 +722,8 @@ function LibraryTab() {
 }
 
 const BROWSER_TABS = ['patterns', 'audio', 'library'] as const;
+/** A tab as a failure names it: "Browser (Library)" (the tab's label is in capitals). */
+const tabName = (k: typeof BROWSER_TABS[number]) => { const l = t(`d.br.tab.${k}`); return t('d.ui.pn.browserTab', { tab: l[0] + l.slice(1).toLowerCase() }); };
 
 export function Browser() {
   const split = (e: PointerEvent) => {
@@ -734,9 +737,10 @@ export function Browser() {
         <div class="btabs">
           <For each={BROWSER_TABS}>{k => <button class={{ on: U.browserTab === k }} onClick={() => setU('browserTab', k)}>{t(`d.br.tab.${k}`)}</button>}</For>
         </div>
-        <Switch fallback={<LibraryTab />}>
-          <Match when={U.browserTab === 'patterns'}><PatternsTab /></Match>
-          <Match when={U.browserTab === 'audio'}><AudioTab /></Match>
+        {/* each tab behind its own error boundary: a failed tab leaves the tabs and the splitter working */}
+        <Switch fallback={<PanelBoundary name={tabName('library')}><LibraryTab /></PanelBoundary>}>
+          <Match when={U.browserTab === 'patterns'}><PanelBoundary name={tabName('patterns')}><PatternsTab /></PanelBoundary></Match>
+          <Match when={U.browserTab === 'audio'}><PanelBoundary name={tabName('audio')}><AudioTab /></PanelBoundary></Match>
         </Switch>
       </div>
       <div class="vsplit" onPointerDown={split} onDblClick={() => setU('pickOpen', false)} title={t('d.br.resize')} />

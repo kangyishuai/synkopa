@@ -23,6 +23,7 @@ import { track } from '../ui/drag';
 import { addFrameTask } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
 import { moveWindow } from './FxWindow';
+import { PanelBoundary, WindowBoundary } from '../ui/PanelBoundary';
 
 export const NOTEBOOK_ICON = 'M6 3h11a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6z M6 3v18 M10 8h5 M10 12h5 M10 16h3';
 /** Rhyme colours: mid-saturation hues that read on dark and light surfaces. */
@@ -64,7 +65,15 @@ export function NotebookHost() {
     window.addEventListener('beforeunload', keep);
     onCleanup(() => { stop(); window.removeEventListener('pointerdown', down, true); window.removeEventListener('beforeunload', keep); });
   });
-  return <Show when={NB.open}><NotebookWindow /></Show>;
+  // a failure of the window itself (its title bar, its body) keeps a frame that moves and closes
+  return (
+    <Show when={NB.open}>
+      <WindowBoundary name={tl('a.nb.title')} class="nbwin" geom={() => NB.geom} z={NB.front ? 46 : 44} close={closeNotebook} closeTip={tl('a.nb.close')}
+        move={(x, y) => { setNB('geom', { x, y }); saveGeom(); }}>
+        <NotebookWindow />
+      </WindowBoundary>
+    </Show>
+  );
 }
 
 function NotebookWindow() {
@@ -208,6 +217,8 @@ function NotebookWindow() {
         <Show when={pages().length}><button class={['nb-tog', { on: NB.wrap }]} title={tl('a.nb.wrapTip')} onClick={toggleWrap}>{tl('a.nb.wrap')}</button></Show>
         <button class="closebtn" title={tl('a.nb.close')} onClick={closeNotebook}>×</button>
       </div>
+      {/* the body behind an error boundary: a failure shows in the window, whose title bar still moves and closes it */}
+      <PanelBoundary name={tl('a.nb.title')}>
       <div class="nb-top">
       <Show when={pages().length}><Tabs /></Show>
       <Show when={page()}>
@@ -248,6 +259,7 @@ function NotebookWindow() {
           </div>
         </div>
       </div>
+      </PanelBoundary>
       <div class="resizer" onPointerDown={resize} title={tl('a.nb.resize')} />
     </div>
   );

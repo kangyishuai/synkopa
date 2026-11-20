@@ -36,6 +36,7 @@ import { masterClip, masterClipTip, resetMasterClip } from '../state/masterClip'
 import { cpuBand, cpuText, resetUnderruns, underrunFlash, underruns } from '../state/underruns';
 import { audioStatus, openAudioSettings } from '../state/audioWatch';
 import { barFits, fitLevel, FIT_MAX } from '../lib/toolbarFit';
+import { ChipBoundary, DialogBoundary } from '../ui/PanelBoundary';
 
 export const TOOLS: [Tool, string, TranslationKey][] = [
   ['draw', 'P', 'a.tb.toolDraw'], ['paint', 'B', 'a.tb.toolPaint'], ['erase', 'D', 'a.tb.toolErase'], ['mute', 'T', 'a.tb.toolMute'], ['slice', 'C', 'a.tb.toolSlice'], ['select', 'E', 'a.tb.toolSelect'],
@@ -185,7 +186,10 @@ export function Toolbar() {
   return (
     <div ref={barEl} class={['toolbar', { native: !!win }]} onMouseDown={dragDown}>
       {/* left: the menus over the hint line (FL): what the last action did, and what the tool does */}
+      {/* each part behind its own error boundary: a failed part says so in its place; the others,
+          the window buttons (outside every part) and the drag area keep working */}
       <div class="tbleft" data-drag>
+        <ChipBoundary name={t('d.ui.pn.menus')}>
         <div class="tbmenu" data-drag>
           <MenuBar />
           <button class="cmdbtn" title={t('a.cmd.title') + ' (Ctrl+K)'} aria-label={t('a.cmd.title')} onClick={() => setPaletteOpen(true)}>
@@ -212,8 +216,10 @@ export function Toolbar() {
           {/* a found, downloading or downloaded update: the status line, where it never crowds the menus */}
           <UpdateChip />
         </div>
+        </ChipBoundary>
       </div>
       <div class="tbmid" data-drag>
+      <ChipBoundary name={t('d.ui.pn.transport')}>
       <div class="seg">
         <button title={patMode() ? t('a.tb.playPat') : t('a.tb.playSong')} data-act="play" class={{ play: U.playing || U.patPlaying }} onClick={() => void A.togglePlay()}>
           <svg width="11" height="11" viewBox="0 0 14 14"><path d="M3 1.5v11l9-5.5z" fill="currentColor" /></svg>
@@ -251,8 +257,10 @@ export function Toolbar() {
         <span class="tag9">BPM</span>
         <button class={['tapbtn', { on: tapping() }]} data-tap title={t('a.tb.tapTip')} onClick={e => doTap(e)}>TAP</button>
       </div>
+      </ChipBoundary>
       </div>
       <div class="tbright" data-drag>
+      <ChipBoundary name={t('d.ui.pn.panels')}>
       <span data-drag class="loopText" style={{ color: S.project.loop ? 'var(--green)' : 'var(--fg5)' }}>{S.project.loop ? 'LOOP ' + fmtPos(S.project.loop.a) + ' – ' + fmtPos(S.project.loop.b) : ''}</span>
       <div data-drag class="dragfill" />
       <Show when={prefs().cpuMeter}><CpuMeter /></Show>
@@ -285,6 +293,7 @@ export function Toolbar() {
           <span class={['midiled', { on: !!midiStatus()?.connected, hit: midiFlash() }]} /><span class="tag9">MIDI</span>
         </button>
       </Show>
+      </ChipBoundary>
       <Show when={win}>
         <div class="winbtns">
           <button title={t('a.tb.minimize')} aria-label={t('a.tb.minimize')} onClick={() => void win!.minimize()}><svg width="10" height="10" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor" /></svg></button>
@@ -576,6 +585,7 @@ export function Help() {
   const close = () => setU('help', false);
   return (
     <Show when={U.help}>
+      <DialogBoundary name={t('a.tb.helpTitle')} close={close}>
       <div class="overlay" onPointerDown={close}>
         <div class="dialog helpdlg" onPointerDown={e => e.stopPropagation()} onKeyDown={e => { if (e.key === 'Escape') { e.stopPropagation(); close(); } }}>
           <div class="hd"><span>{t('a.tb.helpTitle')}</span>
@@ -588,6 +598,7 @@ export function Help() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

@@ -12,6 +12,7 @@ import './state/recFeedback';
 import { say, setU } from './state/ui';
 import { watchAudio } from './state/audioWatch';
 import { App } from './App';
+import { AppBoundary } from './ui/PanelBoundary';
 import { initTheme } from './ui/theme';
 import { initPrefs, prefs } from './state/prefs';
 import { setFullscreen, watchFullscreen } from './state/fullscreen';
@@ -49,7 +50,9 @@ async function boot() {
   setU('playing', S.transport.playing);
   const root = document.getElementById('root')!;
   root.replaceChildren(); // the loading bar from index.html
-  render(() => <App />, root);
+  // the last guard: a render failure no panel caught shows a full-window message (retry, reload)
+  // instead of a frozen window
+  render(() => <AppBoundary><App /></AppBoundary>, root);
   // nothing on the playlist yet: start on the Channel Rack, where a beat begins (FL)
   if (!S.project.clips.length && S.project.patterns.length) openRack();
   const updatesReady = initUpdates(); // version, "What's new" after an update, the first automatic check

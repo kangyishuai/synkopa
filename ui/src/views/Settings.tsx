@@ -19,12 +19,13 @@ import { t } from '../lib/i18n';
 import { UpdatesSettings } from './Updates';
 import { setPluginScan } from './FxPicker';
 import type { TranslationKey } from '../lib/i18n';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const RATES = [44100, 48000, 88200, 96000];
 const BUFFERS = [32, 64, 128, 256, 512, 1024, 2048];
 
 export function Settings() {
-  return <Show when={U.settings}><SettingsDialog /></Show>;
+  return <Show when={U.settings}><DialogBoundary name={t('d.set.title')} close={() => setU('settings', false)}><SettingsDialog /></DialogBoundary></Show>;
 }
 
 function SettingsDialog() {
@@ -406,7 +407,7 @@ function MidiSection() {
 
 /** "Add plugin…" from the add-effect menu: a searchable list of scanned plugins (VST3; LV2 on Linux), with a rescan. */
 export function VstPicker() {
-  return <Show when={U.vstPicker}>{v => <PluginPickerDialog insId={v().insId} />}</Show>;
+  return <Show when={U.vstPicker}>{v => <DialogBoundary name={t('d.set.vst.title')} close={() => setU('vstPicker', null)}><PluginPickerDialog insId={v().insId} /></DialogBoundary>}</Show>;
 }
 function PluginPickerDialog(props: { insId: number }) {
   const [res, setRes] = createSignal<PluginScan | null>(null);

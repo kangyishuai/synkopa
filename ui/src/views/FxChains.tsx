@@ -12,6 +12,7 @@ import { enqueue, resync } from '../state/edit';
 import { insName, S } from '../state/store';
 import { openMenu, openRename, say, setU, U } from '../state/ui';
 import { FxTile } from '../ui/icons';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const errText = (e: unknown) => String(e).replace(/^Error: /, '');
 
@@ -44,7 +45,7 @@ export function openFxChains(insId: Id, x: number, y: number) {
 }
 
 export function FxChainsHost() {
-  return <Show when={U.fxChainWin}>{w => <FxChainLoader insId={w().insId} x={w().x} y={w().y} />}</Show>;
+  return <Show when={U.fxChainWin}>{w => <DialogBoundary name={t('d.ui.pn.fxChains')} close={() => setU('fxChainWin', null)}><FxChainLoader insId={w().insId} x={w().x} y={w().y} /></DialogBoundary>}</Show>;
 }
 
 const W = 400, H = 440;

@@ -22,6 +22,7 @@ import { arrVersion, rawOf, S } from '../state/store';
 import { ensurePluginScan } from '../state/pluginScan';
 import { say, setU, U } from '../state/ui';
 import { edgeScroller, track } from '../ui/drag';
+import { WindowBoundary } from '../ui/PanelBoundary';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
 import { Icon } from '../ui/icons';
 import { channelIcon, InstIcon } from '../ui/instIcons';
@@ -44,7 +45,15 @@ let rackClip: ChannelClip | null = null;
 
 /** The Channel Rack window (shown while `U.rackWin` is set and the project has a pattern). `docked`: laid out left of the Playlist. */
 export function ChannelRack(props: { z: number; docked?: boolean }) {
-  return <Show when={U.rackWin && curPat()}><Rack z={props.z} docked={props.docked} /></Show>;
+  // a failure of the window itself (its title bar, its body) keeps a frame that moves and closes
+  return (
+    <Show when={U.rackWin && curPat()}>
+      <WindowBoundary name={t('a.mn.rack')} class="patwin rackwin" docked={props.docked} z={props.z} front={rackFront} close={closeRack}
+        closeTip={t(props.docked ? 'b.dk.closeRack' : 'b.pe.close')} geom={() => U.rackWin} move={(x, y) => patGeom('rackWin').setGeom({ x, y })}>
+        <Rack z={props.z} docked={props.docked} />
+      </WindowBoundary>
+    </Show>
+  );
 }
 
 function Rack(props: { z: number; docked?: boolean }) {
@@ -367,7 +376,7 @@ function Rack(props: { z: number; docked?: boolean }) {
     stepPattern(headAcc > 0 ? 1 : -1); headAcc = 0;
   };
   return (
-    <PanelFrame {...patGeom('rackWin')} z={props.z} class="rackwin" minW={RACK_MIN_W} minH={200} compactH={230} docked={props.docked} dockId="rack" front={rackFront} onKey={onKey} onHeadWheel={headWheel}
+    <PanelFrame name={t('a.mn.rack')} {...patGeom('rackWin')} z={props.z} class="rackwin" minW={RACK_MIN_W} minH={200} compactH={230} docked={props.docked} dockId="rack" front={rackFront} onKey={onKey} onHeadWheel={headWheel}
       controls={<WinControls dock={paneDock('rack')} close={{ tip: t(props.docked ? 'b.dk.closeRack' : 'b.pe.close'), act: closeRack }} />}
       head={<>
         <span class="tile" style={{ width: '20px', height: '20px', background: pt().color + '2e', color: pt().color }}><Icon d={RACK_ICON} size={12} /></span>

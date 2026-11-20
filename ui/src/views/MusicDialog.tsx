@@ -7,6 +7,7 @@ import { NOTE_NAMES } from '../lib/pitch';
 import * as A from '../state/actions';
 import { findFx, insName, S } from '../state/store';
 import { U } from '../state/ui';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const keyLabel = (root: number, minor: boolean) => `${NOTE_NAMES[root % 12]} ${t(minor ? 'd.music.minor' : 'd.music.major')}`;
 
@@ -63,6 +64,7 @@ export function MusicDialog() {
 
   return (
     <Show when={U.musicWin}>
+      <DialogBoundary name={t('d.ui.pn.music')} close={A.closeMusicAnalysis}>
       <div class="overlay" onPointerDown={A.closeMusicAnalysis}>
         <div class="dialog" style={{ width: 'min(520px, 92vw)' }} onPointerDown={e => e.stopPropagation()} data-music-dialog>
           <div class="hd">
@@ -194,6 +196,7 @@ export function MusicDialog() {
           </Show>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

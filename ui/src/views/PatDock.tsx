@@ -24,6 +24,8 @@ import { PianoRoll } from './PianoRoll';
 import { Playlist } from './Playlist';
 import { guardKeys, useSize } from './patternShared';
 import { WinControls } from './PanelFrame';
+import { PanelBoundary, WindowBoundary } from '../ui/PanelBoundary';
+import { hideMixer } from '../state/mixView';
 
 /** A strip as laid out: its edge and index and its panels shown (with their index in the strip). A strip with none shown takes no room. */
 interface StripView { edge: Edge; si: number; panes: { p: DockPane; at: number }[] }
@@ -143,7 +145,7 @@ export function Workspace() {
         <Show when={U.pickOpen}><Browser /></Show>
         {/* left strips: the outermost first, each with its splitter on the Playlist side */}
         <For each={keys(left()).reverse()}>{k => <Strip k={k} splitFirst={false} />}</For>
-        <Playlist />
+        <PanelBoundary name={t('d.ui.pn.playlist')}><Playlist /></PanelBoundary>
         <For each={keys(right())}>{k => <Strip k={k} splitFirst />}</For>
       </div>
       <For each={keys(bottom())}>{k => <Strip k={k} splitFirst />}</For>
@@ -153,7 +155,13 @@ export function Workspace() {
 
 /** What a docked panel shows: the Channel Rack, the Piano roll (or why it cannot) or the Mixer. */
 function PaneBody(props: { id: PaneId }): JSX.Element {
-  if (props.id === 'mix') return <MixDockPane />;
+  if (props.id === 'mix') {
+    return (
+      <WindowBoundary name={t('c.mv.mixer')} class="mixdock" docked close={hideMixer} closeTip={t('c.mv.hideTip')}>
+        <MixDockPane />
+      </WindowBoundary>
+    );
+  }
   if (props.id === 'rack') {
     return (
       <Show when={curPat()} fallback={<DockEmpty which="rack" msg={t('b.dk.noPattern')} action={{ label: t('b.dk.newPattern'), act: () => { newPattern(); openRack(); } }} />}>

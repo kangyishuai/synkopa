@@ -7,6 +7,7 @@ import { t } from '../lib/i18n';
 import { fmtBytes } from '../lib/format';
 import { S } from '../state/store';
 import { cancelStems, closeStems, fmtEta, fmtSpan, openStems, runStems, STEM_COLORS, STEM_IDS, STEMS, stemsEta, toggleStem } from '../state/stems';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const pct = (f: number) => Math.round(Math.max(0, Math.min(1, f)) * 100) + ' %';
 const STAGE_KEY = { download: 'd.stems.stage.download', prepare: 'd.stems.stage.prepare', load: 'd.stems.stage.load', separate: 'd.stems.stage.separate', place: 'd.stems.stage.place' } as const;
@@ -45,6 +46,7 @@ export function StemsDialog() {
     <>
       <Show when={clip()}>
         {c => (
+          <DialogBoundary name={t('d.stems.title')} close={closeStems}>
           <div class="overlay" onPointerDown={closeStems}>
             <div class="dialog stemsdlg" role="dialog" aria-labelledby="stems-title" onPointerDown={e => e.stopPropagation()} data-stems-dialog
               onKeyDown={e => {
@@ -115,6 +117,7 @@ export function StemsDialog() {
               </div>
             </div>
           </div>
+          </DialogBoundary>
         )}
       </Show>
       {/* a job whose dialog is hidden: its progress in the corner, a click brings the dialog back */}

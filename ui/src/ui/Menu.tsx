@@ -11,6 +11,7 @@ import { Icon } from './icons';
 import { SWATCHES } from '../lib/color';
 import { INST_ICONS, InstIcon } from './instIcons';
 import { isPointerEvent, pressKeepsMenu } from './menuPress';
+import { PopupBoundary } from './PanelBoundary';
 
 /** An optional boolean as Solid 1 wrote it into an `aria-*` attribute: "true" / "false", absent when unset. */
 const ariaBool = (v: boolean | undefined): 'true' | 'false' | undefined => (v == null ? undefined : v ? 'true' : 'false');
@@ -60,7 +61,12 @@ export function ContextMenu() {
   });
   return (
     <Show when={U.menu} keyed>
-      {menu => <MenuList items={menu.items} x={menu.x} y={menu.y} />}
+      {/* a menu that fails to build says so in its place (a press there keeps it, like the menu's own) */}
+      {menu => (
+        <PopupBoundary name={t('d.ui.pn.menu')} x={menu.x} y={menu.y} close={closeMenu} class="ctxmenu">
+          <MenuList items={menu.items} x={menu.x} y={menu.y} />
+        </PopupBoundary>
+      )}
     </Show>
   );
 }

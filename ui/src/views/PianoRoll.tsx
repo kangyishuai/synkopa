@@ -36,6 +36,7 @@ import { selectionSpan, vocalsUnder } from '../lib/melody';
 import { fmtPos } from '../lib/format';
 import { openPitchEditor, seekSong, switchMode } from '../state/actions';
 import { dblCheck, edgeScroller, panDrag, track, trackFrame } from '../ui/drag';
+import { WindowBoundary } from '../ui/PanelBoundary';
 import { typingHeld } from '../state/typingKeys';
 import { noteClip, setNoteClip } from '../state/noteClipboard';
 import { addFrameTask, fitCanvas, fonts, Layer } from '../ui/frameLoop';
@@ -69,7 +70,15 @@ const TOOLS: { id: Tool; key: string; label: Parameters<typeof t>[0]; icon: stri
 
 /** The Piano roll window (shown while `U.rollWin` is set and there is a pattern and a channel). `docked`: laid out under the Playlist. */
 export function PianoRoll(props: { z: number; docked?: boolean }) {
-  return <Show when={U.rollWin && curPat() && selChan()}><Roll z={props.z} docked={props.docked} /></Show>;
+  // a failure of the window itself (its title bar, its body) keeps a frame that moves and closes
+  return (
+    <Show when={U.rollWin && curPat() && selChan()}>
+      <WindowBoundary name={t('a.mn.roll')} class="patwin rollwin" docked={props.docked} z={props.z} front={rollFront} close={closeRoll}
+        closeTip={t(props.docked ? 'b.dk.closeRoll' : 'b.pe.close')} geom={() => U.rollWin} move={(x, y) => patGeom('rollWin').setGeom({ x, y })}>
+        <Roll z={props.z} docked={props.docked} />
+      </WindowBoundary>
+    </Show>
+  );
 }
 
 const [lastLen, setLastLenRaw] = createSignal(2);
@@ -749,7 +758,7 @@ function Roll(props: { z: number; docked?: boolean }) {
     );
   }
   return (
-    <PanelFrame {...patGeom('rollWin')} z={props.z} class="rollwin" minW={560} minH={300} compactH={380} docked={props.docked} dockId="roll" front={rollFront} onKey={onKey} onHeadDbl={toggleRollMax}
+    <PanelFrame name={t('a.mn.roll')} {...patGeom('rollWin')} z={props.z} class="rollwin" minW={560} minH={300} compactH={380} docked={props.docked} dockId="roll" front={rollFront} onKey={onKey} onHeadDbl={toggleRollMax}
       controls={<WinControls dock={paneDock('roll')} max={props.docked ? undefined : { on: U.rollMax, toggle: toggleRollMax }}
         close={{ tip: t(props.docked ? 'b.dk.closeRoll' : 'b.pe.close'), act: closeRoll }} />}
       head={<>

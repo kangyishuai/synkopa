@@ -688,14 +688,13 @@ export function MixDockPane() {
 /** The floating Mixer: the same window frame as the Channel Rack and the Piano roll. */
 export function MixerWindow(props: { z: number }) {
   return (
-    <PanelFrame geom={() => U.mixWin} setGeom={g => setU('mixWin', w => ({ ...w, ...g }))} z={props.z} class="mixwin" dockId="mix" minW={480} minH={260}
+    <PanelFrame name={tr('c.mv.mixer')} geom={() => U.mixWin} setGeom={g => setU('mixWin', w => ({ ...w, ...g }))} z={props.z} class="mixwin" dockId="mix" minW={480} minH={260}
       front={mixFront} onHeadDbl={toggleMixView} head={<MixHead />} controls={<MixControls />}>
+      {/* PanelFrame keeps its content behind an error boundary */}
       <div class="mixer floating">
         <Show when={!U.mixView}>
-          <PanelBoundary name={tr('c.mv.mixer')}>
-            <Strips full={false} />
-            <FxChain />
-          </PanelBoundary>
+          <Strips full={false} />
+          <FxChain />
         </Show>
       </div>
     </PanelFrame>
