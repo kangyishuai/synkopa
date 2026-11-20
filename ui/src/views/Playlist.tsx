@@ -1599,7 +1599,7 @@ function LaneHeader(props: { t: Track; i: number; auto: string | null }) {
           <div class="row" style={{ gap: '6px', 'padding-left': '20px' }}>
             <div class="lvol" classList={{ auto: isAutomated(volTarget()) }} onPointerDown={vol} onContextMenu={e => e.preventDefault()} title={tl('a.pl.volTip')}>
               <div class="track">
-                <div class="fill" style={{ width: shownVol() * 100 + '%', background: audible() ? t().color : 'var(--fg6)' }} />
+                <div class="fill" style={{ width: shownVol() * 100 + '%', background: audible() ? 'var(--fg5)' : 'var(--line2)' }} />
                 <div class="thumb" style={{ left: shownVol() * 100 + '%' }} />
               </div>
             </div>

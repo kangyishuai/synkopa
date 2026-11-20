@@ -39,17 +39,18 @@ export interface Tokens {
 }
 
 export const DARK: Tokens = {
-  bg0: '#0a0c0f', bg1: '#0e1013', bg2: '#111419', bg3: '#14181e', bg4: '#161a21', bg5: '#171b21', bg6: '#1c2128', bg7: '#1e242d',
-  line: '#252b34', line2: '#2c333d', line3: '#2e3641',
-  fg: '#d5dae2', fgHi: '#f2f4f7', fg2: '#b4bac4', fg3: '#9aa2ad', fg4: '#8a93a1', fg5: '#727c8c', fg6: '#5e6877',
-  blue: '#4f8ef7', blueHi: '#8fb6ff', green: '#4ec08a', amber: '#e0a44a', pan: '#b18cf5', red: '#e05263', onBg: '#2f3a4b',
-  viz: '#0c0e12', vizPanel: '#101318', vizGrid: '#161b22', vizGrid2: '#20262f', vizAxis: '#2a313b', vizLabel: '#4a5360',
-  ink: '#f2f4f7', pre: '#9aa2ad', post: '#8fb6ff', playhead: '#eef1f5', onFill: '#0b1220',
-  grid: '#111419', gridBar: '#232a33', gridBeat: '#1a1f27', laneAlt: '#13171c', rulerBg: '#14181e', rulerText: '#7d8592', clipBody: '#101318',
+  // three clear elevations: the grid well (bg2), panels (bg3–bg5), raised items (bg6–bg7), 1px lines between
+  bg0: '#0d0f13', bg1: '#111318', bg2: '#13161c', bg3: '#191c23', bg4: '#1a1e26', bg5: '#1c2028', bg6: '#242a34', bg7: '#2a303b',
+  line: '#2a303b', line2: '#343b47', line3: '#3c4452',
+  fg: '#dde1e8', fgHi: '#f4f6f9', fg2: '#c0c6cf', fg3: '#a8b0bb', fg4: '#98a1ae', fg5: '#808a99', fg6: '#687282',
+  blue: '#4f8ef7', blueHi: '#8fb6ff', green: '#4ec08a', amber: '#e0a44a', pan: '#b18cf5', red: '#e05263', onBg: '#2c3a52',
+  viz: '#0f1115', vizPanel: '#13161b', vizGrid: '#1a1e25', vizGrid2: '#242a33', vizAxis: '#303743', vizLabel: '#566070',
+  ink: '#f4f6f9', pre: '#a8b0bb', post: '#8fb6ff', playhead: '#eef1f5', onFill: '#0b1220',
+  grid: '#13161c', gridBar: '#2b323d', gridBeat: '#1d222a', laneAlt: '#16191f', rulerBg: '#191c23', rulerText: '#8d96a3', clipBody: '#12151a',
   shade: 'rgba(0,0,0,.55)',
-  keyW: '#9aa1ad', keyB: '#1b1f26', keyWText: '#1a1e24', keyBText: '#e6e9ee', onBand: '#0b1220', tint: 1,
-  clipBase: '#101318', clipBodyPct: 14, clipHeadPct: 42, clipHeadSelPct: 75, clipHeadSelTo: '#ffffff',
-  clipInkTo: '#ffffff', clipInkPct: 80, clipText: '#f2f4f7', clipTextSel: '#0b1220', laneArm: '#16121a', gridShade: 'rgba(255,255,255,.04)',
+  keyW: '#9aa1ad', keyB: '#1d2128', keyWText: '#1a1e24', keyBText: '#e6e9ee', onBand: '#0b1220', tint: 1,
+  clipBase: '#12151a', clipBodyPct: 18, clipHeadPct: 50, clipHeadSelPct: 75, clipHeadSelTo: '#ffffff',
+  clipInkTo: '#ffffff', clipInkPct: 85, clipText: '#f4f6f9', clipTextSel: '#0b1220', laneArm: '#1d161c', gridShade: 'rgba(255,255,255,.035)',
 };
 
 export const LIGHT: Tokens = {
