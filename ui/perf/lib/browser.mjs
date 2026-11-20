@@ -8,8 +8,9 @@ import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 const require = createRequire(import.meta.url);
-export const { chromium } = require('playwright-core');
-export const playwrightVersion = require('playwright-core/package.json').version;
+// the UI's own Playwright (the e2e journeys' dependency): nothing to install beside `pnpm --dir ui install`
+export const { chromium } = require('@playwright/test');
+export const playwrightVersion = require('@playwright/test/package.json').version;
 
 export function findChromium() {
   if (process.env.PERF_CHROME) return process.env.PERF_CHROME;

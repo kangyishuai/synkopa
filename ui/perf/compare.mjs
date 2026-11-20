@@ -7,9 +7,10 @@
 //     (spread = (max − min) / median between the whole-suite runs of that file), and
 //   * an absolute floor per unit (ms 0.5, count 2, MiB 0.5 — 0.02 for per-cycle leak metrics, bytes 512),
 // so a 0.1 ms wobble on a 0.3 ms metric or one extra long task is not reported as a regression.
-// Exit code 1 when anything regressed (usable as a gate), 2 on bad input.
+// Exit code 1 when anything regressed (usable as a gate), 2 on bad input or when either file has a
+// failed scenario (its numbers are not the interaction's cost: a missed drag looks faster).
 import { readFileSync, writeFileSync } from 'node:fs';
-import { HEADLINE } from './lib/report.mjs';
+import { HEADLINE, scenarioErrors } from './lib/report.mjs';
 
 const argv = process.argv.slice(2);
 const flag = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; return v == null || v.startsWith('--') ? true : v; };
@@ -17,6 +18,10 @@ const VALUED = new Set(['--min-rel', '--k', '--md']);
 const files = argv.filter((a, i) => !a.startsWith('--') && !VALUED.has(argv[i - 1]));
 if (files.length !== 2) { console.error('usage: node perf/compare.mjs <base.json> <new.json> [--all] [--min-rel 0.10] [--k 1.5] [--md out.md]'); process.exit(2); }
 const [A, B] = files.map(f => JSON.parse(readFileSync(f, 'utf8')));
+for (const [f, R] of [[files[0], A], [files[1], B]]) {
+  const errs = scenarioErrors(R);
+  if (errs.length) { console.error(`${f}: ${errs.length} failed scenario(s), not comparable:`); for (const e of errs) console.error('  ' + e); process.exit(2); }
+}
 const minRel = +flag('min-rel', 0.10), K = +flag('k', 1.5), all = !!flag('all', false);
 
 // not costs: event counts, payload sizes, correctness checks

@@ -19,6 +19,7 @@
 //     --gpu off            software GL (SwiftShader) instead of the real GPU
 //     --headed             show the browser
 //     --dump-profiles DIR  also write each scenario's raw CPU profile (profile pass) to DIR
+// Exit code 1 when a scenario failed (its error is in the summary; the results are still written).
 //
 // It needs `window.__perf` (src/perfHook.ts, bundled only with VITE_PERF=1) and the mock's
 // `window.__waveFixture` hook. All app access goes through lib/app.mjs, the one place to adapt
@@ -33,7 +34,7 @@ import { buildUi, bundleSizes, devUi, previewUi } from './lib/serve.mjs';
 import { launch, playwrightVersion, VIEWPORT } from './lib/browser.mjs';
 import { median, r2 } from './lib/stats.mjs';
 import { App } from './lib/app.mjs';
-import { writeSummary } from './lib/report.mjs';
+import { scenarioErrors, writeSummary } from './lib/report.mjs';
 import { loadMaps } from './lib/sourcemap.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -172,4 +173,7 @@ mkdirSync(dirname(out), { recursive: true });
 writeFileSync(out, JSON.stringify(results, null, 1));
 writeFileSync(out.replace(/\.json$/, '.md'), writeSummary(results));
 log('wrote', out);
+// the files are kept for the diagnosis, but a run with a failed scenario is not a result
+const failed = scenarioErrors(results);
+if (failed.length) { log(`FAILED: ${failed.length} scenario error(s)`); for (const e of failed) log('  ' + e); process.exit(1); }
 process.exit(0);

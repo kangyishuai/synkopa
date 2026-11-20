@@ -53,6 +53,18 @@ export const HEADLINE = [
   ['playback', 'scriptMsPerSecond', 'playback: script ms per second'],
 ];
 
+/**
+ * Scenarios that did not do what they measure (the drag missed its clip, a window did not open,
+ * the body threw): their numbers are not that interaction's cost, so a run or a comparison with
+ * any of these fails instead of reporting a faster result.
+ */
+export function scenarioErrors(res) {
+  const errs = [];
+  (res.runs ?? []).forEach((r, i) => { for (const [k, v] of Object.entries(r)) if (v?.error) errs.push(`run ${i + 1} ${k}: ${String(v.error).trim()}`); });
+  for (const [k, v] of Object.entries(res.profile ?? {})) if (v?.error) errs.push(`profile ${k}: ${String(v.error).trim()}`);
+  return errs;
+}
+
 export function writeSummary(res) {
   const M = res.metrics, m = res.meta;
   const L = [];
@@ -91,8 +103,7 @@ export function writeSummary(res) {
       L.push('', ...v.hot.functions.slice(0, 6).map(x => `- \`${x.name}\` ${x.selfMs} ms`), '');
     }
   }
-  const errs = [];
-  res.runs.forEach((r, i) => { for (const [k, v] of Object.entries(r)) if (v?.error) errs.push(`run ${i + 1} ${k}: ${v.error}`); });
+  const errs = scenarioErrors(res);
   if (errs.length) L.push('', '## Scenario errors', '', ...errs.map(e => '- ' + e));
   const ce = [...new Set(res.runs.flatMap(r => r.console_errors ?? []))];
   if (ce.length) L.push('', '## Console errors', '', ...ce.slice(0, 10).map(e => '- `' + e.replace(/`/g, "'") + '`'));
