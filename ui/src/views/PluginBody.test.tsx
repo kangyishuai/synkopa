@@ -16,6 +16,13 @@ const fake = {
   appInfo: vi.fn(async () => ({ pluginEditors: true })),
 };
 vi.mock('../api/backend', async orig => ({ ...(await orig<typeof import('../api/backend')>()), be: () => fake }));
+// automation capture (the record filter's automation, armed while the song plays): a drag records an envelope
+const capture = vi.hoisted(() => ({ armed: false, moves: [] as number[], ended: 0 }));
+vi.mock('../state/automation', async orig => ({
+  ...(await orig<typeof import('../state/automation')>()),
+  captureArmed: () => capture.armed,
+  autoTweak: () => ({ move: (v: number) => capture.moves.push(v), end: () => { capture.ended++; } }),
+}));
 
 const { PluginBody } = await import('./FxWindow');
 
@@ -25,6 +32,7 @@ const drag = (el: HTMLInputElement, v: number) => { el.value = String(v); fireEv
 beforeEach(async () => {
   params[0].value = 0.2; params[0].display = '20 %';
   fake.pluginParams.mockClear(); fake.pluginSetParam.mockClear();
+  capture.armed = false; capture.moves = []; capture.ended = 0;
   render(() => <PluginBody id={7} />);
   await vi.waitFor(() => expect(screen.getAllByRole('slider')).toHaveLength(2));
 });
@@ -52,5 +60,27 @@ describe('PluginBody', () => {
     expect(slider('Drive')).toBe(el);
     expect(screen.getByRole('checkbox', { name: 'Bypass' })).toBe(box);
     expect(el.value).toBe('0.4');
+  });
+
+  it('a capture drag records the envelope and keeps its value over a refresh', async () => {
+    capture.armed = true;
+    const el = slider('Drive');
+    fireEvent.pointerDown(el, { button: 0 });
+    drag(el, 0.6);
+    drag(el, 0.7);
+    expect(capture.moves, 'the envelope gets the drag').toEqual([0.6, 0.7]);
+    expect(fake.pluginSetParam, 'the static value is not written while capturing').not.toHaveBeenCalled();
+    // a refresh mid-drag (here the one after another parameter's edit) brings the engine's 0.2 for Drive
+    const warn = vi.spyOn(console, 'warn');
+    fireEvent.change(screen.getByRole('checkbox', { name: 'Bypass' }), { target: { checked: true } });
+    const calls = fake.pluginParams.mock.calls.length;
+    await vi.waitFor(() => expect(fake.pluginParams.mock.calls.length).toBeGreaterThan(calls), { timeout: 2000 });
+    settle();
+    expect(slider('Drive')).toBe(el);
+    expect(el.value, 'the slider stays under the pointer').toBe('0.7');
+    expect(warn.mock.calls.flat().join(' ')).not.toMatch(/UNCOMMITTED_INPUT_OVERWRITTEN/);
+    warn.mockRestore();
+    fireEvent.pointerUp(el);
+    expect(capture.ended, 'the release closes the capture').toBe(1);
   });
 });

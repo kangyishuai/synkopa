@@ -745,7 +745,10 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
   const [editorsWhy, setEditorsWhy] = createSignal<string | null>(null);
   const [q, setQ] = createSignal('');
   let refresh = 0;
-  const load = () => be().pluginParams(props.id).then(p => { setParams(p); setErr(null); }).catch(e => setErr(String(e)));
+  /** Parameters a capture drag is recording (id → the dragged value): the engine is not sent the
+   * value, so a refresh would put the slider back under the pointer; the drag's value is kept. */
+  const held = new Map<number, number>();
+  const load = () => be().pluginParams(props.id).then(p => { setParams(held.size ? p.map(x => (held.has(x.id) ? { ...x, value: held.get(x.id)! } : x)) : p); setErr(null); }).catch(e => setErr(String(e)));
   /** Why the engine could not load the plugin (not installed, refused): shown instead of a parameter error. */
   const loadErr = () => S.fxErrors[props.id];
   const [trusting, setTrusting] = createSignal(false);
@@ -802,7 +805,7 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
             const id = untrack(() => p().id); // the row's key: the same for the row's whole life
             const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: id };
             let cap: Tweak | null = null;
-            const done = () => { cap?.end(); cap = null; };
+            const done = () => { cap?.end(); cap = null; held.delete(id); };
             // a row removed mid-drag (the search narrowed, the plugin reloaded) loses its
             // pointer-up handler: the capture closes here instead of leaking the gesture
             onCleanup(done);
@@ -815,7 +818,13 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
                 <Show when={p().options?.length} fallback={
                   <Show when={p().toggle} fallback={
                     <input type="range" min="0" max="1" step={sliderStep(p())} value={p().value}
-                      onInput={e => { const v = +e.currentTarget.value; if (cap) cap.move(v); else set(id, v); }}
+                      onInput={e => {
+                        const v = +e.currentTarget.value;
+                        if (!cap) return set(id, v);
+                        // capturing: the envelope gets the value, the row shows it (`held` keeps it over a refresh)
+                        held.set(id, v); setParams(ps => ps.map(q => (q.id === id ? { ...q, value: v } : q)));
+                        cap.move(v);
+                      }}
                       onDblClick={() => set(id, p().def)} aria-label={p().name}
                       onPointerDown={e => {
                         if (e.altKey && e.button === 0) { e.preventDefault(); set(id, p().def); }
