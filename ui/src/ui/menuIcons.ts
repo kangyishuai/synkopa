@@ -170,5 +170,6 @@ export const PICK_GLYPH = {
   emptySynth: INST_ICONS.synth,
   plugin: INST_ICONS.synth,
   keys: INST_ICONS.piano,
+  musicBox: INST_ICONS.synth,
   source: INST_ICONS.sample,
 } satisfies Record<string, MenuGlyph>;

@@ -12,7 +12,7 @@ import { isTypingKey } from '../state/typingKeys';
 import { commit } from '../state/edit';
 import { pickInsert, type InsertChoice } from '../ui/InsertPicker';
 import {
-  addBar, addKeys, addPlugin, addSampler, addSamplerFiles, addSynth, audition, chanKindLabel, chanOp, channels, clonePattern, cloneChannel, curPat, deleteChannel,
+  addBar, addKeys, addMusicBox, addPlugin, addSampler, addSamplerFiles, addSynth, audition, chanKindLabel, chanOp, channels, clonePattern, cloneChannel, curPat, deleteChannel,
   deletePattern, type InstrumentPick, newPattern, nextEmptyPattern, openPattern, openRack, openRoll, putNotes, recolorPattern, removeBar, renamePattern, replaceChannel, replaceWithFile, setChannel, setCurPattern, splitByChannel,
   rollMoved,
 } from '../state/pattern';
@@ -159,6 +159,7 @@ function instrumentItems(pick: (p: InstrumentPick) => void, file: (f?: LibFile) 
     items.push({ t: 'item', label: t('b.pe.menuSynthEmpty'), glyph: PICK_GLYPH.emptySynth, act: () => pick({ kind: 'synth', preset: null }) });
   }
   items.push({ t: 'sep' }, { t: 'title', label: t('b.pe.menuSampled') }, { t: 'item', label: t('b.pe.menuKeys'), glyph: PICK_GLYPH.keys, act: () => pick({ kind: 'keys' }) });
+  items.push({ t: 'item', label: t('b.pe.menuMusicBox'), glyph: PICK_GLYPH.musicBox, act: () => pick({ kind: 'musicbox' }) });
   items.push({ t: 'sep' }, { t: 'title', label: t('b.pe.menuPlugins') }, ...pluginItems(pick));
   return items;
 }
@@ -194,6 +195,7 @@ export function addChannelMenu(x: number, y: number) {
   const add = (p: InstrumentPick) => {
     if (p.kind === 'synth') addSynth(p.preset);
     else if (p.kind === 'keys') addKeys();
+    else if (p.kind === 'musicbox') addMusicBox();
     else if (p.kind === 'plugin') addPlugin(p.plugin);
     else addSampler(p.source);
   };

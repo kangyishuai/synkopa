@@ -635,6 +635,13 @@ pub enum TargetRt {
     /// Synkopa Keys channel (index into `Timeline::chans`): release time, dynamics.
     KeysRelease(usize),
     KeysDynamics(usize),
+    /// Music Box channel (index into `Timeline::chans`): its knobs, see `crate::musicbox`.
+    MbRing(usize),
+    MbBrightness(usize),
+    MbBody(usize),
+    MbMechanical(usize),
+    MbSpread(usize),
+    MbRelease(usize),
     /// An audio clip (index into `Timeline::clips`; `usize::MAX` while it does not play).
     ClipGain(usize),
     ClipPan(usize),
@@ -792,6 +799,14 @@ pub struct ChanRt {
     pub keys: Option<Arc<crate::keys::KeysBank>>,
     pub keys_release: f32,
     pub keys_dynamics: f32,
+    /// Music Box channels: the knobs (see `crate::musicbox`; the release in seconds, the
+    /// rest normalized 0..1).
+    pub mb_ring: f32,
+    pub mb_brightness: f32,
+    pub mb_body: f32,
+    pub mb_mechanical: f32,
+    pub mb_spread: f32,
+    pub mb_release: f32,
     pub root: u8,
     /// Channel gain (1 at unity), pan −1..1, and audible (mute/solo).
     pub gain: f32,
@@ -2332,7 +2347,7 @@ fn slide(voices: &mut VoicePool, synths: &mut SynthBank, ch: &ChanRt, delay: u32
                 s.slide(delay, key, len.max(0.0) as u32);
             }
         }
-        VoiceKind::Sample | VoiceKind::Keys => voices.slide(ch.id, delay, key, len.max(0.0) as u32),
+        VoiceKind::Sample | VoiceKind::Keys | VoiceKind::MusicBox => voices.slide(ch.id, delay, key, len.max(0.0) as u32),
         VoiceKind::Plugin | VoiceKind::Click { .. } => {}
     }
 }
@@ -2696,13 +2711,43 @@ fn slot(g: &mut Graph, fx: Id) -> Option<&mut FxSlot> {
 fn carry_automated(new: &mut Timeline, old: &Timeline) {
     for a in new.autos.iter() {
         match a.target {
-            TargetRt::ChanVol(i) | TargetRt::ChanPan(i) | TargetRt::KeysRelease(i) | TargetRt::KeysDynamics(i) => {
+            TargetRt::ChanVol(i)
+            | TargetRt::ChanPan(i)
+            | TargetRt::KeysRelease(i)
+            | TargetRt::KeysDynamics(i)
+            | TargetRt::MbRing(i)
+            | TargetRt::MbBrightness(i)
+            | TargetRt::MbBody(i)
+            | TargetRt::MbMechanical(i)
+            | TargetRt::MbSpread(i)
+            | TargetRt::MbRelease(i) => {
                 let Some(c) = new.chans.get_mut(i) else { continue };
+                // a Music Box envelope with no clips drives nothing: carrying the old runtime
+                // value here would keep overriding a manual knob edit on every rebuild (only a
+                // Drive — automation that actually plays — owns the runtime value)
+                if matches!(
+                    a.target,
+                    TargetRt::MbRing(_)
+                        | TargetRt::MbBrightness(_)
+                        | TargetRt::MbBody(_)
+                        | TargetRt::MbMechanical(_)
+                        | TargetRt::MbSpread(_)
+                        | TargetRt::MbRelease(_)
+                ) && !new.drives.iter().any(|d| d.target == a.target)
+                {
+                    continue;
+                }
                 let Some(o) = old.chans.iter().find(|o| o.id == c.id) else { continue };
                 match a.target {
                     TargetRt::ChanVol(_) => (c.gain, c.gain0) = (o.gain, o.gain0),
                     TargetRt::ChanPan(_) => (c.pan, c.pan0) = (o.pan, o.pan0),
                     TargetRt::KeysRelease(_) => c.keys_release = o.keys_release,
+                    TargetRt::MbRing(_) => c.mb_ring = o.mb_ring,
+                    TargetRt::MbBrightness(_) => c.mb_brightness = o.mb_brightness,
+                    TargetRt::MbBody(_) => c.mb_body = o.mb_body,
+                    TargetRt::MbMechanical(_) => c.mb_mechanical = o.mb_mechanical,
+                    TargetRt::MbSpread(_) => c.mb_spread = o.mb_spread,
+                    TargetRt::MbRelease(_) => c.mb_release = o.mb_release,
                     _ => c.keys_dynamics = o.keys_dynamics,
                 }
             }
@@ -2855,6 +2900,37 @@ fn apply_automation(tl: &mut Timeline, g: &mut Graph, synths: &mut crate::poly::
             TargetRt::KeysDynamics(i) => {
                 if let Some(ch) = tl.chans.get_mut(i) {
                     ch.keys_dynamics = v;
+                }
+            }
+            TargetRt::MbRelease(i) => {
+                if let Some(ch) = tl.chans.get_mut(i) {
+                    let (lo, hi, _) = crate::musicbox::RELEASE_MS;
+                    ch.mb_release = lo * (hi / lo).powf(v) / 1000.0;
+                }
+            }
+            TargetRt::MbRing(i) => {
+                if let Some(ch) = tl.chans.get_mut(i) {
+                    ch.mb_ring = v;
+                }
+            }
+            TargetRt::MbBrightness(i) => {
+                if let Some(ch) = tl.chans.get_mut(i) {
+                    ch.mb_brightness = v;
+                }
+            }
+            TargetRt::MbBody(i) => {
+                if let Some(ch) = tl.chans.get_mut(i) {
+                    ch.mb_body = v;
+                }
+            }
+            TargetRt::MbMechanical(i) => {
+                if let Some(ch) = tl.chans.get_mut(i) {
+                    ch.mb_mechanical = v;
+                }
+            }
+            TargetRt::MbSpread(i) => {
+                if let Some(ch) = tl.chans.get_mut(i) {
+                    ch.mb_spread = v;
                 }
             }
             TargetRt::ClipGain(k) => {

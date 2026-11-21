@@ -18,6 +18,7 @@ import { PianoKeys } from '../ui/PianoKeys';
 import { InsertPicker } from '../ui/InsertPicker';
 import { moveWindow, PluginBody } from './FxWindow';
 import { KeysPanel } from './KeysPanel';
+import { MusicBoxPanel } from './MusicBoxPanel';
 import { SynthPanel } from './SynthPanel';
 import { S } from '../state/store';
 import { closeEditor, openSampleEditor } from '../state/actions';
@@ -55,7 +56,7 @@ export function toggleChannelWindow(id: Id, settings = false) {
   if (kind === 'plugin' && !settings) { togglePlugin(id, () => toggleChannelWindow(id, true)); return; }
   if (settings && chanWin()?.id === id) return;
   if (chanWin()?.id === id) { closeChannelWindow(); return; }
-  const width = kind === 'synth' ? 900 : kind === 'keys' ? 700 : kind === 'plugin' ? 560 : Math.min(620, window.innerWidth - 20);
+  const width = kind === 'synth' ? 900 : kind === 'keys' ? 700 : kind === 'musicbox' ? 700 : kind === 'plugin' ? 560 : Math.min(620, window.innerWidth - 20);
   // beside the Channel Rack: the floating window, or the docked panel's place on screen
   const dk = docked('rack') ? document.querySelector('.rackwin')?.getBoundingClientRect() : undefined;
   const r = dk ? { x: dk.left, y: dk.top, w: dk.width } : U.rackWin, W = window.innerWidth;
@@ -108,7 +109,7 @@ function Body(props: { w: Win; c: Channel }) {
         onDblClick={e => { if (!(e.target as HTMLElement).closest('button, select, input')) showInsert(chanHeardInsert(c()) ?? 0); }}>
         <span class="chicon" style={{ color: c().color }}><InstIcon id={channelIcon(c(), (id: number) => S.project.sources.find(s => s.id === id))} size={14} /></span>
         <span class="title">{c().name}</span>
-        <span class="sub">{t(c().kind === 'synth' ? 'b.cw.kSynth' : c().kind === 'plugin' ? 'b.cw.kPlugin' : 'b.cw.kKeys')}</span>
+        <span class="sub">{t(c().kind === 'synth' ? 'b.cw.kSynth' : c().kind === 'plugin' ? 'b.cw.kPlugin' : c().kind === 'musicbox' ? 'b.cw.kMusicBox' : 'b.cw.kKeys')}</span>
         <div style={{ flex: 1 }} />
         <InsertPicker value={c().insert} nullLabel={t('b.cw.likeClipTrack')} ops={id => [chanOp(live(), { insert: id })]} label={t('b.pe.mixCh')} free={{ name: c().name, color: c().color }}
           wheelKey={'cwroute' + props.c.id} title={t('b.cw.mixerTip')} />
@@ -117,13 +118,14 @@ function Body(props: { w: Win; c: Channel }) {
       </div>
       <Show when={c().kind === 'synth'}><SynthPanel c={c()} /></Show>
       <Show when={c().kind === 'keys' && c()}>{k => <KeysPanel c={k() as Extract<Channel, { kind: 'keys' }>} />}</Show>
+      <Show when={c().kind === 'musicbox' && c()}>{k => <MusicBoxPanel c={k() as Extract<Channel, { kind: 'musicbox' }>} />}</Show>
       {/* keyed by the plugin class: a replaced instrument gets a fresh list, an edit elsewhere keeps its editor open */}
       <Show when={plugin()?.cid} keyed>
         {_cid => <PluginBody id={c().id} plugin={plugin()} instrument />}
       </Show>
       <div class="chknobs"><ChannelLevelKnobs channel={c()} /><Show when={c().kind === 'synth'}><ChannelRootKnob channel={c()} /></Show></div>
       <Show when={c().kind !== 'synth'}>
-        <PianoKeys player={{ ch: c().id }} lo={c().kind === 'keys' ? 21 : 36} hi={c().kind === 'keys' ? 108 : 96} root={c().root}
+        <PianoKeys player={{ ch: c().id }} lo={c().kind === 'keys' ? 21 : c().kind === 'musicbox' ? 48 : 36} hi={c().kind === 'keys' || c().kind === 'musicbox' ? 108 : 96} root={c().root}
           onRoot={key => { commit([chanOp(live(), { root: key })], t('b.cw.rootCh')); say(t('b.pk.rootSay', { name: c().name, note: noteName(key) })); }} />
       </Show>
     </div>

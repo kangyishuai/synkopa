@@ -256,6 +256,8 @@ struct Voice {
 fn voice(p: &Project, c: &Channel) -> Voice {
     match &c.src {
         ChannelSrc::Keys { .. } => Voice { drum_key: None, program: Some(0) },
+        // General MIDI program 11 (0-indexed 10) is literally named Music Box
+        ChannelSrc::MusicBox { .. } => Voice { drum_key: None, program: Some(10) },
         // a hosted plugin's sound is its own: no General MIDI program stands for it
         ChannelSrc::Plugin { .. } => Voice { drum_key: None, program: None },
         ChannelSrc::Synth { synth } => {

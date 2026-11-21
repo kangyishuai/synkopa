@@ -81,9 +81,11 @@ PATTERNS & CHANNELS  (steps: x = on, 1-9 = velocity 10-90 %, . = off; spaces and
   channels                                 Channel Rack: ids, instrument/sample, volume, pan, insert
   channels --add kick-808|snare|marimba…   add a sampler of a standard-library sample (--sample SOURCE_ID: of a project source)
   channels --keys                          add Synkopa Keys, the sampled grand piano
+  channels --musicbox                      add the Music Box, the modeled tine instrument
   channels --plugin "NAME|CID"             add a scanned VST3 instrument (name, start of a name, or class id)
   channels --synth "PRESET"                add a synth channel ("" = blank patch); --ch C --preset NAME loads one
-  channels --ch C --param ID --value V     one knob of a synth (ids in `catalog`) or of Synkopa Keys (release ms, dynamics %)
+  channels --ch C --param ID --value V     one knob of a synth (ids in `catalog`), of Synkopa Keys (release ms, dynamics %)
+                                           or of the Music Box (ring, brightness, body, mechanical, spread %; release ms)
   channels --remove ID|NAME                remove a channel and its notes
   pattern [--id N]                         a pattern as step strings per channel
   pattern --id N --ch C --steps "x... x... x... x..." [--vel 0.8]   replace channel C's notes with step triggers
@@ -238,6 +240,7 @@ const SWITCHES: &[&str] = &[
     "help",
     "install",
     "keys",
+    "musicbox",
     "new",
     "no-bake",
     "no-master",
@@ -840,6 +843,9 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
             }
             if a.has("keys") {
                 args["keys"] = json!(true);
+            }
+            if a.has("musicbox") {
+                args["musicbox"] = json!(true);
             }
             if a.has("synth") {
                 args["synth"] = json!(a.get("synth").unwrap_or(""));

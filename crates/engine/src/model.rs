@@ -382,6 +382,11 @@ pub enum ChannelSrc {
         #[serde(default)]
         keys: KeysState,
     },
+    /// Music Box: the modeled tine instrument (see `crate::musicbox`).
+    MusicBox {
+        #[serde(default, rename = "musicBox")]
+        music_box: MusicBoxState,
+    },
     /// A hosted plugin instrument (VST3): its notes, live keys and auditions go to one
     /// instance of the plugin, whose stereo output plays like any channel's.
     Plugin { plugin: PluginRef },
@@ -560,6 +565,61 @@ fn keys_dynamics() -> f32 {
 impl Default for KeysState {
     fn default() -> Self {
         Self { release: keys_release(), dynamics: keys_dynamics() }
+    }
+}
+
+/// A Music Box channel's settings (percentages and milliseconds; see `crate::musicbox`).
+#[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
+pub struct MusicBoxState {
+    /// 25..250 % of the natural decay time of the note's fundamental.
+    #[serde(default = "mb_ring")]
+    pub ring: f32,
+    /// 0..100 %: how hard the pluck excites the overtone stack.
+    #[serde(default = "mb_brightness")]
+    pub brightness: f32,
+    /// 0..100 %: the wooden box's own low resonance under the tines.
+    #[serde(default = "mb_body")]
+    pub body: f32,
+    /// 0..100 %: the pin's tick at the start of every note.
+    #[serde(default = "mb_mechanical")]
+    pub mechanical: f32,
+    /// 0..100 %: how far across the stereo image the comb's notes sit.
+    #[serde(default = "mb_spread")]
+    pub spread: f32,
+    /// How long a note rings after its key is let go, in milliseconds.
+    #[serde(default = "mb_release")]
+    pub release: f32,
+}
+
+fn mb_ring() -> f32 {
+    crate::musicbox::RING.2
+}
+fn mb_brightness() -> f32 {
+    crate::musicbox::BRIGHTNESS.2
+}
+fn mb_body() -> f32 {
+    crate::musicbox::BODY.2
+}
+fn mb_mechanical() -> f32 {
+    crate::musicbox::MECHANICAL.2
+}
+fn mb_spread() -> f32 {
+    crate::musicbox::SPREAD.2
+}
+fn mb_release() -> f32 {
+    crate::musicbox::RELEASE_MS.2
+}
+
+impl Default for MusicBoxState {
+    fn default() -> Self {
+        Self {
+            ring: mb_ring(),
+            brightness: mb_brightness(),
+            body: mb_body(),
+            mechanical: mb_mechanical(),
+            spread: mb_spread(),
+            release: mb_release(),
+        }
     }
 }
 
@@ -831,6 +891,12 @@ pub enum AutoTarget {
     },
     /// A Synkopa Keys channel's `release` (ms, logarithmic) or `dynamics` (%).
     Keys {
+        chan_id: Id,
+        param: String,
+    },
+    /// A Music Box channel's knob: `ring`, `brightness`, `body`, `mechanical`, `spread`
+    /// (all %) or `release` (ms, logarithmic).
+    MusicBox {
         chan_id: Id,
         param: String,
     },
