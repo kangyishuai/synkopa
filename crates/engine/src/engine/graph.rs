@@ -452,7 +452,7 @@ fn build_patterns(p: &Project, audio: &HashMap<Id, Arc<Audio>>, keys: Option<&Ar
         .iter()
         .map(|pt| {
             let end = (pt.len * 4.0) as f32;
-            let notes = pt
+            let mut notes: Vec<NoteRt> = pt
                 .notes
                 .iter()
                 .filter(|n| n.step < end - 1e-4)
@@ -471,6 +471,9 @@ fn build_patterns(p: &Project, audio: &HashMap<Id, Arc<Audio>>, keys: Option<&Ar
                     })
                 })
                 .collect();
+            // in time order: the audio thread resolves the slides of one block in this order, and
+            // a later slide must build on an earlier one (stable, so notes at one time keep theirs)
+            notes.sort_by(|a, b| a.beat.total_cmp(&b.beat));
             PatRt { id: pt.id, len: pt.len, notes, home: pat_home(pt.id) }
         })
         .collect();

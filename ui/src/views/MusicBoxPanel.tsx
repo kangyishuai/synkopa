@@ -4,8 +4,8 @@
 import { MB_BODY, MB_BRIGHTNESS, MB_MECHANICAL, MB_RELEASE, MB_RING, MB_SPREAD, type Channel, type MusicBoxState } from '../api/types';
 import { clamp } from '../lib/format';
 import { t, type TranslationKey } from '../lib/i18n';
-import { autoDisplay, isAutomated, paramMenu } from '../state/automation';
-import { commit, Gesture, wheelEdit} from '../state/edit';
+import { autoDisplay, autoTweak, autoWheel, isAutomated, isOverridden, paramMenu, type Tweak } from '../state/automation';
+import { commit } from '../state/edit';
 import { chanById, chanOp } from '../state/pattern';
 import { say } from '../state/ui';
 import { InstIcon } from '../ui/instIcons';
@@ -24,20 +24,21 @@ export function MusicBoxPanel(props: { c: MbChannel }) {
   const wheelKey = (lab: string) => 'mb' + lab + props.c.id;
 
   // one knob: `tv`/`text` read and show it, `patch` writes the new MusicBoxState
-  const knob = (lab: TranslationKey, tv: () => number, text: () => string, patch: (v: number) => MusicBoxState, def: number, param: MbParam) => {
-    let g: Gesture | null = null;
+  const knob = (lab: TranslationKey, titleKey: TranslationKey, tv: () => number, text: () => string, patch: (v: number) => MusicBoxState, def: number, param: MbParam) => {
+    let g: Tweak | null = null;
     const op = (v: number) => [chanOp(live(), { musicBox: patch(v) } as Partial<Channel>)];
     const target = () => ({ kind: 'musicBox' as const, chanId: props.c.id, param });
     const reset = () => commit(op(def), t('b.mb.gest', { name: t(lab) }));
     return (
-      <Knob key={wheelKey(lab)} label={t(lab)} title={t('b.mb.knobTitle', { title: t(lab) })} t={tv} text={text}
+      <Knob key={wheelKey(lab)} label={t(lab)} title={t('b.mb.knobTitle', { title: t(titleKey) })} t={tv} text={text}
         automated={() => isAutomated(target())}
+        overridden={() => isOverridden(target())}
         onMenu={(x, y) => paramMenu(x, y, target(), reset, props.c.color)}
-        onStart={() => { g = new Gesture(t('b.mb.gest', { name: t(lab) })); }}
-        onChange={v => { g?.update(op(v)); say(props.c.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
+        onStart={() => { g = autoTweak(target(), t('b.mb.gest', { name: t(lab) }), v => op(v)); }}
+        onChange={v => { g?.move(v); say(props.c.name + ' · ' + t(lab).toLowerCase() + ' ' + text()); }}
         onEnd={() => { g?.end(); g = null; }}
         onReset={reset}
-        onWheel={v => wheelEdit(wheelKey(lab), t('b.mb.gest', { name: t(lab) }), op(v))} />
+        onWheel={v => autoWheel(target(), wheelKey(lab), t('b.mb.gest', { name: t(lab) }), v, vv => op(vv))} />
     );
   };
 
@@ -63,12 +64,12 @@ export function MusicBoxPanel(props: { c: MbChannel }) {
         </div>
       </div>
       <div class="keysknobs">
-        {knob('b.mb.release', () => relT(k().release), () => relText(k().release), t => ({ ...kBase(), release: relMs(t) }), relT(MB_RELEASE.def), 'release')}
-        {knob('b.mb.ring', () => (k().ring - MB_RING.min) / (MB_RING.max - MB_RING.min), () => Math.round(k().ring) + ' %', t => ({ ...kBase(), ring: MB_RING.min + Math.round(clamp(t, 0, 1) * (MB_RING.max - MB_RING.min)) }), (MB_RING.def - MB_RING.min) / (MB_RING.max - MB_RING.min), 'ring')}
-        {knob('b.mb.brightness', () => k().brightness / 100, () => Math.round(k().brightness) + ' %', t => ({ ...kBase(), brightness: Math.round(clamp(t, 0, 1) * 100) }), MB_BRIGHTNESS.def / 100, 'brightness')}
-        {knob('b.mb.body', () => k().body / 100, () => Math.round(k().body) + ' %', t => ({ ...kBase(), body: Math.round(clamp(t, 0, 1) * 100) }), MB_BODY.def / 100, 'body')}
-        {knob('b.mb.mechanical', () => k().mechanical / 100, () => Math.round(k().mechanical) + ' %', t => ({ ...kBase(), mechanical: Math.round(clamp(t, 0, 1) * 100) }), MB_MECHANICAL.def / 100, 'mechanical')}
-        {knob('b.mb.spread', () => k().spread / 100, () => Math.round(k().spread) + ' %', t => ({ ...kBase(), spread: Math.round(clamp(t, 0, 1) * 100) }), MB_SPREAD.def / 100, 'spread')}
+        {knob('b.mb.release', 'b.mb.releaseTip', () => relT(k().release), () => relText(k().release), t => ({ ...kBase(), release: relMs(t) }), relT(MB_RELEASE.def), 'release')}
+        {knob('b.mb.ring', 'b.mb.ringTip', () => (k().ring - MB_RING.min) / (MB_RING.max - MB_RING.min), () => Math.round(k().ring) + ' %', t => ({ ...kBase(), ring: MB_RING.min + Math.round(clamp(t, 0, 1) * (MB_RING.max - MB_RING.min)) }), (MB_RING.def - MB_RING.min) / (MB_RING.max - MB_RING.min), 'ring')}
+        {knob('b.mb.brightness', 'b.mb.brightnessTip', () => k().brightness / 100, () => Math.round(k().brightness) + ' %', t => ({ ...kBase(), brightness: Math.round(clamp(t, 0, 1) * 100) }), MB_BRIGHTNESS.def / 100, 'brightness')}
+        {knob('b.mb.body', 'b.mb.bodyTip', () => k().body / 100, () => Math.round(k().body) + ' %', t => ({ ...kBase(), body: Math.round(clamp(t, 0, 1) * 100) }), MB_BODY.def / 100, 'body')}
+        {knob('b.mb.mechanical', 'b.mb.mechanicalTip', () => k().mechanical / 100, () => Math.round(k().mechanical) + ' %', t => ({ ...kBase(), mechanical: Math.round(clamp(t, 0, 1) * 100) }), MB_MECHANICAL.def / 100, 'mechanical')}
+        {knob('b.mb.spread', 'b.mb.spreadTip', () => k().spread / 100, () => Math.round(k().spread) + ' %', t => ({ ...kBase(), spread: Math.round(clamp(t, 0, 1) * 100) }), MB_SPREAD.def / 100, 'spread')}
       </div>
     </div>
   );

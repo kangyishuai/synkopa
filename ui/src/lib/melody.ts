@@ -29,7 +29,7 @@ function placements(p: Project, clip: Clip, channel: Id, only?: { pattern: Id; i
     const base = pc.start - pc.offset, endSteps = pat.len * SPB_STEPS;
     for (let k = Math.floor((lo - base) / pat.len) - 1; k <= Math.floor((hi - base) / pat.len); k++) {
       pat.notes.forEach((n, i) => {
-        if (n.ch !== channel || n.step >= endSteps - 1e-4) return;
+        if (n.ch !== channel || n.slide || n.step >= endSteps - 1e-4) return;
         if (only && !only.idx.has(i)) return;
         const nb = base + k * pat.len + (n.step + swingOffset(n.step, pat.swing ?? 0)) / SPB_STEPS;
         if (nb < pc.start || nb >= pc.start + pc.len) return;

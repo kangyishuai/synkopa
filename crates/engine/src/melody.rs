@@ -44,7 +44,8 @@ pub fn collect(p: &Project, clip: &Clip, channel: Id, span: Option<[f64; 2]>) ->
         // the same repeats the sequencer plays (rt.rs), notes past the pattern end left out
         let (k0, k1) = (((lo - base) / pat.len).floor() as i64 - 1, ((hi - base) / pat.len).floor() as i64);
         for k in k0..=k1 {
-            for n in pat.notes.iter().filter(|n| n.ch == channel && n.step < end_steps - 1e-4) {
+            // slide notes make no sound of their own: they are not part of the melody
+            for n in pat.notes.iter().filter(|n| n.ch == channel && !n.slide && n.step < end_steps - 1e-4) {
                 let step = n.step + crate::model::swing_offset(n.step, pat.swing);
                 let nb = base + k as f64 * pat.len + step as f64 / crate::midi::STEPS_PER_BEAT;
                 if nb < pc.start || nb >= pc.start + pc.len {
@@ -377,6 +378,13 @@ mod tests {
         }
         assert_eq!(collect(&p, &vocal, 7001, Some([src(8.0) + 0.01, src(9.0)])).len(), 1);
         assert!(collect(&p, &vocal, 9999, None).is_empty());
+        // a slide note makes no sound of its own, so it is not part of the melody
+        let before = collect(&p, &vocal, 7001, None);
+        let slide: crate::model::Note =
+            serde_json::from_value(serde_json::json!({"ch": 7001, "step": 4, "len": 2, "p": 72, "slide": true})).unwrap();
+        p.patterns.iter_mut().find(|x| x.id == 7100).unwrap().notes.push(slide);
+        assert_eq!(collect(&p, &vocal, 7001, None), before);
+        p.patterns.iter_mut().find(|x| x.id == 7100).unwrap().notes.pop();
         // stored on the clip, a melody reference survives a JSON round trip
         let tune = ClipTune {
             notes: vec![],
