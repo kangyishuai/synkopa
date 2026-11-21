@@ -550,6 +550,7 @@ function ChanRow(props: { c: Channel; onMenu: (c: Channel, e: MouseEvent) => voi
         <span class="cicon" style={{ color: c().color }}><InstIcon id={channelIcon(c(), (id: number) => S.project.sources.find(s => s.id === id))} size={11} /></span>
         <span class="ell">{c().name}</span>
         <Show when={c().kind === 'keys'}><span class="ckind">KEYS</span></Show>
+        <Show when={c().kind === 'musicbox'}><span class="ckind">MBOX</span></Show>
         <Show when={c().kind === 'plugin'}><span class={['ckind', { err: !!S.fxErrors[c().id] }]}>{S.fxErrors[c().id] ? '! VST3' : 'VST3'}</span></Show>
       </button>
     </div>

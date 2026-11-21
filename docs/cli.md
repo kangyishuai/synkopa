@@ -207,6 +207,8 @@ synkopa channels --ch 1005 --preset "Pad Warm"     # load a synth preset (ids/na
 synkopa channels --ch 1005 --param flt_cutoff --value 900   # one synth knob
 synkopa channels --keys                              # Synkopa Keys: the sampled grand piano (see docs/keys.md)
 synkopa channels --ch "Synkopa Keys" --param release --value 600   # its knobs: release (ms), dynamics (%)
+synkopa channels --musicbox                          # the Music Box: the modeled tine instrument (see docs/musicbox.md)
+synkopa channels --ch "Music Box" --param ring --value 140     # its knobs: ring, brightness, body, mechanical, spread (%); release (ms)
 synkopa channels --plugin serum                      # a scanned VST3 instrument (name, start of one, or class id; `synkopa plugins --rescan` first)
 synkopa plugin-params --fx 1007                      # its parameters: a plugin channel's id works wherever an effect id does
 synkopa channels --ch Kick --group Drums             # the Channel Rack filter group ("" = none, unsorted)

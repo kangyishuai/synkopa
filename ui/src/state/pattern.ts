@@ -10,7 +10,7 @@ import { newSynthChannel } from '../lib/synth';
 import { nextChannelColor } from '../lib/color';
 import { prefs } from './prefs';
 import { be } from '../api/backend';
-import { KEYS_DYNAMICS, KEYS_RELEASE, SAMPLE_ROOT, samplerDefault, TOTAL_BEATS, VOL_UNITY, type Channel, type Id, type LibFile, type Note, type Op, type Pattern, type PluginInfo } from '../api/types';
+import { KEYS_DYNAMICS, KEYS_RELEASE, MB_BODY, MB_BRIGHTNESS, MB_MECHANICAL, MB_RELEASE, MB_RING, MB_SPREAD, SAMPLE_ROOT, samplerDefault, TOTAL_BEATS, VOL_UNITY, type Channel, type Id, type LibFile, type Note, type Op, type Pattern, type PluginInfo } from '../api/types';
 import { baseName, clamp, mod } from '../lib/format';
 import { BAR, barsText, cloneNotes, notesText, stepsOf } from '../lib/pattern';
 import { fitOnScreen, rackFitWidth } from '../lib/rack';
@@ -421,6 +421,12 @@ export function addSynth(name: string | null) {
 /** A new channel's colour: one the rack uses least, so its steps and notes stand apart. */
 const freshColor = () => nextChannelColor(channels().map(c => c.color));
 const keysChannel = (id: Id): Channel => ({ id, name: 'Synkopa Keys', color: '#e0a44a', kind: 'keys', keys: { release: KEYS_RELEASE.def, dynamics: KEYS_DYNAMICS.def }, vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root: 60 });
+/** A new Music Box channel: the modeled tine instrument. */
+const musicBoxChannel = (id: Id): Channel => ({
+  id, name: 'Music Box', color: '#cf8e52', kind: 'musicbox',
+  musicBox: { ring: MB_RING.def, brightness: MB_BRIGHTNESS.def, body: MB_BODY.def, mechanical: MB_MECHANICAL.def, spread: MB_SPREAD.def, release: MB_RELEASE.def },
+  vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root: 60,
+});
 /** `root`: the key at which the file plays at its own pitch (a library file may know it). */
 const samplerChannel = (id: Id, s: { id: Id; name: string; color: string }, root: number = SAMPLE_ROOT): Channel => ({ id, name: s.name, color: s.color, kind: 'sample', source: s.id, sampler: samplerDefault(), vol: 0.7937, pan: 0, mute: false, solo: false, insert: null, root });
 
@@ -436,12 +442,13 @@ const pluginChannel = (id: Id, p: PluginInfo): Channel => ({
  * file's own pitch, if known), or a scanned VST3 instrument.
  */
 export type InstrumentPick =
-  | { kind: 'synth'; preset: string | null } | { kind: 'keys' } | { kind: 'sample'; source: Id; root?: number }
+  | { kind: 'synth'; preset: string | null } | { kind: 'keys' } | { kind: 'musicbox' } | { kind: 'sample'; source: Id; root?: number }
   | { kind: 'plugin'; plugin: PluginInfo };
 function makeChannel(id: Id, pick: InstrumentPick): Channel | null {
   switch (pick.kind) {
     case 'synth': { const cat = S.catalog?.synth; if (!cat) { say(t('b.st.synthNA')); return null; } return newSynthChannel(cat, id, pick.preset, freshColor()); }
     case 'keys': return keysChannel(id);
+    case 'musicbox': return musicBoxChannel(id);
     case 'sample': { const src = S.project.sources.find(x => x.id === pick.source); return src ? samplerChannel(id, src, pick.root) : null; }
     case 'plugin': return pluginChannel(id, pick.plugin);
   }
@@ -501,6 +508,13 @@ export function addKeys() {
   commit([chanOp(c)], t('b.st.addKeys'));
   selectChannel(c.id);
   say(t('b.st.keysSay'));
+}
+/** A new Music Box channel: the modeled tine instrument. */
+export function addMusicBox() {
+  const c = { ...musicBoxChannel(allocId()), color: freshColor() };
+  commit([chanOp(c)], t('b.st.addMusicBox'));
+  selectChannel(c.id);
+  say(t('b.st.musicBoxSay'));
 }
 /** A new sampler channel of a project source, at `index` in the rack (default: the end). Without a `root` it starts at
  *  the root its audio clips were given in the sample editor (FL: the audio clip channel's root note). */
@@ -563,6 +577,7 @@ export const chanKindLabel = (c: Channel) => {
   switch (c.kind) {
     case 'synth': return t('b.st.kindSynth', { name: c.synth.preset ? tName(c.synth.preset) : t('b.st.kindCustom') });
     case 'keys': return t('b.st.kindKeys');
+    case 'musicbox': return t('b.st.kindMusicBox');
     case 'plugin': return t('b.st.kindPlugin', { name: [c.plugin.name, c.plugin.vendor].filter(Boolean).join(' · ') });
     case 'sample': return t('b.st.kindSample', { name: chanSource(c) ? baseName(chanSource(c)!.path) : t('b.cw.noFile') });
   }

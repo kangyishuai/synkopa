@@ -853,14 +853,14 @@ pub fn schema() -> Value {
             "removeFx": {"fxId": 0},
             "moveFx": {"fxId": 0, "to": 0},
             "putPattern": {"pattern": {"id": 0, "name": "", "color": "#4f8ef7", "minLen": 4, "swing": 0, "notes": [{"ch": "channel id", "step": 0, "len": 1, "p": 36, "v": 1}]}},
-            "putChannel": {"channel": {"id": 0, "name": "Kick", "color": "#4f8ef7", "kind": "sample|synth|keys", "source": "source id (kind sample)", "sampler": "kind sample, optional: {start, end (0..1 of the file), reverse, norm, semi, fine, env (volume envelope on), delay, attack, hold, decay, release, fadeInMs, fadeOutMs (ms), sustain (0..1), attackTension, decayTension, releaseTension (-1..1), cut (0 = none, 1..8)}", "slices": "kind sample, optional: slice mode, increasing fractions of the file in 0..1 where each slice starts (at most 128); key root plays slice 1, root+1 slice 2, ...; a slice plays to the next at the file's pitch and cuts the one sounding; omit or [] = off", "vol": 0.7937, "pan": 0, "mute": false, "solo": false, "insert": "insert id or null (= the clip's track)", "root": 60, "group": "Channel Rack filter group, optional (absent = unsorted)"}, "index": null},
+            "putChannel": {"channel": {"id": 0, "name": "Kick", "color": "#4f8ef7", "kind": "sample|synth|keys|musicbox", "source": "source id (kind sample)", "sampler": "kind sample, optional: {start, end (0..1 of the file), reverse, norm, semi, fine, env (volume envelope on), delay, attack, hold, decay, release, fadeInMs, fadeOutMs (ms), sustain (0..1), attackTension, decayTension, releaseTension (-1..1), cut (0 = none, 1..8)}", "slices": "kind sample, optional: slice mode, increasing fractions of the file in 0..1 where each slice starts (at most 128); key root plays slice 1, root+1 slice 2, ...; a slice plays to the next at the file's pitch and cuts the one sounding; omit or [] = off", "vol": 0.7937, "pan": 0, "mute": false, "solo": false, "insert": "insert id or null (= the clip's track)", "root": 60, "group": "Channel Rack filter group, optional (absent = unsorted)"}, "index": null},
             "removeChannel": {"id": 0},
             "removePattern": {"id": 0},
             "putSource": {"source": "rename/recolour an existing source"},
             "removeSource": {"id": 0},
             "setBpm": {"bpm": 128},
             "setLoop": {"loop": {"a": 0, "b": 16}},
-            "putAutomation": {"automation": {"id": 0, "name": "Reverb mix", "color": "#e0a44a", "target": {"kind": "fx|mix|insertVol|insertPan|trackVol|chanVol|chanPan|synth|keys|clipGain|clipPan", "fxId": 0, "chanId": 0, "param": "fx: mix or band:<i>:f|g|q; synth: catalog id; keys: release|dynamics", "id": "insert/track/channel/clip id for vol/pan/gain"}, "points": [{"t": 0, "v": 0.2}, {"t": 8, "v": 0.8, "tension": -0.4}, {"t": 12, "v": 0.5, "shape": "hold"}]}},
+            "putAutomation": {"automation": {"id": 0, "name": "Reverb mix", "color": "#e0a44a", "target": {"kind": "fx|mix|insertVol|insertPan|trackVol|chanVol|chanPan|synth|keys|musicBox|clipGain|clipPan", "fxId": 0, "chanId": 0, "param": "fx: mix or band:<i>:f|g|q; synth: catalog id; keys: release|dynamics; musicBox: ring|brightness|body|mechanical|spread|release", "id": "insert/track/channel/clip id for vol/pan/gain"}, "points": [{"t": 0, "v": 0.2}, {"t": 8, "v": 0.8, "tension": -0.4}, {"t": 12, "v": 0.5, "shape": "hold"}]}},
             "removeAutomation": {"id": 0},
             "transformNotes": {"pattern": 1, "verb": {"kind": "humanize|quantize|euclidFill|strum|chop|glue|arpeggiate|euclidDrums|melody|chord|progression", "len": 1, "mode": "up|down|upDown|random", "rate": 1, "gate": 0.9, "octaves": 1, "timing": 0.3, "velocity": 0.2, "grid": 1, "amount": 1, "scaleAware": false, "ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7, "width": 0.5, "ramp": 0.05, "voices": [{"ch": 0, "k": 4, "n": 16, "rotate": 0, "vel": 0.7}], "bars": 2, "density": 0.5, "repeat": 1, "harmony": "diatonic|maj|min|7|maj7|min7", "template": "pop|pop2|minloop|trap|iivI|doowop|andalusian|blues|canon|chance", "voiceLead": true, "degrees": [0, 5, 2, 6]}, "seed": 7, "select": {"kind": "indices|range", "indices": [1, 2], "from": 0, "to": 16, "ch": 0}},
             "setKey": {"key": 2, "scale": 1},
@@ -948,6 +948,10 @@ fn channel_json(p: &wave_engine::Project, c: &wave_engine::Channel) -> Value {
         ),
         ChannelSrc::Synth { synth } => ("synth", json!({ "preset": synth.preset })),
         ChannelSrc::Keys { keys } => ("keys", json!({ "release": keys.release, "dynamics": keys.dynamics })),
+        ChannelSrc::MusicBox { music_box } => (
+            "musicbox",
+            json!({ "ring": music_box.ring, "brightness": music_box.brightness, "body": music_box.body, "mechanical": music_box.mechanical, "spread": music_box.spread, "release": music_box.release }),
+        ),
         ChannelSrc::Plugin { plugin } => (
             "plugin",
             json!({ "plugin": { "format": plugin.format, "name": plugin.name, "vendor": plugin.vendor, "path": plugin.path, "cid": plugin.cid } }),
@@ -1060,6 +1064,13 @@ pub fn channels(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value>
         added = Some(id);
         ops.push(Op::PutChannel { channel: ch, index: None });
     }
+    if arg(a, "musicbox").and_then(Value::as_bool).unwrap_or(false) {
+        // a Music Box channel: the modeled tine instrument
+        let id = p.next_id + ops.len() as u64;
+        let ch = Channel::new(id, "Music Box", "#cf8e52", ChannelSrc::MusicBox { music_box: Default::default() });
+        added = Some(id);
+        ops.push(Op::PutChannel { channel: ch, index: None });
+    }
     if let (Some(v), Some(name)) = (arg(a, "ch"), arg(a, "preset").and_then(Value::as_str)) {
         // load a factory preset into a synth channel
         let mut c = find_channel(&p, v)?.clone();
@@ -1093,6 +1104,23 @@ pub fn channels(app: &dyn Host, a: &Value, if_revision: Option<u64>) -> R<Value>
                 "dynamics" => keys.dynamics = (value as f32).clamp(0.0, 100.0),
                 _ => return Err(format!("Synkopa Keys has no parameter `{param}` (release in ms, dynamics in %)")),
             },
+            ChannelSrc::MusicBox { music_box } => {
+                let v = value as f32;
+                use wave_engine::musicbox as mb;
+                match param {
+                    "ring" => music_box.ring = v.clamp(mb::RING.0, mb::RING.1),
+                    "brightness" => music_box.brightness = v.clamp(mb::BRIGHTNESS.0, mb::BRIGHTNESS.1),
+                    "body" => music_box.body = v.clamp(mb::BODY.0, mb::BODY.1),
+                    "mechanical" => music_box.mechanical = v.clamp(mb::MECHANICAL.0, mb::MECHANICAL.1),
+                    "spread" => music_box.spread = v.clamp(mb::SPREAD.0, mb::SPREAD.1),
+                    "release" => music_box.release = v.clamp(mb::RELEASE_MS.0, mb::RELEASE_MS.1),
+                    _ => {
+                        return Err(format!(
+                            "the music box has no parameter `{param}` (ring, brightness, body, mechanical, spread in %; release in ms)"
+                        ))
+                    }
+                }
+            }
             ChannelSrc::Sample { sampler, .. } => {
                 let (v, on) = (value as f32, value != 0.0);
                 match param {

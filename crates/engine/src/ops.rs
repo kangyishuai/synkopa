@@ -503,6 +503,17 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
                     return Err(OpError::Invalid("keys dynamics must be 0..100 %".into()));
                 }
             }
+            if let ChannelSrc::MusicBox { music_box } = &c.src {
+                crate::musicbox::check(
+                    music_box.ring,
+                    music_box.brightness,
+                    music_box.body,
+                    music_box.mechanical,
+                    music_box.spread,
+                    music_box.release,
+                )
+                .map_err(OpError::Invalid)?;
+            }
             if let ChannelSrc::Plugin { plugin } = &c.src {
                 if plugin.format != PluginRef::VST3 {
                     return Err(OpError::Invalid(format!("{} instruments are not supported (VST3 only)", plugin.format_label())));

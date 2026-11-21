@@ -97,6 +97,21 @@ export const KEYS_DYNAMICS = { min: 0, max: 100, def: 100 } as const;
 /** Where the piano's recordings are: `missing` = not on this computer yet (install library kit `kit`). */
 export interface KeysStatus { state: 'idle' | 'missing' | 'loading' | 'ready' | 'error'; error: string | null; kit: string; installed: boolean }
 /**
+ * Music Box (the modeled tine instrument): `ring` 25..250 % of the natural decay of the note's
+ * fundamental, `brightness` 0..100 % = how hard the pluck excites the overtone stack, `body`
+ * 0..100 % = the wooden resonance of the box under the tines, `mechanical` 0..100 % = the tick of
+ * the pin at the start of every note, `spread` 0..100 % = the width of the comb across the stereo
+ * image, `release` ms = how long a note rings after its key is let go. Mirrors
+ * crates/engine/src/musicbox.rs.
+ */
+export interface MusicBoxState { ring: number; brightness: number; body: number; mechanical: number; spread: number; release: number }
+export const MB_RING = { min: 25, max: 250, def: 100 } as const;
+export const MB_BRIGHTNESS = { min: 0, max: 100, def: 45 } as const;
+export const MB_BODY = { min: 0, max: 100, def: 30 } as const;
+export const MB_MECHANICAL = { min: 0, max: 100, def: 25 } as const;
+export const MB_SPREAD = { min: 0, max: 100, def: 35 } as const;
+export const MB_RELEASE = { min: 40, max: 3000, def: 400 } as const;
+/**
  * How a sampler channel plays its sample (crates/engine/src/model.rs `SamplerState`).
  * `start`/`end`: the part of the file that plays, fractions 0..1. `semi` (−24..24) and `fine`
  * (cents) transpose on top of the note. For keys, auditions and legacy notes, `gate` switches
@@ -137,6 +152,7 @@ export type ChannelSrc =
   | { kind: 'sample'; source: Id; sampler: SamplerState; slices?: number[] }
   | { kind: 'synth'; synth: SynthState }
   | { kind: 'keys'; keys: KeysState }
+  | { kind: 'musicbox'; musicBox: MusicBoxState }
   | { kind: 'plugin'; plugin: PluginRef };
 /**
  * A Channel Rack row, global to the project (every pattern can have notes for it).
@@ -358,6 +374,8 @@ export type AutoTarget =
   | { kind: 'synth'; chanId: Id; param: string }
   /** A Synkopa Keys channel's release (ms, log) or dynamics (%). */
   | { kind: 'keys'; chanId: Id; param: 'release' | 'dynamics' }
+  /** A Music Box channel's knob: ring/brightness/body/mechanical/spread (%) or release (ms, log). */
+  | { kind: 'musicBox'; chanId: Id; param: 'ring' | 'brightness' | 'body' | 'mechanical' | 'spread' | 'release' }
   /** A hosted plugin parameter (`paramId` as `pluginParams` reports it: VST3 id, LV2 port index); values are normalized 0..1. */
   | { kind: 'plugin'; fxId: Id; paramId: number }
   /** An audio clip's own gain (−24..+12 dB, `CLIP_GAIN_DB`) and pan. */

@@ -205,7 +205,7 @@ pub(crate) fn sample_audio(store: &SourceStore, chans: &[Channel]) -> HashMap<Id
         .iter()
         .filter_map(|c| match c.src {
             ChannelSrc::Sample { source, .. } => store.get(source).map(|a| (source, a.clone())),
-            ChannelSrc::Synth { .. } | ChannelSrc::Keys { .. } | ChannelSrc::Plugin { .. } => None,
+            ChannelSrc::Synth { .. } | ChannelSrc::Keys { .. } | ChannelSrc::MusicBox { .. } | ChannelSrc::Plugin { .. } => None,
         })
         .collect()
 }
@@ -392,6 +392,7 @@ fn build_patterns(p: &Project, audio: &HashMap<Id, Arc<Audio>>, keys: Option<&Ar
                 ChannelSrc::Sample { source, .. } => (crate::synth::VoiceKind::Sample, audio.get(&source).cloned()),
                 ChannelSrc::Synth { .. } => (crate::synth::VoiceKind::Synth, None),
                 ChannelSrc::Keys { .. } => (crate::synth::VoiceKind::Keys, None),
+                ChannelSrc::MusicBox { .. } => (crate::synth::VoiceKind::MusicBox, None),
                 ChannelSrc::Plugin { .. } => (crate::synth::VoiceKind::Plugin, None),
             };
             let ks = match c.src {
@@ -399,6 +400,19 @@ fn build_patterns(p: &Project, audio: &HashMap<Id, Arc<Audio>>, keys: Option<&Ar
                 _ => None,
             };
             let (keys_release, keys_dynamics) = ks.map(|k| (k.release / 1000.0, k.dynamics / 100.0)).unwrap_or((0.35, 1.0));
+            let mb = match &c.src {
+                ChannelSrc::MusicBox { music_box } => crate::musicbox::Params {
+                    ring: (music_box.ring - crate::musicbox::RING.0) / (crate::musicbox::RING.1 - crate::musicbox::RING.0),
+                    brightness: (music_box.brightness - crate::musicbox::BRIGHTNESS.0)
+                        / (crate::musicbox::BRIGHTNESS.1 - crate::musicbox::BRIGHTNESS.0),
+                    body: (music_box.body - crate::musicbox::BODY.0) / (crate::musicbox::BODY.1 - crate::musicbox::BODY.0),
+                    mechanical: (music_box.mechanical - crate::musicbox::MECHANICAL.0)
+                        / (crate::musicbox::MECHANICAL.1 - crate::musicbox::MECHANICAL.0),
+                    spread: (music_box.spread - crate::musicbox::SPREAD.0) / (crate::musicbox::SPREAD.1 - crate::musicbox::SPREAD.0),
+                    release: music_box.release / 1000.0,
+                },
+                _ => crate::musicbox::Params::default(),
+            };
             let (smp, slices) = match &c.src {
                 ChannelSrc::Sample { source, sampler, slices } => (
                     SmpRt::new(sampler, p.sources.iter().find(|s| s.id == *source).map(|s| s.peak_db)),
@@ -415,6 +429,12 @@ fn build_patterns(p: &Project, audio: &HashMap<Id, Arc<Audio>>, keys: Option<&Ar
                 keys: ks.and(keys.cloned()),
                 keys_release,
                 keys_dynamics,
+                mb_ring: mb.ring,
+                mb_brightness: mb.brightness,
+                mb_body: mb.body,
+                mb_mechanical: mb.mechanical,
+                mb_spread: mb.spread,
+                mb_release: mb.release,
                 root: c.root,
                 gain,
                 pan,
@@ -698,6 +718,18 @@ fn resolve_target(p: &Project, t: &AutoTarget) -> Option<TargetRt> {
             match param.as_str() {
                 "release" => TargetRt::KeysRelease(i),
                 "dynamics" => TargetRt::KeysDynamics(i),
+                _ => return None,
+            }
+        }
+        AutoTarget::MusicBox { chan_id, param } => {
+            let i = p.channels.iter().position(|c| c.id == *chan_id && matches!(c.src, ChannelSrc::MusicBox { .. }))?;
+            match param.as_str() {
+                "ring" => TargetRt::MbRing(i),
+                "brightness" => TargetRt::MbBrightness(i),
+                "body" => TargetRt::MbBody(i),
+                "mechanical" => TargetRt::MbMechanical(i),
+                "spread" => TargetRt::MbSpread(i),
+                "release" => TargetRt::MbRelease(i),
                 _ => return None,
             }
         }

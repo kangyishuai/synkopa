@@ -39,6 +39,8 @@ pub enum VoiceKind {
     Keys,
     /// A synth channel: its notes go to the channel's `poly::SynthInst`, not this pool.
     Synth,
+    /// A Music Box channel: a modeled comb tine (see `crate::musicbox`).
+    MusicBox,
     /// A plugin-instrument channel: its notes go to the channel's `plug::PlugInst`.
     Plugin,
     Click {
@@ -91,6 +93,8 @@ pub struct Voice {
     key: u8,
     /// Piano: which recording of the bank plays, and the release envelope's level.
     zone: u16,
+    /// Music Box: the sounding note's tine model.
+    pub mb: crate::musicbox::Tine,
     /// Release (and cut) level: 1 until the note ends, then it falls.
     env: f32,
     /// Sampler: the channel's cut group when the note started (0 = none), and the voice's
@@ -163,6 +167,7 @@ impl Voice {
             sus: false,
             key: 0,
             zone: 0,
+            mb: crate::musicbox::Tine::default(),
             env: 1.0,
             cut: 0,
             cut_at: u32::MAX,
@@ -322,7 +327,7 @@ impl VoicePool {
         let sounding = |v: &Voice| {
             v.alive
                 && v.chan_id == chan_id
-                && matches!(v.kind, VoiceKind::Sample | VoiceKind::Keys)
+                && matches!(v.kind, VoiceKind::Sample | VoiceKind::Keys | VoiceKind::MusicBox)
                 && v.slice == NO_SLICE
                 && v.delay <= delay
                 && v.cut_at == u32::MAX
@@ -423,6 +428,37 @@ impl VoicePool {
                 self.voices[i].pan = pan;
                 Some(i)
             }
+            VoiceKind::MusicBox => {
+                let p = crate::musicbox::Params {
+                    ring: ch.mb_ring,
+                    brightness: ch.mb_brightness,
+                    body: ch.mb_body,
+                    mechanical: ch.mb_mechanical,
+                    spread: ch.mb_spread,
+                    release: ch.mb_release,
+                };
+                // the same key struck again: the pin catches the tine and damps it — at the new
+                // note's start, not here (the new voice begins after its delay)
+                for v in self.voices.iter_mut().filter(|v| v.alive && v.kind == VoiceKind::MusicBox && v.chan_id == ch.id && v.key == key) {
+                    v.held = false;
+                    v.sus = false;
+                    v.len = v.len.min(v.t.saturating_add(delay.saturating_sub(v.delay)));
+                }
+                // velocity is the gain: a zero-velocity note is silent, and above that it shapes
+                // the timbre (a harder pluck excites the overtones) on top of the level
+                if vel <= 0.0 {
+                    return None;
+                }
+                let level = vel.clamp(0.0, 1.0).powf(1.5) * gain * crate::musicbox::HEADROOM;
+                let tine = crate::musicbox::Tine::new(key, vel, &p, self.sr);
+                let i = self.trigger(VoiceKind::MusicBox, dest, idx, ch.id, delay, end, level, 1.0);
+                let v = &mut self.voices[i];
+                v.mb = tine;
+                v.key = key;
+                // the pattern's own pan plus the comb's spread across the image
+                v.pan = (pan + tine.pan).clamp(-1.0, 1.0);
+                Some(i)
+            }
             VoiceKind::Synth | VoiceKind::Plugin | VoiceKind::Click { .. } => None,
         }
     }
@@ -468,9 +504,17 @@ impl VoicePool {
             let start = (v.delay as usize).min(n);
             v.delay = v.delay.saturating_sub(n as u32);
             // channel gain × velocity, split by the channel's pan
-            let (g, pan, g0, pan0, sample, piano) = match chans.get(v.chan) {
+            let (g, pan, g0, pan0, sample, piano, mb) = match chans.get(v.chan) {
                 Some(c) => {
                     let on = if c.on { v.vel } else { 0.0 } * if v.kind == VoiceKind::Sample { c.smp.gain } else { 1.0 };
+                    let mb = matches!(c.kind, VoiceKind::MusicBox).then(|| crate::musicbox::Params {
+                        ring: c.mb_ring,
+                        brightness: c.mb_brightness,
+                        body: c.mb_body,
+                        mechanical: c.mb_mechanical,
+                        spread: c.mb_spread,
+                        release: c.mb_release,
+                    });
                     (
                         c.gain * on,
                         c.pan,
@@ -478,9 +522,10 @@ impl VoicePool {
                         c.pan0,
                         c.sample.as_deref().map(|a| (a, c.smp, c.slices.as_deref())),
                         c.keys.as_deref().map(|b| (b, c.keys_release)),
+                        mb,
                     )
                 }
-                None if v.chan == NO_CHAN => (v.vel, 0.0, v.vel, 0.0, None, None),
+                None if v.chan == NO_CHAN => (v.vel, 0.0, v.vel, 0.0, None, None, None),
                 None => {
                     v.alive = false;
                     continue;
@@ -550,6 +595,35 @@ impl VoicePool {
                         out_r[i] += y * gr * fade;
                     }
                     v.pos += v.rate * bend as f64 * v.slide_tick();
+                    v.t += 1;
+                }
+                continue;
+            }
+            if v.kind == VoiceKind::MusicBox {
+                let mb = mb.unwrap_or_default();
+                // −60 dB after `release` seconds
+                let coef = 10f32.powf(-3.0 / (mb.release.max(0.005) * sr));
+                for i in start..n {
+                    // decayed into inaudibility on its own
+                    if v.mb.spent() {
+                        v.alive = false;
+                        break;
+                    }
+                    if v.t >= v.len {
+                        v.env *= coef;
+                        if v.env < 1e-4 {
+                            v.alive = false;
+                            break;
+                        }
+                    }
+                    let slide = v.slide_tick() as f32;
+                    let y = v.mb.sample(bend * slide, sr);
+                    let fade = (v.t as f32 / (0.001 * sr)).min(1.0) * v.env;
+                    let (gl, gr) = side(i);
+                    out_l[i] += y * gl * fade;
+                    if stereo {
+                        out_r[i] += y * gr * fade;
+                    }
                     v.t += 1;
                 }
                 continue;
