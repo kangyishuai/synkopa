@@ -315,7 +315,14 @@ export function setShiftAt(notes: readonly Note[], ch: Id, s: number, shift: num
   const d = Math.round(Math.min(MAX_SHIFT, Math.max(0, shift)) * 100) / 100;
   // an old step without the trigger flag becomes an explicit trigger: off the grid, a plain note
   // would turn the row into a Piano roll row (`isRollRow`)
-  return notes.map(n => (n.ch === ch && n.step >= s - EPS && n.step < s + 1 - EPS ? { ...n, step: s + d, ...(d > 0 && n.trig == null ? { trig: true } : {}) } : n));
+  // the note keeps its end (a step's end is its cell's end), so shifting the last step does not
+  // make the pattern a bar longer; a note that ended earlier stays inside its cell
+  return notes.map(n => {
+    if (n.ch !== ch || n.step < s - EPS || n.step >= s + 1 - EPS) return n;
+    const start = s + d, end = n.step + n.len;
+    const len = Math.round(Math.max(end - start, Math.min(n.len, s + 1 - start)) * 1000) / 1000;
+    return { ...n, step: start, len, ...(d > 0 && n.trig == null ? { trig: true } : {}) };
+  });
 }
 
 // ---------------------------------------------------------------- piano roll

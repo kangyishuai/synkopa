@@ -81,6 +81,17 @@ describe('step sequencer', () => {
     expect(setShiftAt(shifted, KICK, 2, 0)[0].step).toBe(2);
     expect(setShiftAt(shifted, KICK, 3, 0.5)[1].step).toBe(3.5);
   });
+  it('a shifted step keeps its end, so shifting the last step does not lengthen the pattern', () => {
+    const last: Note[] = [{ ch: KICK, step: 15, len: 1, trig: true }];
+    const shifted = setShiftAt(last, KICK, 15, 0.5);
+    expect(shifted[0]).toMatchObject({ step: 15.5, len: 0.5 });
+    expect(contentLen(shifted)).toBe(4);
+    // and back to the grid: the full step again
+    expect(setShiftAt(shifted, KICK, 15, 0)[0]).toMatchObject({ step: 15, len: 1 });
+    // a note shorter than its cell stays inside it
+    const short = setShiftAt([{ ch: KICK, step: 15, len: 0.25, trig: true }], KICK, 15, MAX_SHIFT)[0];
+    expect(short.step + short.len).toBeLessThanOrEqual(16 + 1e-9);
+  });
   it('keeps a step row with triplet triggers written in the Piano roll as steps', () => {
     const trip = [12, 12 + 2 / 3, 12 + 4 / 3].map(step => ({ ch: BASS, step, len: 2 / 3, trig: true }));
     const row = [{ ch: BASS, step: 0, len: 1, trig: true }, ...trip];

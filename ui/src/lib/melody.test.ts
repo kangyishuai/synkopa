@@ -31,6 +31,12 @@ describe('melody reference (melody.rs mirror)', () => {
     p.clips.find(c => c.id === 7200)!.muted = true;
     expect(collectMelody(p, vocal, 7001)).toEqual([]);
   });
+  it('a slide note is not a note of the melody: it makes no sound of its own', () => {
+    const { p, vocal } = song();
+    const before = collectMelody(p, vocal, 7001);
+    p.patterns.find(x => x.id === 7100)!.notes.push({ ch: 7001, step: 4, len: 2, p: 72, slide: true });
+    expect(collectMelody(p, vocal, 7001)).toEqual(before);
+  });
   it('a piano roll selection becomes the source seconds it covers on that vocal', () => {
     const { p, vocal } = song();
     p.clips.push(vocal);

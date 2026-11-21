@@ -177,3 +177,11 @@ fn a_synth_slides_its_sounding_note() {
     let (l, _) = lab::run(&mut s, 0.3, sr);
     assert_eq!(peak(&l), 0.0);
 }
+
+#[test]
+fn two_slides_in_one_block_end_on_the_later_ones_key_whatever_their_order_in_the_pattern() {
+    // C4, then a slide up to C5 and, 120 samples later (the same audio block), one back to C4,
+    // stored later-first: the later slide must win
+    let out = render(&engine("pair", &[(0.0, 16.0, 60, false), (2.02, 0.5, 60, true), (2.0, 0.02, 72, true)], &[]), 2.0);
+    assert!(near(hz(&out, 0.45, 0.6), 440.0), "{}", hz(&out, 0.45, 0.6));
+}

@@ -7,6 +7,17 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Music Box, a new built-in instrument.** A cylinder music box modeled from how its steel comb
+  rings, so it needs no samples and nothing to install: bass tines ring longest, a harder hit
+  sounds brighter, not just louder. Knobs for Ring, Brightness, Body (the wooden box), Mechanical
+  (the pin's tick), Spread and Release, all automatable. Pick it from the instrument list, or
+  `synkopa channels --musicbox` from the command line.
+- **Record knob moves as automation.** Right-click the record button and leave Automation ticked:
+  with the song playing, turn a knob or move a fader and the move is written into that control's
+  automation clip (made for you if it has none), one undo step per move. It stops writing when you
+  let go; turn on Latch to keep the last value until the song stops. Moving an automated control
+  by hand while it plays now takes over from its envelope (the knob shows a grey mark) instead of
+  fighting it; right-click → Re-enable automation, or stop, hands it back.
 - **Channel groups in the Channel Rack, as FL's filter groups.** Right-click a channel → Group to
   put it in Drums, Bass or a new group; the filter at the rack's top shows every channel, one group or
   the unsorted ones (hidden channels keep playing). Channels added while a group is shown join it, and
@@ -43,6 +54,34 @@ shown in the app after an update and is published as the release notes (see
 - **One click plays a sample in every Browser tab.** In the AUDIO tab a press now plays the file
   from the top, like the library and FL Studio's browser (it used to take a double-click). Esc
   stops a preview wherever the keyboard is.
+- **A calmer dark theme.** In the default Grafit theme the grid, the panels and raised items
+  (hover, selection, dialogs) are clearly apart, small labels and dB readouts are easier to read,
+  and the top bar is quieter. A track's colour is on its left stripe only.
+- **Faster editing.** Dragging notes and clips, zooming, opening and closing windows and loading a
+  project all take less time, and the app uses less memory with a large project.
+- **A broken panel no longer freezes the app.** If a panel, window, dialog or menu hits an error,
+  only that one shows a short message with "Try again"; the rest keeps working and Ctrl+S still
+  saves.
+- **The mixer box in the sample editor and channel windows works like the Channel Rack's.** A
+  click opens the insert list, a double-click gives the sound its own insert named after it, and
+  the wheel steps through inserts.
+- **The graph editor's Velocity / Key / Pan / Shift switch looks like the Piano roll's**, and
+  the Piano roll's Pan button lights purple like its pan handles.
+
+### Fixed
+- **A note's length is easier to change in the Piano roll.** The resize handle reaches 10 px into
+  the note and a few pixels past its end, so it is much harder to miss.
+- **Menu bar:** with a menu open, one click on another title opens it (it took two), and moving
+  the mouse across the titles switches menus again. A click outside a menu only closes it, so it
+  no longer also presses the button under the mouse.
+- **Extract stems works after a tune or a retry.** It failed with "only one environment is
+  allowed per process" when another analysis had run first. Its dialog is also tidier: one tile
+  per stem in its track's colour, and errors in a red box.
+- Clicking a pattern clip always makes its pattern the current one.
+- A plugin's parameter slider no longer lets go of the mouse in the middle of a drag.
+- The Reference list in the pitch editor and the audio input list in Settings always show the
+  real choice.
+- Text typed in the note properties box is kept when the language is switched.
 
 ## 0.9.30 — 2026-11-19
 
