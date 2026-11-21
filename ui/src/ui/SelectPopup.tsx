@@ -2,9 +2,12 @@
 // Windows list box that ignores the theme (and WebKitGTK's is worse). The <select> itself stays —
 // its value, change event, focus, disabled state and arrow-key stepping are unchanged — only its
 // popup is replaced, so every select (and every new one) gets it without a wrapper component.
-import { createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, onCleanup, onMount } from '../lib/reactive';
 import { CHECK_GLYPH } from './menuIcons';
 import { step, typeAhead, type Opt, type Row } from '../lib/selectList';
+import { PopupBoundary } from './PanelBoundary';
+import { t } from '../lib/i18n';
 
 interface Open { el: HTMLSelectElement; rows: Row[]; x: number; y: number; w: number; maxH: number; up: boolean }
 
@@ -14,8 +17,9 @@ let listEl: HTMLDivElement | undefined;
 /** Highlight a row and keep it in view (keyboard moves past the list's edge). */
 function setHot(i: number) {
   setHotSig(i);
-  queueMicrotask(() => listEl?.querySelector('.mi.hot')?.scrollIntoView({ block: 'nearest' }));
+  scrollHot();
 }
+const scrollHot = () => queueMicrotask(() => listEl?.querySelector('.mi.hot')?.scrollIntoView({ block: 'nearest' }));
 
 /** The select's options as rows, optgroup labels included (read live: options are reactive JSX). */
 export function selectRows(el: HTMLSelectElement): Row[] {
@@ -128,9 +132,10 @@ export function SelectPopup() {
   });
   return (
     <Show when={open()}>{o => {
-      setHot(hot());
+      scrollHot();
+      // a list that fails to build says so in its place
       return (
-        <>
+        <PopupBoundary name={t('d.ui.pn.list')} x={o().x} y={o().y} close={close} class="selpop">
           <div class="backdrop selpop-veil" onPointerDown={e => { e.preventDefault(); closeSelectPopup(); }} onContextMenu={e => e.preventDefault()} />
           <div ref={el => { listEl = el; }} class="menu selpop" role="listbox" style={{
             left: Math.max(4, Math.min(o().x, window.innerWidth - Math.max(o().w, 120) - 4)) + 'px',
@@ -140,8 +145,8 @@ export function SelectPopup() {
             <For each={o().rows}>{(r, i) => r.kind === 'grp'
               ? <div class="msec">{r.label}</div>
               : (
-                <button class="mi" role="option" tabIndex={-1} aria-selected={r.value === o().el.value} aria-disabled={r.disabled}
-                  classList={{ hot: hot() === i(), dis: r.disabled, cur: r.value === o().el.value }}
+                <button role="option" tabindex={-1} aria-selected={r.value === o().el.value ? 'true' : 'false'} aria-disabled={r.disabled ? 'true' : 'false'}
+                  class={['mi', { hot: hot() === i(), dis: r.disabled, cur: r.value === o().el.value }]}
                   onPointerMove={() => { if (!r.disabled && hot() !== i()) setHotSig(i()); }}
                   onClick={() => pick(i())}>
                   <span class="row" style={{ gap: '8px' }}>
@@ -151,7 +156,7 @@ export function SelectPopup() {
                 </button>
               )}</For>
           </div>
-        </>
+        </PopupBoundary>
       );
     }}</Show>
   );

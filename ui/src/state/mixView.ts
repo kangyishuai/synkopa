@@ -2,7 +2,7 @@
 // panels, the docked mixer and the floating Channel Rack / Piano roll are hidden (kept mounted,
 // so their scroll and zoom survive), effect windows still float above. Leaving it gives back the
 // arrange layout as it was on the way in (`takeArrange` / `restoreArrange`).
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import type { Id } from '../api/types';
 import { t } from '../lib/i18n';
 import { restoreArrange, takeArrange, type Arrange } from '../lib/mixer';

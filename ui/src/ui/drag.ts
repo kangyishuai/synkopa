@@ -1,4 +1,5 @@
 // Pointer drag helper: window-level move/up listeners plus a forced cursor while dragging.
+import { clamp } from '../lib/format';
 import { edgeSpeed } from '../lib/viewNav';
 
 /**
@@ -24,6 +25,14 @@ export function track(move: (e: PointerEvent) => void, up?: ((e: PointerEvent) =
   window.addEventListener('pointermove', move);
   window.addEventListener('pointerup', u);
   window.addEventListener('pointercancel', u);
+}
+
+/** Move a fixed window by its header. */
+export function moveWindow(e: PointerEvent, get: () => { x: number; y: number; w: number }, set: (x: number, y: number) => void) {
+  if (e.button !== 0 || (e.target as HTMLElement).closest('button,select,input,.miniknob')) return;
+  e.preventDefault();
+  const sx = e.clientX, sy = e.clientY, o = { ...get() };
+  track(ev => set(clamp(o.x + ev.clientX - sx, 80 - o.w, window.innerWidth - 80), clamp(o.y + ev.clientY - sy, 0, window.innerHeight - 40)), null, 'grabbing');
 }
 
 /** How far (px) the pointer may travel between or during the two presses of a double click. */

@@ -1,6 +1,6 @@
 // User preferences kept on this computer (localStorage), applied live. The theme lives in
 // ui/theme.ts; audio and MIDI devices are saved by the engine.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { setLang, type Lang } from '../lib/i18n';
 import { be } from '../api/backend';
 import * as A from './actions';

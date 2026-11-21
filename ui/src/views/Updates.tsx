@@ -1,10 +1,12 @@
 // Update dialog, "What's new" dialog, the toolbar button and the Settings → Updates rows.
-import { createMemo, createSignal, For, Match, onCleanup, Show, Switch } from 'solid-js';
+import { createMemo, For, Match, Show, Switch } from 'solid-js';
+import { createSignal, onCleanup } from '../lib/reactive';
 import { lang, t } from '../lib/i18n';
 import { parseNotes, type Block, type Inline } from '../lib/changelog';
 import type { Release } from '../lib/changelog';
 import { projectNew } from '../state/actions';
 import { checkUpdates, closeUpdateDialog, closeWelcome, closeWhatsNew, installUpdate, openReleasePage, openUpdateDialog, setAutoUpdate, showWhatsNew, startUpdate, upd } from '../state/updates';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const mb = (n: number) => (n / 1e6).toFixed(n >= 1e8 ? 0 : 1);
 
@@ -65,7 +67,7 @@ export function UpdateChip() {
   const tip = () => s().phase === 'ready' ? t('d.upd.chip.ready.tip', { v: s().info?.version ?? '' }) : t('d.upd.chip.tip');
   return (
     <Show when={s().phase !== 'idle' && s().phase !== 'checking' && !(s().phase === 'downloading' && s().quiet)}>
-      <button class="updchip" classList={{ ready: s().phase === 'ready', busy: s().phase === 'downloading' || s().phase === 'installing' }} title={tip()}
+      <button class={['updchip', { ready: s().phase === 'ready', busy: s().phase === 'downloading' || s().phase === 'installing' }]} title={tip()}
         disabled={s().phase === 'installing'} style={{ '--p': (pct() ?? 0) + '%' }} onClick={() => void click()}>{label()}</button>
     </Show>
   );
@@ -84,6 +86,7 @@ function UpdateDialog() {
   const open = () => s().dialog && (s().phase === 'available' || s().phase === 'downloading' || s().phase === 'ready' || s().phase === 'installing');
   return (
     <Show when={open()}>
+      <DialogBoundary name={t('d.ui.pn.update')} close={() => closeUpdateDialog()} z={250}>
       <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={() => closeUpdateDialog()}>
         <div class="dialog upddlg" role="dialog" aria-modal="true" aria-label={t('d.upd.title.available')} onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') closeUpdateDialog(); }}>
@@ -120,6 +123,7 @@ function UpdateDialog() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }
@@ -129,7 +133,7 @@ function UpdateDialog() {
  * several get a larger window with a list of versions to jump between (the one in view is marked).
  */
 function WhatsNewDialog() {
-  return <Show when={upd().news}>{news => <WhatsNew news={news()} from={upd().newsFrom} />}</Show>;
+  return <Show when={upd().news}>{news => <DialogBoundary name={t('d.news.title')} close={() => void closeWhatsNew()} z={250}><WhatsNew news={news()} from={upd().newsFrom} /></DialogBoundary>}</Show>;
 }
 
 function WhatsNew(p: { news: Release[]; from: string | null }) {
@@ -155,7 +159,7 @@ function WhatsNew(p: { news: Release[]; from: string | null }) {
     : [t('d.news.ver', { v: p.news[0].version }), fmtDate(p.news[0].date)].filter(Boolean).join(' · ');
   return (
     <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={() => void closeWhatsNew()}>
-      <div class="dialog newsdlg" classList={{ multi: multi() }} role="dialog" aria-modal="true" aria-label={t('d.news.title')} onPointerDown={e => e.stopPropagation()}
+      <div class={['dialog newsdlg', { multi: multi() }]} role="dialog" aria-modal="true" aria-label={t('d.news.title')} onPointerDown={e => e.stopPropagation()}
         onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') void closeWhatsNew(); }}>
         <header class="newshd">
           <div>
@@ -168,7 +172,7 @@ function WhatsNew(p: { news: Release[]; from: string | null }) {
           <Show when={multi()}>
             <nav class="newsrail" aria-label={t('d.news.versions')}>
               <For each={p.news}>{(r, i) => (
-                <button classList={{ on: active() === r.version }} aria-current={active() === r.version ? 'true' : undefined} onClick={() => jump(r.version)}>
+                <button class={{ on: active() === r.version }} aria-current={active() === r.version ? 'true' : undefined} onClick={() => jump(r.version)}>
                   <b>{r.version}</b>
                   <span>{i() === 0 ? t('d.news.latest') : fmtDate(r.date)}</span>
                 </button>
@@ -236,6 +240,7 @@ function WelcomeDialog() {
   const openDemo = () => { closeWelcome(); void projectNew(true); };
   return (
     <Show when={upd().welcome}>
+      <DialogBoundary name={t('d.welcome.title')} close={() => closeWelcome()} z={250}>
       <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={() => closeWelcome()}>
         <div class="dialog upddlg" role="dialog" aria-modal="true" aria-label={t('d.welcome.title')} onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') closeWelcome(); }}>
@@ -249,6 +254,7 @@ function WelcomeDialog() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

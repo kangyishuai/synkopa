@@ -1,7 +1,8 @@
 // Pattern commands: the current pattern (FL's pattern selector), the Channel Rack and Piano roll
 // windows, pattern and channel edits, auditions and the pattern loop preview.
 // Every edit is an op (putPattern / putChannel / removeChannel) and one undo step.
-import { createEffect, createRoot, createSignal, on } from 'solid-js';
+import { createRoot } from 'solid-js';
+import { createSignal, watch } from '../lib/reactive';
 import { inFilter, liveFilter, type RackFilter } from '../lib/rackGroups';
 import { topFloating } from './winOrder';
 import { t, tName } from '../lib/i18n';
@@ -17,8 +18,7 @@ import { dockKeyAction } from '../lib/layout';
 import { commit, enqueue } from './edit';
 import { newTrack } from '../lib/clipOps';
 import { planMoveNotes } from '../lib/moveNotes';
-import { unwrap } from 'solid-js/store';
-import { allocId, plain, plainNotes, S } from './store';
+import { allocId, plain, plainNotes, rawOf, S } from './store';
 import { curBeat, tele } from './telemetry';
 import { loopSpan, type BeatRange } from '../lib/patLoop';
 import { docked, say, setU, tucked, U } from './ui';
@@ -62,9 +62,10 @@ export function setCurPattern(id: Id, quiet = false) {
 }
 createRoot(() => {
   // a pattern picked in the playlist or the browser (the paint brush) becomes the current one
-  createEffect(on(() => U.cur, cur => { if (cur?.kind === 'pat' && cur.ref !== U.pat && patById(cur.ref)) setU('pat', cur.ref); }));
+  // (its fields, not its identity: a store write merges into the same object)
+  watch(() => (U.cur?.kind === 'pat' ? U.cur.ref : null), ref => { if (ref != null && ref !== U.pat && patById(ref)) setU('pat', ref); });
   // PAT mode keeps looping the current pattern when it changes (FL)
-  createEffect(on(() => curPat()?.id, id => { if (id != null && U.patPlaying && previewId !== id) void togglePreview(id); }, { defer: true }));
+  watch(() => curPat()?.id, id => { if (id != null && U.patPlaying && previewId !== id) void togglePreview(id); }, { defer: true });
 });
 /**
  * After the user switched patterns: a pattern that changed with no pattern window open would be
@@ -288,7 +289,7 @@ export function routeSelectedChannels(insId: Id, spread: boolean) {
 
 /** The pattern with other notes. Copies only the new notes (once per frame of a drag: the old ones are dropped anyway). */
 export const putNotes = (pt: Pattern, notes: Note[]): Op => {
-  const { notes: _old, ...rest } = unwrap(pt);
+  const { notes: _old, ...rest } = rawOf(pt);
   return { op: 'putPattern', pattern: { ...plain(rest), notes: plainNotes(notes) } };
 };
 export const patOp = (pt: Pattern, patch: Partial<Pattern>): Op => ({ op: 'putPattern', pattern: { ...plain(pt), ...plain(patch) } });
@@ -359,7 +360,7 @@ export function splitByChannel(pt = curPat()) {
  * The playlist keeps sounding the same: every clip of `pt` gets a clip of the new one beside it.
  */
 export function moveNotesToNewPattern(pt: Pattern, idx: readonly number[]) {
-  const P = unwrap(S.project), src = unwrap(pt);
+  const P = rawOf(S.project), src = rawOf(pt);
   const chs = new Set(idx.map(i => src.notes[i]?.ch));
   const ch = chs.size === 1 ? channels().find(c => chs.has(c.id)) : undefined;
   const name = freshName(src.name + ' – ' + (ch?.name ?? t('b.st.movePart')));
@@ -668,11 +669,11 @@ export const playStep = (pt: Pattern) => { const b = patPlayhead(pt); return b <
 // The Channel Rack grows with its channels (a new channel and the "+ Channel" row used to land
 // below the window's edge), and both pattern windows stay reachable when the app window shrinks.
 createRoot(() => {
-  createEffect(on(() => channels().length, (n, prev) => {
+  watch(() => channels().length, (n, prev) => {
     const w = U.rackWin; if (!w || docked('rack') || prev == null || n <= prev) return;
     const need = RACK_HEAD + (n + 1) * RACK_ROW + 12 + 2 * RACK_PAD_Y;
     if (need > w.h) setU('rackWin', 'h', Math.min(need, Math.max(220, window.innerHeight - w.y - 20)));
-  }));
+  });
   window.addEventListener('resize', keepOnScreen);
 });
 /** Keep the floating pattern windows reachable (the app window shrank, or a docked panel floats again at an old place). */

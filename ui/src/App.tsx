@@ -3,7 +3,8 @@ import { AskDialog, toggleAsk } from './views/Ask';
 import { t as tl } from './lib/i18n';
 import { closeNotebook, NB } from './state/notebook';
 import { ConfirmDialog } from './ui/Confirm';
-import { createEffect, For, onCleanup, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { effect, onCleanup, onMount } from './lib/reactive';
 import { be } from './api/backend';
 import { baseName } from './lib/format';
 import { typingIn } from './lib/keys';
@@ -17,7 +18,8 @@ import { ContextMenu } from './ui/Menu';
 import { osDragEnd, osDragOver, osDrop } from './views/Browser';
 import { FxWindow } from './views/FxWindow';
 import { MixerWindow, MixView } from './views/Mixer';
-import { hideMixer, leaveMixView, toggleMixer } from './state/mixView';
+import { hideMixer, leaveMixView, mixFront, toggleMixer } from './state/mixView';
+import { WindowBoundary } from './ui/PanelBoundary';
 import { chanById, routeSelectedChannels } from './state/pattern';
 import { reportPin } from './state/pluginWindows';
 import { playlistZoom } from './views/Playlist';
@@ -257,7 +259,7 @@ export function App() {
   // Clips selected by something other than a press in the Playlist (Automate from a mixer fader, a
   // dropped file, a finished take) are what the user now looks at: the clip keys go back to them
   let selSeen = U.sel.join(',');
-  createEffect(() => {
+  effect(() => {
     const s = U.sel.join(',');
     if (s !== selSeen && s) clipKeysAway = null;
     selSeen = s;
@@ -274,9 +276,11 @@ export function App() {
     const offPin = be().on('plugin-pin', ({ id, pinned }) => reportPin(id, pinned));
     onCleanup(() => void offPin.then(off => off()));
     // the window's X / Alt+F4 asks the save prompts first; only the guard's OK destroys it
-    void be().win?.onCloseRequested(async destroy => {
+    const offClose = be().win?.onCloseRequested(async destroy => {
       if (await A.closeWindowGuarded()) await destroy();
-    }).catch(() => {});
+    }).catch(() => null);
+    // a rebuilt App (the root boundary's Try again) must not leave a second guard asking twice
+    onCleanup(() => void offClose?.then(off => off?.()));
     window.addEventListener('keydown', onKey);
     window.addEventListener('pointerdown', reclaimFocus, true);
     window.addEventListener('keyup', onKeyUp);
@@ -297,14 +301,14 @@ export function App() {
 
   // effects whose windows are open → analysis in the engine (≤ 8)
   let lastWatch = '';
-  createEffect(() => {
+  effect(() => {
     // the 8 front-most windows (engine limit), in a stable order so focusing does not re-send
     const ids = U.plugs.filter(p => !tucked(p.z)).sort((a, b) => b.z - a.z).map(p => p.fxId).filter(id => { const f = findFx(id)?.f; return f && f.type !== 'plugin'; }).slice(0, 8).sort((a, b) => a - b);
     const key = ids.join(',');
     if (key !== lastWatch) { lastWatch = key; be().watchFx(ids).catch(e => console.warn(e)); }
   });
   // close windows of effects that disappeared (undo, CLI, …)
-  createEffect(() => {
+  effect(() => {
     const gone = U.plugs.filter(p => !findFx(p.fxId));
     if (gone.length) setU('plugs', U.plugs.filter(p => findFx(p.fxId)));
     const ed = U.editor;
@@ -316,7 +320,7 @@ export function App() {
     if (U.musicWin?.fxId != null && !findFx(U.musicWin!.fxId)) setU('musicWin', null);
     if (STEMS.win != null && !S.project.clips.some(c => c.id === STEMS.win)) closeStems();
   });
-  createEffect(() => { be().setTitle((S.path ? baseName(S.path) : tl('a.tb.untitled')) + (S.dirty ? ' •' : '') + ' — Synkopa'); });
+  effect(() => { be().setTitle((S.path ? baseName(S.path) : tl('a.tb.untitled')) + (S.dirty ? ' •' : '') + ' — Synkopa'); });
 
   return (
     <>
@@ -324,20 +328,37 @@ export function App() {
       <Toolbar />
       <div class="stage">
         <Workspace />
-        <Show when={U.mixView}><MixView /></Show>
+        <Show when={U.mixView}>
+          <WindowBoundary name={tl('c.mv.mixer')} class="mixview" close={leaveMixView}><MixView /></WindowBoundary>
+        </Show>
       </div>
       {/* the editors float outside the window layer (own z order, see outerZ); F5 tucks them away too */}
       {/* each window steps behind the workspace on its own (`tucked`): it stays mounted, only not drawn */}
       <div class="outerwins">
-        <div class="tuck" classList={{ hidden: tucked(U.editor?.z) }}><SampleEditor /></div>
-        <div class="tuck" classList={{ hidden: tucked(win()?.z) }}><ChannelWindow /></div>
-        <div class="tuck" classList={{ hidden: tucked(U.pitchEd?.z) }}><PitchEditor /></div>
+        <div class={['tuck', { hidden: tucked(U.editor?.z) }]}><SampleEditor /></div>
+        <div class={['tuck', { hidden: tucked(win()?.z) }]}><ChannelWindow /></div>
+        <div class={['tuck', { hidden: tucked(U.pitchEd?.z) }]}><PitchEditor /></div>
       </div>
-      <div class="winlayer" classList={{ mv: U.mixView }}>
-        <For each={U.plugs}>{pw => <div class="tuck" classList={{ hidden: tucked(pw.z) }}><FxWindow pw={pw} z={plugRank(pw.z)} /></div>}</For>
-        <Show when={!docked('rack')}><div class="tuck" classList={{ hidden: tucked(U.rackWin?.z) }}><ChannelRack z={U.rackWin ? plugRank(U.rackWin.z) : 1} /></div></Show>
-        <Show when={!docked('roll')}><div class="tuck" classList={{ hidden: tucked(U.rollWin?.z) }}><PianoRoll z={U.rollWin ? plugRank(U.rollWin.z) : 1} /></div></Show>
-        <Show when={mixFloating()}><div class="tuck" classList={{ hidden: tucked(U.mixWin.z) }}><MixerWindow z={plugRank(U.mixWin.z)} /></div></Show>
+      <div class={['winlayer', { mv: U.mixView }]}>
+        {/* a failure of a window itself (its title bar, its body) keeps a frame that moves and closes */}
+        <For each={U.plugs}>{pw => (
+          <div class={['tuck', { hidden: tucked(pw.z) }]}>
+            <WindowBoundary name={tl('d.ui.pn.fx')} class="fxwin" geom={() => pw} z={plugRank(pw.z)} front={() => A.plugFront(pw.fxId)} close={() => A.closePlug(pw.fxId)}
+              closeTip={tl('c.fx.close')} move={(x, y) => A.movePlug(pw.fxId, x, y)}>
+              <FxWindow pw={pw} z={plugRank(pw.z)} />
+            </WindowBoundary>
+          </div>
+        )}</For>
+        <Show when={!docked('rack')}><div class={['tuck', { hidden: tucked(U.rackWin?.z) }]}><ChannelRack z={U.rackWin ? plugRank(U.rackWin.z) : 1} /></div></Show>
+        <Show when={!docked('roll')}><div class={['tuck', { hidden: tucked(U.rollWin?.z) }]}><PianoRoll z={U.rollWin ? plugRank(U.rollWin.z) : 1} /></div></Show>
+        <Show when={mixFloating()}>
+          <div class={['tuck', { hidden: tucked(U.mixWin.z) }]}>
+            <WindowBoundary name={tl('c.mv.mixer')} class="patwin mixwin" geom={() => U.mixWin} z={plugRank(U.mixWin.z)} front={mixFront} close={hideMixer} closeTip={tl('c.mv.hideTip')}
+              move={(x, y) => setU('mixWin', w => ({ ...w, x, y }))}>
+              <MixerWindow z={plugRank(U.mixWin.z)} />
+            </WindowBoundary>
+          </div>
+        </Show>
       </div>
       <DockGuides />
       <NotebookHost />

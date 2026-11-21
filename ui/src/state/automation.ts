@@ -4,15 +4,15 @@ import { t as tl } from '../lib/i18n';
 // Also capture (issue #201): while the transport records automation, control tweaks during
 // playback write envelope points instead of static values, and a tweak on an automated
 // control overrides its envelope until re-enabled (or the transport stops).
-import { createMemo, createRoot, createSignal } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { createMemo, createRoot } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import type { AutoPoint, AutoTarget, Automation, Id, Op } from '../api/types';
 import { automationSpans, autoValueText, createAutomationOps, denormalize, normalize, parseAutoValue, readTarget, spansValue, targetKey, targetLabel, trackForAutomation, writeTargetOps } from '../lib/automation';
 import { fmtPos } from '../lib/format';
 import { addFrameTask } from '../ui/frameLoop';
 import { commit, enqueue, Gesture, wheelEdit } from './edit';
 import { be } from '../api/backend';
-import { allocId, S } from './store';
+import { allocId, rawOf, S } from './store';
 import { curBeat } from './telemetry';
 import { openMenu, openRename, revealInPlaylist, say, setU, U } from './ui';
 
@@ -100,7 +100,7 @@ export function paramMenu(x: number, y: number, target: AutoTarget, reset: (() =
       const n = parseAutoValue(S.project, S.catalog, target, v.replace(/−/g, '-'));
       if (n == null) { say(tl('a.au.typeBad', { v })); return; }
       // plain objects: ops are cloned on their way to the engine, which a store proxy does not survive
-      const ops = writeTargetOps(unwrap(S.project), target, denormalize(S.project, S.catalog, target, n));
+      const ops = writeTargetOps(rawOf(S.project), target, denormalize(S.project, S.catalog, target, n));
       if (!ops) return;
       commit(ops, label);
       say(label + ' · ' + autoValueText(S.project, S.catalog, target, n));
@@ -268,7 +268,7 @@ class CaptureTweak implements Tweak {
     this.g = new Gesture(label);
     const ct = captureTargetOf(target);
     if (ct && ct.clip) {
-      this.auto = structuredClone(unwrap(ct.auto));
+      this.auto = structuredClone(rawOf(ct.auto));
       this.clip = { ...ct.clip };
       this.local = beat => beat - this.clip!.start + this.clip!.offset;
     } else {
@@ -277,15 +277,15 @@ class CaptureTweak implements Tweak {
       if (ct) {
         // the envelope exists but nothing plays it (its clip was deleted or muted):
         // give the recorded points a clip again
-        this.auto = structuredClone(unwrap(ct.auto));
+        this.auto = structuredClone(rawOf(ct.auto));
         const id = allocId();
-        this.g.update([{ op: 'putClips', clips: [autoClip(id, this.auto.id, trackForAutomation(unwrap(S.project), start, len), start, len)] }]);
+        this.g.update([{ op: 'putClips', clips: [autoClip(id, this.auto.id, trackForAutomation(rawOf(S.project), start, len), start, len)] }]);
         this.clip = { id, start, len, offset: 0 };
         this.local = beat => beat - start;
       } else {
         // no envelope yet: create it with its clip, like the right-click "Automate" — same undo step
         const name = targetLabel(S.project, S.catalog, target, this.opts?.paramLabel);
-        const r = createAutomationOps(unwrap(S.project), S.catalog, target, name, this.color || '#e0a44a', start, len, allocId, this.opts?.current);
+        const r = createAutomationOps(rawOf(S.project), S.catalog, target, name, this.color || '#e0a44a', start, len, allocId, this.opts?.current);
         this.g.update(r.ops);
         this.auto = structuredClone((r.ops.find(o => o.op === 'putAutomation') as { automation: Automation } | undefined)!.automation);
         const clip = (r.ops.find(o => o.op === 'putClips') as { clips: { id: Id; start: number; len: number }[] } | undefined)?.clips[0];
@@ -330,7 +330,7 @@ class CaptureTweak implements Tweak {
     if (this.clip && maxT > this.clip.len) {
       this.clip.len = maxT + 1;
       const c = S.project.clips.find(q => q.id === this.clip!.id);
-      ops.push({ op: 'putClips', clips: [c ? { ...unwrap(c), len: this.clip.len } : autoClip(this.clip.id, this.auto.id, 0, this.clip.start, this.clip.len)] });
+      ops.push({ op: 'putClips', clips: [c ? { ...rawOf(c), len: this.clip.len } : autoClip(this.clip.id, this.auto.id, 0, this.clip.start, this.clip.len)] });
     }
     this.g.update(ops);
   }

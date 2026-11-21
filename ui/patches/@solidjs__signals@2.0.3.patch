@@ -1,0 +1,90 @@
+diff --git a/dist/dev.js b/dist/dev.js
+index b0bac54d3b2ec287c076abb88679996b75339fb4..4875a92e1bac78e7cff50dff1e251c4dd6eb4eba 100644
+--- a/dist/dev.js
++++ b/dist/dev.js
+@@ -3805,6 +3805,7 @@ function TargetShape(value, parent, parentKey, fam) {
+   this.pb = null;
+   this.n = null;
+   this.h = null;
++  this.hasCount = 0;
+   this.k = null;
+   this.dk = null;
+   this.u = parent;
+@@ -3906,7 +3907,8 @@ function releaseSlot(node) {
+     if (--t.nc === 0) t.n = null;
+   } else if (t.h?.[key] === node) {
+     delete t.h[key];
+-    if (Reflect.ownKeys(t.h).length === 0) t.h = null;
++    // a count, not Reflect.ownKeys: releasing K presence nodes was O(K²) (Synkopa patch)
++    if (--t.hasCount === 0) t.h = null;
+   }
+   // The family's index keeps only targets that still carry a node.
+   if (t._fam !== null && t.nc === 0 && t.k === null && t.dk === null && t.h === null)
+@@ -4020,6 +4022,7 @@ function getHasNode(target, key) {
+     if (pb !== null) bornStaged(target, created, key in pb && !target.del?.has(key), key);
+     if (attrHooks !== null) stampNodeOwner(created, target);
+     nodes[key] = node;
++    target.hasCount++;
+     noteNode(target, created, key);
+   }
+   return node;
+diff --git a/dist/observe/store/store.js b/dist/observe/store/store.js
+index d135588cde6424c74ddf30d5708ad821e16dc93a..991938af4ae184081848e467fcfee160240a1f6a 100644
+--- a/dist/observe/store/store.js
++++ b/dist/observe/store/store.js
+@@ -77,6 +77,7 @@ export { markRaw } from "./types.js";
+     this.pb = null;
+     this.n = null;
+     this.h = null;
++    this.hasCount = 0;
+     this.k = null;
+     this.dk = null;
+     this.u = t;
+@@ -185,7 +186,8 @@ function releaseSlot(e) {
+                 if (--t.nc === 0) t.n = null;
+     } else if (t.h?.[n] === e) {
+         delete t.h[n];
+-        if (Reflect.ownKeys(t.h).length === 0) t.h = null;
++        // a count, not Reflect.ownKeys: releasing K presence nodes was O(K²) (Synkopa patch)
++        if (--t.hasCount === 0) t.h = null;
+     }
+     // The family's index keeps only targets that still carry a node.
+         if (t.rr !== null && t.nc === 0 && t.k === null && t.dk === null && t.h === null) t.rr.live.delete(t);
+@@ -288,6 +290,7 @@ function getHasNode(e, t) {
+         if (i !== null) bornStaged(e, o, t in i && !e.del?.has(t), t);
+         if (attrHooks !== null) stampNodeOwner(o, e);
+         n[t] = r;
++        e.hasCount++;
+         noteNode(e, o, t);
+     }
+     return r;
+diff --git a/dist/prod/store/store.js b/dist/prod/store/store.js
+index cd549d7a9d2c455f9106b924f2450bcf1df3ed31..6782c63df584a4ac8fcb2a870ce4fe4b4135d984 100644
+--- a/dist/prod/store/store.js
++++ b/dist/prod/store/store.js
+@@ -73,6 +73,7 @@ export { markRaw } from "./types.js";
+     this.pb = null;
+     this.n = null;
+     this.h = null;
++    this.hasCount = 0;
+     this.k = null;
+     this.dk = null;
+     this.u = t;
+@@ -181,7 +182,8 @@ function releaseSlot(e) {
+                 if (--t.nc === 0) t.n = null;
+     } else if (t.h?.[n] === e) {
+         delete t.h[n];
+-        if (Reflect.ownKeys(t.h).length === 0) t.h = null;
++        // a count, not Reflect.ownKeys: releasing K presence nodes was O(K²) (Synkopa patch)
++        if (--t.hasCount === 0) t.h = null;
+     }
+     // The family's index keeps only targets that still carry a node.
+         if (t.rr !== null && t.nc === 0 && t.k === null && t.dk === null && t.h === null) t.rr.live.delete(t);
+@@ -271,6 +273,7 @@ function getHasNode(e, t) {
+         const i = e.pb;
+         if (i !== null) bornStaged(e, o, t in i && !e.del?.has(t), t);
+         n[t] = r;
++        e.hasCount++;
+         noteNode(e, o, t);
+     }
+     return r;

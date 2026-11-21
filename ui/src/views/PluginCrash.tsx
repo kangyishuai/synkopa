@@ -1,11 +1,13 @@
 // "Synkopa did not exit cleanly": the plugins that were loaded when the last session died (one of
 // them may be why). Offered once at start: keep a plugin out of future scans, or let it be —
 // the crash may have had nothing to do with it.
-import { createSignal, For, onMount, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { PluginCrashSuspect } from '../api/types';
 import { t } from '../lib/i18n';
 import { say } from '../state/ui';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 export function PluginCrash() {
   const [suspects, setSuspects] = createSignal<PluginCrashSuspect[]>([]);
@@ -30,6 +32,7 @@ export function PluginCrash() {
   };
   return (
     <Show when={suspects().length}>
+      <DialogBoundary name={t('d.pcrash.title')} close={() => setSuspects([])}>
       <div class="overlay" onPointerDown={() => setSuspects([])}>
         <div class="dialog" role="dialog" aria-modal="true" aria-label={t('d.pcrash.title')} onPointerDown={e => e.stopPropagation()} onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); }}>
           <div class="hd">
@@ -60,6 +63,7 @@ export function PluginCrash() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

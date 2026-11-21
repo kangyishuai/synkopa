@@ -1,9 +1,18 @@
 // The engine's state, mirrored. Rust owns the project and undo; this store holds the latest
 // StateDto plus local optimistic edits (applied immediately so drags feel instant).
-import { batch, createMemo, createRoot, createSignal } from 'solid-js';
-import { $RAW, createStore, produce, reconcile } from 'solid-js/store';
-import type { Catalog, Clip, Fx, Id, Insert, Note, Op, Project, StateDto, TransportDto } from '../api/types';
+//
+// Solid 2: the project lives twice. `S.project` is the reactive store the views read; `M` is a
+// plain copy of the same data that only this module writes (every edit is applied to both, and an
+// engine state is diffed against `M`). `M` gives what Solid 1's `unwrap` gave for free and Solid 2
+// has no public equivalent of: the current project as plain objects, read without a proxy per
+// field (`rawOf`, `plain`, `plainNotes`, the arrangement listeners, the canvas views). It also lets
+// `replaceState` write only what changed, in place, so store items keep their identity and a held
+// reference stays live (Solid 2's `reconcile` swaps in the engine's objects instead: a reference
+// taken before reads stale data afterwards). `M` never shares an object with the store.
+import { $PROXY, createMemo, createRoot, snapshot, untrack } from 'solid-js';
+import type { Catalog, Clip, Fx, Id, Insert, Note, Op, Pattern, Project, StateDto, TransportDto } from '../api/types';
 import { applyCompOp, compExtent } from '../lib/comp';
+import { batch, createSignal, createStore } from '../lib/reactive';
 import { audibleInserts, forgetInsert } from '../lib/routing';
 import { applyNotebookOp } from '../lib/notebook';
 import { applyPatternOp, fitLen as fitPatternLen, followPatternLength } from '../lib/pattern';
@@ -43,6 +52,9 @@ export const [S, setS] = createStore<EngineState>({
   path: null, dirty: false, catalog: null, audition: {}, stretching: {}, missing: {}, fxErrors: {}, overriddenAutos: [],
 });
 
+/** The project as plain objects, equal to `S.project` (see the header). Read only: never mutate it. */
+let M: Project = emptyProject();
+
 function stretchStatus(dto: StateDto): Record<string, string> {
   const out: Record<string, string> = { ...(dto.stretchErrors ?? {}) };
   for (const id of dto.stretching ?? []) out[id] = '';
@@ -57,9 +69,9 @@ function stretchStatus(dto: StateDto): Record<string, string> {
 const [projVersion, setProjVersion] = createSignal(0);
 export { projVersion };
 /**
- * Like `projVersion`, but not bumped by local edits that only touch the mixer or the notebook
- * (effects, inserts, lyrics): the arrangement canvases (playlist, pattern editor) skip a full
- * redraw when an effect is added, bypassed or tweaked.
+ * Like `projVersion`, but not bumped by changes (local edits or engine states) that only touch the
+ * mixer, the notebook or the loop range (effects, inserts, lyrics): the arrangement canvases
+ * (playlist, pattern editor) skip a full redraw when an effect is added, bypassed or tweaked.
  */
 const [arrVersion, setArrVersion] = createSignal(0);
 export { arrVersion };
@@ -71,8 +83,8 @@ const NOT_ARRANGEMENT = new Set<Op['op']>([...MIXER_ONLY, 'setLoop']);
 
 /**
  * Told about every arrangement change before it is applied: the local ops (with the project as it
- * is before them), or `null` when the whole project was replaced from the engine. The playlist
- * uses it to repaint only the clips an edit touched instead of the whole view.
+ * is before them, plain), or `null` when the whole project was replaced from the engine. The
+ * playlist uses it to repaint only the clips an edit touched instead of the whole view.
  */
 export type ArrangementListener = (ops: readonly Op[] | null, before: Project) => void;
 const arrListeners = new Set<ArrangementListener>();
@@ -82,78 +94,226 @@ export function onArrangementChange(f: ArrangementListener): () => void {
 }
 const tellArrangement = (ops: readonly Op[] | null) => {
   if (!arrListeners.size) return;
-  const before = rawOf(S.project) as Project;
-  for (const f of arrListeners) f(ops, before);
+  for (const f of arrListeners) f(ops, M);
 };
 
 // ---- plain copies ----
-const rawOf = (x: unknown): unknown => (x != null && typeof x === 'object' && (x as Record<symbol, unknown>)[$RAW]) || x;
+type Obj = Record<string, unknown>;
+const isObj = (v: unknown): v is Obj => v !== null && typeof v === 'object';
+const isProxy = (v: unknown): boolean => isObj(v) && !!(v as Record<symbol, unknown>)[$PROXY];
+
 /**
- * A plain deep copy (JSON semantics) of store data or of anything built from it. A store
- * proxy is copied from its raw object, whose whole tree is raw (the native fast path, instead of
- * a proxy trap and a tracked read per field: ~0.5 s per drag on a 2000-note pattern); a fresh
- * container that holds proxies is unwrapped item by item.
+ * An item of `M` and where it is in the project: `list[i]`, or `list[i][sub][j]` for an effect or a
+ * take (the same place in `S.project` holds its store proxy). Flat fields, no array per item: the
+ * index is rebuilt on the first lookup after every edit (a drag frame).
+ */
+interface Indexed { r: object; list: string; i: number; sub: string | null; j: number }
+/**
+ * Project items by id: rebuilt on the first lookup after a change of `M`. New ids come from one
+ * counter (`nextId`), but a project can still use one id in several lists (the engine's demo song
+ * numbers its patterns, clips and inserts from 1 each), so an id can hold several places.
+ */
+let byId: Map<Id, Indexed | Indexed[]> | null = null;
+/**
+ * Store proxy of a project item → its object in `M`, filled by `rawOf` once the proxy was found at
+ * that object's place in `S.project` (so a hit needs no check). Valid while `M` is unchanged: it is
+ * dropped with the id index by `mChanged`, which every writer of `M` calls.
+ */
+let rawCache = new WeakMap<object, object>();
+/** `M` (and the store's project) change: the id index and the `rawOf` cache are stale. */
+function mChanged(): void {
+  byId = null;
+  rawCache = new WeakMap();
+}
+function idIndex(): Map<Id, Indexed | Indexed[]> {
+  if (byId) return byId;
+  const m = new Map<Id, Indexed | Indexed[]>();
+  const add = (xs: readonly { id: Id }[] | undefined, list: string, i = -1, sub: string | null = null) => {
+    if (xs) for (let k = 0; k < xs.length; k++) {
+      const e: Indexed = sub ? { r: xs[k], list, i, sub, j: k } : { r: xs[k], list, i: k, sub, j: -1 };
+      const was = m.get(xs[k].id);
+      m.set(xs[k].id, was === undefined ? e : Array.isArray(was) ? (was.push(e), was) : [was, e]);
+    }
+  };
+  add(M.tracks, 'tracks'); add(M.inserts, 'inserts'); M.inserts.forEach((ins, i) => add(ins.fx, 'inserts', i, 'fx'));
+  add(M.patterns, 'patterns'); add(M.sources, 'sources'); add(M.clips, 'clips');
+  add(M.automations, 'automations'); add(M.channels, 'channels'); add(M.notebook?.pages, 'notebook.pages');
+  if (M.comps) { add(M.comps, 'comps'); M.comps.forEach((c, i) => add(c.takes, 'comps', i, 'takes')); }
+  return (byId = m);
+}
+/** The store proxy at an indexed item's place in `S.project` (read untracked by the caller). */
+function storeAt(e: Indexed): unknown {
+  const p = S.project as unknown as Obj;
+  const xs = (e.list === 'notebook.pages' ? (p.notebook as Obj | undefined)?.pages : p[e.list]) as Obj[] | undefined;
+  const x = xs?.[e.i];
+  return e.sub ? (x?.[e.sub] as Obj[] | undefined)?.[e.j] : x;
+}
+const sameKeys = (a: object, b: object) => {
+  const ka = Object.keys(a), kb = Object.keys(b);
+  return ka.length === kb.length && ka.every(k => k in b);
+};
+
+/**
+ * The plain, current data behind store data (Solid 1's `unwrap`): `S.project` and its items with
+ * an id come from `M` without a copy (read only: never mutate them); anything else in a store is
+ * copied (`snapshot`, a walk of it); plain data comes back as is. Does not track.
+ * A project item's proxy seen before (and `S.project`) is a WeakMap hit until the next change.
+ */
+export function rawOf<T>(x: T): T {
+  if (!isObj(x)) return x;
+  const hit = rawCache.get(x);
+  if (hit) return hit as T;
+  if (!isProxy(x)) return x;
+  return untrack(() => {
+    if ((x as unknown) === S.project) { rawCache.set(x, M); return M as T; }
+    const id = (x as Obj).id;
+    if (typeof id === 'number') {
+      const hit = idIndex().get(id);
+      const es = hit === undefined ? [] : Array.isArray(hit) ? hit : [hit];
+      // the store's own item at one of the id's places: certain, and cached
+      for (const e of es) if (Array.isArray(e.r) === Array.isArray(x) && storeAt(e) === x) { rawCache.set(x, e.r); return e.r as T; }
+      // not where the item is (another store holding a copy, or a mirror out of step): the
+      // check this had before the cache, and never cached
+      for (const e of es) if (Array.isArray(e.r) === Array.isArray(x) && sameKeys(e.r, x as object)) return e.r as T;
+    }
+    // a list of items with ids (clips, tracks): each from `M`; else one copy (notes, points)
+    if (Array.isArray(x) && x.length && typeof (x[0] as Obj | undefined)?.id === 'number') return x.map(rawOf) as T;
+    return snapshot(x);
+  });
+}
+
+/**
+ * A plain deep copy (JSON semantics) of store data or of anything built from it. Store data is
+ * copied from `M` (the native fast path, instead of a proxy trap and a tracked read per field:
+ * ~0.5 s per drag on a 2000-note pattern); a fresh container that holds proxies is unwrapped item
+ * by item.
  */
 export function plain<T>(v: T): T {
+  if (v === undefined) return v;
   const r = rawOf(v);
   return JSON.parse(r !== v ? JSON.stringify(r) : JSON.stringify(v, (_k, x) => rawOf(x)));
 }
 
 /** A copy of notes (flat objects) taken from the store or built from its notes: a spread per note, ~10× faster than `plain`. */
 export function plainNotes<T extends object>(notes: readonly T[]): T[] {
-  return notes.map(n => ({ ...(rawOf(n) as T) }));
+  return rawOf(notes).map(n => ({ ...rawOf(n) }));
 }
 
 // ---- ids ----
 let localNext = 1;
 /** Allocate a new id (project.nextId, increased locally). */
 export function allocId(): Id {
-  const id = Math.max(localNext, S.project.nextId);
+  const id = Math.max(localNext, M.nextId);
   localNext = id + 1;
   return id;
 }
 
 // ---- replacing from the engine ----
+/** A copy for the store: an object handed to it must never be one of `M`'s. */
+const own = <T,>(v: T): T => (isObj(v) ? structuredClone(v) : v);
 /**
- * `reconcile` first unwraps its input, a deep walk that copies every object's property
- * descriptors to strip store proxies; a state from the engine is fresh JSON with none. Marking
- * the root as already raw skips the walk (most of a ~1 MB project's reconcile time).
+ * Write into the draft `d[key]` what changed from `prev` (what it holds, as plain data) to `next`:
+ * Solid 1's `reconcile(next, { key: 'id', merge: true })`. Objects with the same id (or both
+ * without one) are merged in place, so they keep their identity; arrays of items with ids are
+ * reordered by id; anything else is replaced. Only changed leaves are written (and notify).
  */
-function fresh<T extends object>(v: T): T {
-  if (!Object.prototype.hasOwnProperty.call(v, $RAW)) Object.defineProperty(v, $RAW, { value: v });
-  return v;
+function mergeInto(d: Obj, key: string | number, prev: unknown, next: unknown): void {
+  if (prev === next) return;
+  if (!isObj(prev) || !isObj(next) || Array.isArray(prev) !== Array.isArray(next) || (!Array.isArray(next) && prev.id !== next.id)) {
+    if (next === undefined) delete d[key]; else d[key] = own(next);
+    return;
+  }
+  let dd: Obj | undefined;
+  const draft = () => (dd ??= d[key] as Obj);
+  if (Array.isArray(next)) {
+    const p = prev as unknown as unknown[], n = next as unknown[];
+    let aligned = p.length === n.length;
+    if (aligned) for (let i = 0; i < n.length; i++) { const a = p[i], b = n[i]; if (isObj(a) && isObj(b) && a.id !== b.id) { aligned = false; break; } }
+    const keyed = !aligned && n.length > 0 && n.every(x => isObj(x) && x.id != null);
+    if (!keyed) {
+      // positional (Solid 1 too, when the items have no ids): merge the common part, then grow or cut
+      const common = Math.min(p.length, n.length);
+      for (let i = 0; i < common; i++) if (p[i] !== n[i] && !same(p[i], n[i])) mergeInto(draft(), i, p[i], n[i]);
+      if (n.length > p.length) for (let i = p.length; i < n.length; i++) (draft() as unknown as unknown[])[i] = own(n[i]);
+      else if (n.length < p.length) (draft() as unknown as unknown[]).length = n.length;
+      return;
+    }
+    // keyed: items keep their store identity by id, in the new order
+    const at = new Map<unknown, number>();
+    p.forEach((x, i) => { if (isObj(x) && x.id != null && !at.has(x.id)) at.set(x.id, i); });
+    const dArr = draft() as unknown as unknown[];
+    const order = n.map(x => at.get((x as Obj).id));
+    d[key] = n.map((x, i) => (order[i] !== undefined ? dArr[order[i]!] : own(x)));
+    dd = undefined;
+    n.forEach((x, i) => { const j = order[i]; if (j !== undefined && !same(p[j], x)) mergeInto(draft(), i, p[j], x); });
+    return;
+  }
+  for (const k of Object.keys(next)) { const a = prev[k], b = next[k]; if (a !== b && !same(a, b)) mergeInto(draft(), k, a, b); }
+  for (const k of Object.keys(prev)) if (next[k] === undefined && prev[k] !== undefined) delete draft()[k];
+}
+/** Deep equality of plain JSON data (an equal subtree is skipped without touching the draft). */
+function same(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!isObj(a) || !isObj(b) || Array.isArray(a) !== Array.isArray(b)) return false;
+  if (Array.isArray(a)) {
+    const bb = b as unknown as unknown[];
+    if (a.length !== bb.length) return false;
+    for (let i = 0; i < a.length; i++) if (!same(a[i], bb[i])) return false;
+    return true;
+  }
+  let na = 0, nb = 0;
+  for (const k in a) { if (a[k] === undefined) continue; na++; if (!same(a[k], b[k])) return false; }
+  for (const k in b) if (b[k] !== undefined) nb++;
+  return na === nb;
+}
+/** Replace the transport or a live-only map (`audition`, `missing`, ...) in place, its removed keys too. */
+function setLive<K extends 'transport' | 'audition' | 'stretching' | 'missing' | 'fxErrors' | 'overriddenAutos'>(key: K, next: EngineState[K]) {
+  const prev = untrack(() => snapshot(S[key]));
+  if (!same(prev, next)) setS(d => { mergeInto(d as unknown as Obj, key, prev, next); });
+}
+function setMeta(dto: StateDto) {
+  setS({ revision: dto.revision, canUndo: dto.canUndo, canRedo: dto.canRedo, undoLabel: dto.undoLabel ?? null, redoLabel: dto.redoLabel ?? null, path: dto.path, dirty: dto.dirty, ready: true });
+  setLive('transport', dto.transport);
+  setLive('audition', dto.audition ?? {});
+  setLive('stretching', stretchStatus(dto));
+  setLive('missing', dto.missing ?? {});
+  setLive('fxErrors', dto.fxErrors ?? {});
+  setLive('overriddenAutos', dto.overriddenAutos ?? []);
 }
 
+/** Project fields no arrangement canvas draws from (what `NOT_ARRANGEMENT` ops change, and the id counter). */
+const NOT_ARRANGEMENT_KEYS = new Set<string>(['inserts', 'notebook', 'loop', 'nextId'] satisfies (keyof Project)[]);
+
 export function replaceState(dto: StateDto) {
-  tellArrangement(null);
+  const old = M as unknown as Obj, next = dto.project as unknown as Obj;
+  // Most engine states are the reply to an edit already applied here, or carry only a mixer change:
+  // only the fields that differ are merged and announced, so the arrangement canvases are not
+  // redrawn in full (and nothing re-runs) for a state that does not change what they draw.
+  const changed: string[] = [];
+  for (const k of new Set([...Object.keys(old), ...Object.keys(next)])) if (old[k] !== next[k] && !same(old[k], next[k])) changed.push(k);
+  const arrangement = changed.some(k => !NOT_ARRANGEMENT_KEYS.has(k));
+  if (arrangement) tellArrangement(null);
   // a relink (or its undo) gives a source other audio under the same id: its waveform is redrawn
-  const was = new Map((rawOf(S.project) as Project).sources.map(s => [s.id, s.path]));
+  const was = new Map(M.sources.map(s => [s.id, s.path]));
   for (const s of dto.project.sources) { const p = was.get(s.id); if (p != null && p !== s.path) dropSourcePeaks(s.id); }
+  mChanged();
+  // `M` keeps its own objects where nothing changed: what was read from it (a canvas's lookup
+  // tables, kept while `arrVersion` holds) stays current, and the previous project is not kept alive
+  const kept: Obj = { ...next };
+  for (const k of Object.keys(old)) if (!changed.includes(k)) kept[k] = old[k];
+  M = kept as unknown as Project;
   batch(() => {
-    setS('project', reconcile(fresh(dto.project), { key: 'id', merge: true }));
-    bumpProject();
-    setS({ revision: dto.revision, canUndo: dto.canUndo, canRedo: dto.canRedo, undoLabel: dto.undoLabel ?? null, redoLabel: dto.redoLabel ?? null, path: dto.path, dirty: dto.dirty, ready: true });
-    setS('transport', reconcile(dto.transport));
-    setS('audition', reconcile(dto.audition ?? {}));
-    setS('stretching', reconcile(stretchStatus(dto)));
-    setS('missing', reconcile(dto.missing ?? {}));
-    setS('fxErrors', reconcile(dto.fxErrors ?? {}));
-    setS('overriddenAutos', reconcile(dto.overriddenAutos ?? []));
+    if (changed.length) setS(d => { const p = d.project as unknown as Obj; for (const k of changed) mergeInto(p, k, old[k], next[k]); });
+    mChanged(); // nothing cached while the store was half merged
+    if (changed.length) bumpProject(arrangement);
+    setMeta(dto);
   });
   localNext = Math.max(localNext, dto.project.nextId);
 }
 
 /** Everything but the project (whose edits are already applied locally). */
 export function replaceMeta(dto: StateDto) {
-  batch(() => {
-    setS({ revision: dto.revision, canUndo: dto.canUndo, canRedo: dto.canRedo, undoLabel: dto.undoLabel ?? null, redoLabel: dto.redoLabel ?? null, path: dto.path, dirty: dto.dirty, ready: true });
-    setS('transport', reconcile(dto.transport));
-    setS('audition', reconcile(dto.audition ?? {}));
-    setS('stretching', reconcile(stretchStatus(dto)));
-    setS('missing', reconcile(dto.missing ?? {}));
-    setS('fxErrors', reconcile(dto.fxErrors ?? {}));
-    setS('overriddenAutos', reconcile(dto.overriddenAutos ?? []));
-  });
+  batch(() => setMeta(dto));
   localNext = Math.max(localNext, dto.project.nextId);
 }
 
@@ -187,11 +347,19 @@ function assignFx(dst: Fx, src: Fx) {
   if (src.plugin) dst.plugin = { ...src.plugin };
 }
 const clone = <T,>(v: T): T => structuredClone(v);
+/** `structuredClone` of a pattern, ~5× faster for its notes (flat objects; a 2000-note piano-roll drag copies them per frame). */
+const copyPattern = (pt: Pattern): Pattern => {
+  const out = { ...pt } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(pt)) if (v !== null && typeof v === 'object') out[k] = k === 'notes' ? (v as Note[]).map(n => ({ ...n })) : structuredClone(v);
+  return out as unknown as Pattern;
+};
 
-function applyInPlace(p: Project, op: Op) {
+/** Apply `op` to `p` in place: the store's draft, or `M`. `raw` is `M` as it is before the op (plain). */
+function applyInPlace(p: Project, op: Op, raw: Project = p) {
   switch (op.op) {
     case 'putClips': {
-      const idx = new Map<Id, number>(); p.clips.forEach((c, i) => idx.set(c.id, i));
+      // positions from the plain copy (the same as the draft's): no proxy read per clip
+      const idx = new Map<Id, number>(); raw.clips.forEach((c, i) => idx.set(c.id, i));
       for (const c of op.clips) {
         const i = idx.get(c.id);
         if (i != null) assignClip(p.clips[i], c); else { p.clips.push(clone(c)); idx.set(c.id, p.clips.length - 1); }
@@ -247,7 +415,7 @@ function applyInPlace(p: Project, op: Op) {
       const [f] = m.fx.splice(i, 1); m.fx.splice(to, 0, f);
       return;
     }
-    case 'putPattern': case 'putChannel': case 'removeChannel': applyPatternOp(p, op, false, fresh); return;
+    case 'putPattern': case 'putChannel': case 'removeChannel': applyPatternOp(p, op, false, copyPattern); return;
     case 'putSource': { const s = p.sources.find(x => x.id === op.source.id); if (s) { s.name = op.source.name; s.color = op.source.color; } return; }
     case 'putComp': case 'removeComp': applyCompOp(p, op, false); return;
     case 'removeSource':
@@ -280,8 +448,8 @@ function applyInPlace(p: Project, op: Op) {
       // like the engine's transform path (applyOps ported): an edit it would refuse is left to its reply to undo
       const pt = p.patterns.find(x => x.id === op.pattern); if (!pt) return;
       const roots = (p.channels ?? []).map(c => ({ id: c.id, root: c.root ?? 60 }));
-      // plain copies: `p` is a Solid draft here, and its proxies do not survive structuredClone
-      const notes: Note[] = JSON.parse(JSON.stringify(pt.notes ?? []));
+      // a plain copy, from `M` (`p` may be a Solid draft, whose proxies do not survive structuredClone)
+      const notes: Note[] = JSON.parse(JSON.stringify(raw.patterns.find(x => x.id === op.pattern)?.notes ?? []));
       // generator sizes the engine refuses (bounded in ops.rs before anything allocates):
       // refuse them here too, before the optimistic transform allocates per slot
       const sizeOk = (x: unknown) => typeof x === 'number' && Number.isInteger(x) && x >= 1 && x <= 512;
@@ -309,15 +477,26 @@ function applyInPlace(p: Project, op: Op) {
   }
 }
 
+/** Ops whose application copies everything it keeps (the others are copied for the store: `M` must not share objects with it). */
+const SELF_COPYING = new Set<Op['op']>(['putClips', 'removeClips', 'removeTrack', 'putPattern', 'putChannel', 'removeChannel', 'removeInsert', 'removeFx', 'moveFx', 'removeSource', 'removeComp', 'removePattern', 'removeAutomation', 'setBpm', 'setLoop', 'setKey', 'putAutomation', 'transformNotes']);
+const copyOp = (op: Op): Op => {
+  if (SELF_COPYING.has(op.op)) return op;
+  try { return structuredClone(op); } catch { return plain(op); } // an op holding store proxies
+};
+
 export function applyLocal(ops: Op[]) {
   if (!ops.length) return;
   const arrangement = ops.some(op => !NOT_ARRANGEMENT.has(op.op));
   if (arrangement) tellArrangement(ops);
+  const forStore = ops.map(copyOp);
   // one batch: memos that follow `arrVersion` are current before any effect of the edit runs
   batch(() => {
-    setS('project', produce(p => { for (const op of ops) applyInPlace(p, op); }));
+    mChanged();
+    // op by op, the store's draft first and then `M`: each op sees `M` as the draft is before it
+    setS(d => { ops.forEach((op, i) => { applyInPlace(d.project, forStore[i], M); applyInPlace(M, op); }); });
+    mChanged(); // nothing cached while the edit was half applied
     bumpProject(arrangement);
-    if (!S.dirty) setS('dirty', true);
+    setS('dirty', true);
   });
 }
 

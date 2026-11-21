@@ -1,4 +1,5 @@
-import { createEffect, createSignal, For, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, effect } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { KeyCandidate, MusicAnalysis } from '../api/types';
 import { t } from '../lib/i18n';
@@ -6,6 +7,7 @@ import { NOTE_NAMES } from '../lib/pitch';
 import * as A from '../state/actions';
 import { findFx, insName, S } from '../state/store';
 import { U } from '../state/ui';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const keyLabel = (root: number, minor: boolean) => `${NOTE_NAMES[root % 12]} ${t(minor ? 'd.music.minor' : 'd.music.major')}`;
 
@@ -17,7 +19,7 @@ export function MusicDialog() {
   const [selKey, setSelKey] = createSignal<KeyCandidate | null>(null);
   let reqId = 0;
 
-  createEffect(() => {
+  effect(() => {
     const w = U.musicWin;
     if (!w) return;
     const id = ++reqId;
@@ -62,6 +64,7 @@ export function MusicDialog() {
 
   return (
     <Show when={U.musicWin}>
+      <DialogBoundary name={t('d.ui.pn.music')} close={A.closeMusicAnalysis}>
       <div class="overlay" onPointerDown={A.closeMusicAnalysis}>
         <div class="dialog" style={{ width: 'min(520px, 92vw)' }} onPointerDown={e => e.stopPropagation()} data-music-dialog>
           <div class="hd">
@@ -97,7 +100,7 @@ export function MusicDialog() {
                               const tag = () => (i() === 0 ? t('d.music.main') : c.bpm < tp().bpm ? '½×' : '2×');
                               const on = () => selBpm() === c.bpm;
                               return (
-                                <button class="smallbtn" classList={{ primary: on() }} style={{ height: '28px', padding: '0 10px', display: 'flex', 'align-items': 'center', gap: '6px' }}
+                                <button class={['smallbtn', { primary: on() }]} style={{ height: '28px', padding: '0 10px', display: 'flex', 'align-items': 'center', gap: '6px' }}
                                   onClick={() => setSelBpm(c.bpm)}>
                                   <span class="mono" style={{ 'font-weight': 600, 'font-size': '13px' }}>{c.bpm.toFixed(2)}</span>
                                   <span style={{ 'font-size': '10px', opacity: 0.75 }}>{tag()}</span>
@@ -142,7 +145,7 @@ export function MusicDialog() {
                             {(c, i) => {
                               const on = () => selKey()?.root === c.root && selKey()?.minor === c.minor;
                               return (
-                                <button class="smallbtn" classList={{ primary: on() }} style={{ height: '28px', padding: '0 10px', display: 'flex', 'align-items': 'center', gap: '6px' }}
+                                <button class={['smallbtn', { primary: on() }]} style={{ height: '28px', padding: '0 10px', display: 'flex', 'align-items': 'center', gap: '6px' }}
                                   onClick={() => setSelKey(c)}>
                                   <span style={{ 'font-weight': 600, 'font-size': '13px' }}>{keyLabel(c.root, c.minor)}</span>
                                   <span class="mono" style={{ 'font-size': '10px', opacity: 0.75 }}>{i() === 0 ? '1.' : i() + 1 + '.'}</span>
@@ -177,7 +180,7 @@ export function MusicDialog() {
                               </button>
                             </Show>
                             <Show when={U.musicWin?.fxId == null || tuneCount() > 1}>
-                              <button class="smallbtn" classList={{ primary: U.musicWin?.fxId == null }} style={{ height: '28px', padding: '0 12px' }} disabled={!selKey()}
+                              <button class={['smallbtn', { primary: U.musicWin?.fxId == null }]} style={{ height: '28px', padding: '0 12px' }} disabled={!selKey()}
                                 onClick={() => { const sk = selKey(); if (sk) A.applyKeyToTune(sk.root, sk.minor, 'all'); }}>
                                 {t('d.music.setall', { n: tuneCount() })}
                               </button>
@@ -193,6 +196,7 @@ export function MusicDialog() {
           </Show>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

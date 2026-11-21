@@ -1,4 +1,6 @@
-import { For, Show, createSignal, type JSX } from 'solid-js';
+import { For, Show } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { createSignal } from '../lib/reactive';
 import { clamp } from '../lib/format';
 import { t } from '../lib/i18n';
 import { dblCheck, fineMul, track } from './drag';
@@ -65,7 +67,7 @@ export function Knob(p: KnobProps) {
     p.onWheel(clamp(p.t() + (d < 0 ? 1 : -1) * 0.02 * (e.shiftKey ? 0.2 : 1), 0, 1));
   };
   return (
-    <div class={'knob ' + (p.size ?? 'md')} classList={{ auto: !!p.automated?.(), ovr: !!p.overridden?.() }}>
+    <div class={['knob ' + (p.size ?? 'md'), { auto: !!p.automated?.(), ovr: !!p.overridden?.() }]}>
       <div class="dial" style={{ width: geo().s + 'px', height: geo().s + 'px' }} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()}
         title={p.title ?? t('d.ui.knob.tip')}>
         <svg width={geo().s} height={geo().s} viewBox={`0 0 ${geo().s} ${geo().s}`} style={{ position: 'absolute', inset: 0 }}>
@@ -104,7 +106,7 @@ export function MiniKnob(p: { t: () => number; key: string; title: string; color
   };
   const t = () => clamp(p.t(), 0, 1);
   return (
-    <span class="miniknob" classList={{ auto: !!p.automated?.(), ovr: !!p.overridden?.() }} title={p.title} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()} onClick={e => e.stopPropagation()}>
+    <span class={['miniknob', { auto: !!p.automated?.(), ovr: !!p.overridden?.() }]} title={p.title} onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()} onClick={e => e.stopPropagation()}>
       <svg width="22" height="22" viewBox="0 0 22 22">
         <circle cx="11" cy="11" r={R} fill="none" transform="rotate(135 11 11)" style={{ stroke: 'var(--knob-track)', 'stroke-width': '2.5px', 'stroke-linecap': 'round', 'stroke-dasharray': `${L}px ${C}px` }} />
         <circle cx="11" cy="11" r={R} fill="none" transform="rotate(135 11 11)" style={{ stroke: p.color ?? 'var(--blue)', 'stroke-width': '2.5px', 'stroke-linecap': 'round', 'stroke-dasharray': `${t() * L}px ${C}px` }} />
@@ -119,9 +121,9 @@ export function Segmented(p: { options: string[]; value: () => number; pick: (i:
   return (
     <div class="segp" title={p.title} onContextMenu={e => { e.preventDefault(); p.onMenu?.(e.clientX, e.clientY); }}>
       <Show when={p.label}><span class="lab">{p.label}</span></Show>
-      <div class="seg2" classList={{ small: !!p.small }}>
+      <div class={['seg2', { small: !!p.small }]}>
         <For each={p.options}>{(o, i) => (
-          <button classList={{ on: Math.round(p.value()) === i(), danger: p.danger === i() }}
+          <button class={{ on: Math.round(p.value()) === i(), danger: p.danger === i() }}
             style={Math.round(p.value()) === i() && p.color && p.danger !== i() ? { background: p.color + '38', color: `color-mix(in srgb, ${p.color} 55%, var(--fg-hi))` } : {}}
             onClick={() => p.pick(i())}>{o}</button>
         )}</For>
@@ -166,7 +168,7 @@ export function NumField(p: {
     setEdit(false);
   };
   return (
-    <div class="numf" classList={{ dis: !!p.disabled?.() }} title={p.title ?? t('d.ui.num.tip')} style={p.width ? { width: p.width + 'px' } : {}}
+    <div class={['numf', { dis: !!p.disabled?.() }]} title={p.title ?? t('d.ui.num.tip')} style={p.width ? { width: p.width + 'px' } : {}}
       onPointerDown={down} onWheel={wheel} onContextMenu={e => e.preventDefault()}>
       <span class="lab">{p.label}</span>
       <Show when={edit()} fallback={<span class="v" style={p.color ? { color: p.color } : {}}>{p.disabled?.() ? '—' : p.text(p.value())}</span>}>

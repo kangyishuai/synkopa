@@ -9,7 +9,7 @@ import { t as tl } from '../lib/i18n';
 //
 // The window is project-level and is NOT part of the effect-window layer: F5 / a click on
 // the playlist never hide it (lyrics stay readable over the playlist while recording).
-import { createStore } from 'solid-js/store';
+import { createStore } from '../lib/reactive';
 import type { Id, LyricPage, Notebook } from '../api/types';
 import { clamp } from '../lib/format';
 import { emptyNotebook, movePage, notebookHash, withPage } from '../lib/notebook';

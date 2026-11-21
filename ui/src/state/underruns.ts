@@ -3,7 +3,7 @@
 // rendered (the device ran dry: a click) plus the xruns the driver reports, and sends the running
 // total in each telemetry frame. The UI keeps its own reset point, so clicking the meter (or Reset
 // in Settings → Audio) starts a fresh count without a round trip to the audio thread.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 
 /** How long the meter stays in its warning colour after a new underrun. */
 export const FLASH_MS = 900;

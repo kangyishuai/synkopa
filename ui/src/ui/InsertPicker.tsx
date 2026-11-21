@@ -1,13 +1,12 @@
 // The MIXER picker in the header of the sample and channel windows (FL's FX-track box): a list of
 // the mixer inserts, and the mouse wheel over it steps through them (down = next), one undo
 // step per burst of wheel ticks.
-import { onCleanup } from 'solid-js';
-import { unwrap } from 'solid-js/store';
+import { onCleanup } from '../lib/reactive';
 import type { Id, Op } from '../api/types';
 import { t } from '../lib/i18n';
 import { routeToFreeInsert } from '../lib/mixer';
 import { commit, wheelEdit } from '../state/edit';
-import { allocId, insName, S } from '../state/store';
+import { allocId, insName, rawOf, S } from '../state/store';
 import { showInsert } from '../state/mixView';
 import { openMenu, say, setU, type MenuItem } from '../state/ui';
 
@@ -47,7 +46,7 @@ export function pickInsert(p: InsertChoice, id: Id | null) {
  */
 export function pickFreeInsert(p: InsertChoice) {
   if (!p.free) return;
-  const plan = routeToFreeInsert(unwrap(S.project), p.free.name, p.free.color, allocId, p.ops);
+  const plan = routeToFreeInsert(rawOf(S.project), p.free.name, p.free.color, allocId, p.ops);
   commit(plan.ops, p.label);
   select(plan.insert.id);
   const n = S.project.inserts.findIndex(m => m.id === plan.insert.id);
@@ -111,7 +110,7 @@ export function InsertPicker(props: InsertChoice & { title: string }) {
   return (
     <button class="chip inspick" title={props.title + '\n' + t('d.smp.mixer.boxTip')} aria-haspopup="menu" onClick={click} onWheel={e => wheelInsert(props, e)}>
       {t('a.mn.mixer')}
-      <span class="cins" classList={{ auto: props.value == null }}>{insertBoxLabel(props)}</span>
+      <span class={['cins', { auto: props.value == null }]}>{insertBoxLabel(props)}</span>
       <span class="insnm ell">{name()}</span>
     </button>
   );

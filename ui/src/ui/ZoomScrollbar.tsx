@@ -4,7 +4,8 @@
 // Ctrl+wheel zooms. Works in content units; the owner maps them to its own scroll and zoom.
 // With `paint` it is an overview bar (the Playlist's, the Piano roll's, the Pitch editor's): a
 // minimap of the whole content under the thumb, painted by the owner.
-import { createEffect, createMemo, createSignal, onCleanup, onMount, untrack } from 'solid-js';
+import { createMemo, untrack } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { centreAt, clampPos, dragEdge, dragThumb, spanOf, thumbOf, zoomAround, type ZLimits, type ZRange } from '../lib/zoomBar';
 import { track } from './drag';
 import { fitCanvas } from './frameLoop';
@@ -50,7 +51,7 @@ export function ZoomScrollbar(props: {
     g.clearRect(0, 0, W, H);
     props.paint(g, W, H, span());
   };
-  createEffect(() => {
+  effect(() => {
     if (!props.paint) return;
     L(); span(); themeVersion(); props.paintKey?.();
     if (!raf) raf = requestAnimationFrame(() => untrack(paintNow));

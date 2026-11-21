@@ -1,13 +1,15 @@
 // "Ask AI": a question about Synkopa goes to an AI assistant that reads Synkopa's open-source code.
 // ChatGPT gets the whole prompt in its link; DeepWiki's links take no question, so the question
 // is copied and the user pastes it there (as with a ChatGPT question too long for a link).
-import { createSignal, For, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import { askPrompt, askUrl, type AskService } from '../lib/askLink';
 import { t } from '../lib/i18n';
 import { say, tucked, U } from '../state/ui';
 import { rackFloating, rollFloating } from '../state/pattern';
 import { APP_GLYPH } from '../ui/menuIcons';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 const SERVICE_KEY = 'wave.ask.service';
 const loadService = (): AskService => {
@@ -75,7 +77,7 @@ async function send() {
 /** The menu-row button: always visible, labelled, next to the application menus. */
 export function AskButton() {
   return (
-    <button class="askbtn" classList={{ on: open() }} title={t('d.ask.tip')} aria-haspopup="dialog" aria-expanded={open()} onClick={toggleAsk}>
+    <button class={['askbtn', { on: open() }]} title={t('d.ask.tip')} aria-haspopup="dialog" aria-expanded={open() ? 'true' : 'false'} onClick={toggleAsk}>
       <svg width="13" height="13" viewBox={APP_GLYPH.ask.vb} aria-hidden="true"><path d={APP_GLYPH.ask.d} fill="currentColor" /></svg>
       <span>{t('d.ask.button')}</span>
     </button>
@@ -86,6 +88,7 @@ export function AskDialog() {
   const services: [AskService, string][] = [['chatgpt', 'ChatGPT'], ['deepwiki', 'DeepWiki']];
   return (
     <Show when={open()}>
+      <DialogBoundary name={t('d.ask.title')} close={close} z={250}>
       <div class="overlay" style={{ 'z-index': 250 }} onPointerDown={close}>
         <div class="dialog askdlg" role="dialog" aria-modal="true" aria-labelledby="askhd" onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { e.stopPropagation(); if (e.key === 'Escape') close(); }}>
@@ -99,11 +102,11 @@ export function AskDialog() {
             <span class="cl">{t('d.ask.to')}</span>
             <div class="seg asksvc" role="radiogroup" aria-label={t('d.ask.to')}>
               <For each={services}>{([id, name]) => (
-                <button role="radio" aria-checked={service() === id} classList={{ on: service() === id }} onClick={() => setService(id)}>{name}</button>
+                <button role="radio" aria-checked={service() === id ? 'true' : 'false'} class={{ on: service() === id }} onClick={() => setService(id)}>{name}</button>
               )}</For>
             </div>
           </div>
-          <div class="asknote" classList={{ warn: viaClipboard() }}>
+          <div class={['asknote', { warn: viaClipboard() }]}>
             {service() === 'deepwiki' ? t('d.ask.noteDeepwiki') : viaClipboard() ? t('d.ask.noteLong') : t('d.ask.noteChatgpt')}
           </div>
           <Show when={error()}><div class="askerr" role="alert">{error()}</div></Show>
@@ -115,6 +118,7 @@ export function AskDialog() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

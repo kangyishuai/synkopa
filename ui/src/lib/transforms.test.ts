@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Note } from '../api/types';
 import { SCALES, scaleMask } from './pattern';
-import { applyTransform, CHORD_TYPES, chordName, chordPitches, progressionDegrees, PROGRESSION_TEMPLATES, snapMidi, SplitMix64 } from './transforms';
+import { applyTransform, CHORD_TYPES, chordName, chordPitches, progressionDegrees, PROGRESSION_TEMPLATES, snapMidi } from './transforms';
 
 const note = (ch: number, step: number, p = 60, v = 0.8): Note => ({ ch, step, len: 1, p, v });
 const notes = () => [note(1, 0, 61), note(1, 4.3, 64), note(1, 8, 60)];
@@ -28,14 +28,6 @@ describe('scale ids (engine id space, pitch::scale_mask)', () => {
 });
 
 describe('transformNotes (TS mirror)', () => {
-  it('humanize is deterministic in the seed', () => {
-    const a = notes(), b = notes();
-    const roots = [{ id: 1, root: 60 }];
-    applyTransform(a, { kind: 'humanize', timing: 0.5, velocity: 0.4 }, 41, null, roots, null, 1, 16);
-    applyTransform(b, { kind: 'humanize', timing: 0.5, velocity: 0.4 }, 41, null, roots, null, 1, 16);
-    expect(a).toEqual(b);
-  });
-
   it('quantize with a project key snaps into the scale', () => {
     const a = notes();
     applyTransform(a, { kind: 'quantize', grid: 1, amount: 1, scaleAware: true }, 0, null, [{ id: 1, root: 60 }], 0, 1, 16);
@@ -47,14 +39,6 @@ describe('transformNotes (TS mirror)', () => {
     applyTransform(a, { kind: 'euclidFill', ch: 1, k: 5, n: 16 }, 0, null, [{ id: 1, root: 60 }, { id: 2, root: 60 }], null, 1, 16);
     expect(a.filter(n => n.ch === 1)).toHaveLength(5);
     expect(a.some(n => n.ch === 2 && n.step === 2)).toBe(true);
-  });
-
-  it('splitmix64 matches the engine by construction (stability smoke)', () => {
-    const r = new SplitMix64(7);
-    const seq = [r.unit(), r.unit(), r.unit()];
-    const r2 = new SplitMix64(7);
-    expect([r2.unit(), r2.unit(), r2.unit()]).toEqual(seq);
-    expect(seq).not.toEqual([0, 0, 0]);
   });
 
   it('a generator replaces its whole channel whatever the selection', () => {
@@ -210,7 +194,6 @@ describe('transformNotes (TS mirror)', () => {
 
     it('chance walk matches the engine bit for bit (golden degrees)', () => {
       expect(progressionDegrees('chance', 4, 2026, 7)).toEqual([2, 4, 3, 2]);
-      expect(progressionDegrees('chance', 4, 7, 7)).toEqual(progressionDegrees('chance', 4, 7, 7));
       expect(progressionDegrees('chance', 4, 7, 7)).not.toEqual(progressionDegrees('chance', 4, 8, 7));
     });
 

@@ -95,6 +95,7 @@ describe('mock: melody reference and preview', () => {
     const c = p.clips.find(x => x.kind === 'audio')!;
     const spb = 60 / p.bpm, a = c.offset * spb / (c.stretch ?? 1), b = (c.offset + c.len) * spb / (c.stretch ?? 1);
     await be.previewClip(c.id, a + 0.5);
+    expect((be as unknown as { preview: { off: number } | null }).preview?.off).toBeCloseTo(a + 0.5, 9);
     await expect(be.previewClip(c.id, b + 1)).rejects.toThrow();
   });
 });

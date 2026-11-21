@@ -99,7 +99,7 @@ describe('stem export in the mock', () => {
     expect(r.files.map(f => f.master)).toEqual([true, false, false, false]);
     expect(new Set(r.files.map(f => f.stats.seconds)).size).toBe(1); // all the same length
     expect(r.format).toBe('wav');
-    await new Promise(res => setTimeout(res, 5)); // the mock delivers events on a timer
+    await vi.waitFor(() => expect(seen.at(-1)?.stage).toBe('done')); // the mock delivers events on a timer
     expect([...new Set(seen.map(p => p.done))]).toEqual([0, 1, 2, 3, 4]);
     expect(seen[0]).toMatchObject({ total: 4, name: 'Master', stage: 'prepare' });
     expect(seen.at(-1)).toMatchObject({ done: 4, total: 4, name: '', stage: 'done' });
@@ -118,7 +118,7 @@ describe('stem export in the mock', () => {
     const { includeMaster: _, ...mix } = opts;
     const r = await be.exportAudio({ ...mix, format: 'wav', wavBits: 16, dither: true });
     expect(r.cancelled).toBeFalsy();
-    await new Promise(res => setTimeout(res, 5));
+    await vi.waitFor(() => expect(seen.at(-1)?.stage).toBe('done'));
     expect(seen[0]).toMatchObject({ done: 0, total: 1, name: 'Song.wav', stage: 'prepare' });
     const renders = seen.filter(p => p.stage === 'render');
     expect(renders.length).toBeGreaterThan(4);
@@ -444,8 +444,7 @@ describe('import as an undo step (engine import_audio_with)', () => {
     await be.beginGesture();
     await be.applyOps([{ op: 'putTrack', track: { ...t0, h: t0.h + 30 } }], { transient: true });
     await be.endGesture();
-    await new Promise(r => setTimeout(r, 5));
-    expect(states.length).toBeGreaterThan(0);
+    await vi.waitFor(() => expect(states.length).toBeGreaterThan(0));
     expect((await be.getState()).canUndo).toBe(false);
   });
 });

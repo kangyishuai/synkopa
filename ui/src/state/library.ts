@@ -1,6 +1,6 @@
 // The standard library's file list (the samples that ship with the program), loaded once so
 // that menus can offer them without opening the browser.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { LibFile } from '../api/types';
 import { t, type TranslationKey } from '../lib/i18n';

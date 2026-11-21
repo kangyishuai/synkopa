@@ -1,6 +1,6 @@
 // The installed plugins, scanned once per session and shared by the FX picker (effects) and the
 // Channel Rack's instrument menus (VST3 instruments). A rescan opens only modules it has not seen.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { PluginScan } from '../api/types';
 import { say } from './ui';

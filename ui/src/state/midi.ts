@@ -1,4 +1,4 @@
-import { createEffect, createRoot, createSignal } from 'solid-js';
+import { createDetachedRoot, createSignal, effect } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Id, MidiStatus } from '../api/types';
 import { U } from './ui';
@@ -30,7 +30,8 @@ export function startMidi() {
     setStatus(s => (s ? { ...s, lastNote: ev.note, noteCount: ev.count } : s));
     if (ev.note.on) { setFlash(true); clearTimeout(flashTimer); flashTimer = setTimeout(() => setFlash(false), 120); }
   });
-  createRoot(() => createEffect(() => {
+  // called from App's onMount: a root of its own (Solid 2 creates no primitive in a callback)
+  createDetachedRoot(() => effect(() => {
     const ch = U.selCh ?? null;
     if (follow() && ch != null && status()?.target !== ch) void setMidiTarget(ch);
   }));

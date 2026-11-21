@@ -5,7 +5,8 @@
 // On the waveform: click a slice to hear it, drag a marker to move it, double-click empty space
 // to add a marker and a marker to remove it. Detection runs once per file in the engine
 // (`source_onsets`); the Sensitivity knob only filters the candidates, so it answers instantly.
-import { createEffect, createMemo, createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { createMemo, Show } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Channel, Id, Op, Source } from '../api/types';
 import { clamp } from '../lib/format';
@@ -58,7 +59,7 @@ export function SlicePanel(props: { channel: () => SampleChannel; source: () => 
     try { const o = await onsetsOf(src.id); setOnsets(o); return o; } catch (e) { setErr(String(e)); return null; } finally { setBusy(false); }
   };
   // a slice page with slices already there: fetch the candidates in the background, so the knob answers at once
-  createEffect(() => { if (props.source()) void load(); });
+  effect(() => { if (props.source()) void load(); });
 
   const detect = async () => {
     const o = await load(); if (!o) return;
@@ -125,7 +126,7 @@ function SliceWave(props: { channel: () => SampleChannel; source: () => Source |
   let box!: HTMLDivElement, canvas!: HTMLCanvasElement;
   const [hover, setHover] = createSignal<{ x: number; marker: number | null } | null>(null);
   let dirty = true, epoch = -1;
-  createEffect(() => { props.source(); props.slices(); hover(); props.channel().color; peaksVersion(); dirty = true; });
+  effect(() => { props.source(); props.slices(); hover(); props.channel().color; peaksVersion(); dirty = true; });
   onMount(() => {
     const ro = new ResizeObserver(() => { dirty = true; });
     ro.observe(box);

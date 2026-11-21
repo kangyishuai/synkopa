@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 
 /** A button on a notice: what it says and what it does (the notice closes after it). */
 export interface NoticeAction { label: string; act: () => void; danger?: boolean }

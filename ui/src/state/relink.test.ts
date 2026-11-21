@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockBackend } from '../api/mock';
+import { syncEngine } from '../test/engine';
 
 // Missing audio against the mock backend, which relinks like engine.rs (`relink_sources`,
 // `relink_search`): state.missing, one undo step, the dialog offered after an open.
@@ -15,13 +16,14 @@ let A: typeof import('./actions');
 let store: typeof import('./store');
 let ui: typeof import('./ui');
 const KICK = 'C:\\Samples\\Drums\\kick.wav';
-const settle = () => new Promise(r => setTimeout(r, 30));
-const sync = async () => { await settle(); store.replaceState(await mock.getState()); };
+let edit: typeof import('./edit');
+const sync = () => syncEngine(mock, store, edit);
 
 beforeEach(async () => {
   vi.resetModules();
   const backend = await import('../api/backend');
   mock = (await backend.getBackend()) as MockBackend;
+  edit = await import('./edit');
   A = await import('./actions');
   store = await import('./store');
   ui = await import('./ui');
@@ -80,6 +82,7 @@ describe('missing audio', () => {
 
   it('a library sample is never relinked', async () => {
     const lib = store.S.project.sources.find(s => s.path.startsWith('lib:'));
+    expect(lib).toBeDefined();
     if (!lib) return;
     await expect(mock.relinkSources([{ sourceId: lib.id, path: 'D:\\x.wav' }])).rejects.toThrow('library');
   });

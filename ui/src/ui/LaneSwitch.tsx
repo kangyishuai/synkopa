@@ -18,9 +18,9 @@ export const LANE_ICONS = {
  */
 export function LaneSwitch<T extends string>(p: { label: string; value: T; items: LaneTarget<T>[]; onPick: (id: T, el: HTMLElement) => void; row?: boolean }) {
   return (
-    <div class="laneswitch" classList={{ row: !!p.row }} role="radiogroup" aria-label={p.label}>
+    <div class={['laneswitch', { row: !!p.row }]} role="radiogroup" aria-label={p.label}>
       <For each={p.items}>{it => (
-        <button role="radio" class={it.cls} aria-checked={p.value === it.id} classList={{ on: p.value === it.id }} disabled={it.disabled} title={it.tip}
+        <button role="radio" class={[it.cls, { on: p.value === it.id }]} aria-checked={p.value === it.id ? 'true' : 'false'} disabled={it.disabled} title={it.tip}
           onClick={e => p.onPick(it.id, e.currentTarget)}>
           <Icon d={it.icon} size={12} sw={2.4} /><span>{it.label}</span>
         </button>

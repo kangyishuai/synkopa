@@ -1,14 +1,13 @@
 // Take lanes & comping: which comp a track shows, and the edits the playlist, its menus and
 // the keyboard make. Every edit is one `putComp` (or `removeComp`) undo step.
 import { createMemo, createRoot } from 'solid-js';
-import { unwrap } from 'solid-js/store';
 import { be } from '../api/backend';
 import { lang, t as tl } from '../lib/i18n';
 import type { Clip, Comp, CompRegion, Id, Take } from '../api/types';
 import { removeTake, swapRange, toTimeline, unusedTakes, usedBeats, writeRange } from '../lib/comp';
 import { fmtPos } from '../lib/format';
 import { commit, enqueue, resync } from './edit';
-import { arrVersion, plain, S } from './store';
+import { arrVersion, plain, rawOf, S } from './store';
 import { say, setU, U } from './ui';
 
 /** Height of one take lane, px. */
@@ -32,12 +31,12 @@ export function compClipsOn(track: number): Clip[] {
  */
 const compIndex = createRoot(() => createMemo(() => {
   arrVersion();
-  const P = unwrap(S.project), comps = new Set((P.comps ?? []).map(c => c.id));
+  const P = rawOf(S.project), comps = new Set((P.comps ?? []).map(c => c.id));
   const m = new Map<number, number[]>();
   P.clips.forEach((c, i) => { if (c.kind === 'comp' && comps.has(c.ref)) { const a = m.get(c.track); if (a) a.push(i); else m.set(c.track, [i]); } });
   for (const a of m.values()) a.sort((x, y) => P.clips[x].start - P.clips[y].start);
   return m;
-}, new Map<number, number[]>(), { equals: sameIndex }));
+}, { equals: sameIndex }));
 function sameIndex(a: Map<number, number[]>, b: Map<number, number[]>): boolean {
   if (a.size !== b.size) return false;
   for (const [k, x] of a) { const y = b.get(k); if (!y || y.length !== x.length || x.some((v, i) => v !== y[i])) return false; }

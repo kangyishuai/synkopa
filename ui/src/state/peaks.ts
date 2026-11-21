@@ -1,6 +1,6 @@
 // Waveform peaks from `source_peaks`, cached per (source, norm, rev). Consumers poll `getPeaks`
 // while drawing; a finished load bumps `peaksVersion` so canvases redraw.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { Clip, Id } from '../api/types';
 import { tuneIsNeutral } from '../lib/pitch';

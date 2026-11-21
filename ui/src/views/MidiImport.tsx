@@ -1,7 +1,8 @@
 // "Import MIDI": the parts of a .mid file (track × channel) with what each becomes in Synkopa,
 // chosen with checkboxes; optionally the file's tempo. Imports as one new pattern on the
 // Playlist, or — opened from a channel — one part's notes into that channel. One undo step.
-import { createEffect, createSignal, For, on, Show } from 'solid-js';
+import { For, Show } from 'solid-js';
+import { createSignal, watch } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { MidiInfo, MidiPart } from '../api/types';
 import { t } from '../lib/i18n';
@@ -11,6 +12,7 @@ import { enqueue, resync } from '../state/edit';
 import { openRoll, setCurPattern } from '../state/pattern';
 import { S } from '../state/store';
 import { say, setU, U } from '../state/ui';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 export function MidiImport() {
   const [info, setInfo] = createSignal<MidiInfo | null>(null);
@@ -23,7 +25,7 @@ export function MidiImport() {
 
   const into = () => U.midiWin?.into ?? null;
   const close = () => setU('midiWin', null);
-  createEffect(on(() => U.midiWin?.path, path => {
+  watch(() => U.midiWin?.path, path => {
     setInfo(null); setErr(null); setPicked(new Set<number>());
     if (!path) return;
     const id = ++req;
@@ -37,7 +39,7 @@ export function MidiImport() {
       setTempo(f.bpm != null && Math.abs(f.bpm - f.projectBpm) > 0.005 && !S.project.clips.length);
       queueMicrotask(() => importBtn?.focus());
     }).catch(e => { if (id === req) setErr(String(e)); });
-  }));
+  });
 
   const toggle = (p: MidiPart) => setPicked(s => {
     if (into()) return new Set([p.index]);
@@ -76,6 +78,7 @@ export function MidiImport() {
 
   return (
     <Show when={U.midiWin}>
+      <DialogBoundary name={t('d.ui.pn.midi')} close={close}>
       <div class="overlay" onPointerDown={close}>
         <div class="dialog mididlg" role="dialog" aria-modal="true" aria-label={t('d.midi.title', { name: fileName() })} onPointerDown={e => e.stopPropagation()}
           onKeyDown={e => { if (e.key !== 'Escape') e.stopPropagation(); if (e.key === 'Enter' && !e.repeat && (e.target as HTMLElement).tagName !== 'BUTTON') { e.preventDefault(); void run(); } }} data-midi-dialog>
@@ -92,7 +95,7 @@ export function MidiImport() {
                 <ul class="midilist" role={into() ? 'radiogroup' : 'group'}>
                   <For each={f().parts}>
                     {p => (
-                      <li classList={{ off: !picked().has(p.index), empty: !p.notes }}>
+                      <li class={{ off: !picked().has(p.index), empty: !p.notes }}>
                         <label class="row">
                           <input type={into() ? 'radio' : 'checkbox'} name="midipart" checked={picked().has(p.index)} disabled={!p.notes || busy()} onChange={() => toggle(p)} />
                           <span class="midiname" title={p.name}>{p.name}</span>
@@ -125,6 +128,7 @@ export function MidiImport() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

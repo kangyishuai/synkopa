@@ -2,7 +2,8 @@
 // knowing which menu holds it. It reads the app menus themselves, so a command added to a menu is
 // here too, with the same shortcut, the same disabled state and the same action. A question that is
 // not a command goes to "Ask AI" (the Ask dialog, with the text filled in).
-import { createEffect, createMemo, createSignal, For, Show } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import { createSignal, effect } from '../lib/reactive';
 import { matchCommand } from '../lib/commandMatch';
 import { t, type TranslationKey } from '../lib/i18n';
 import type { MenuItem } from '../state/ui';
@@ -14,6 +15,7 @@ import { S } from '../state/store';
 import { setU, U } from '../state/ui';
 import { askAbout } from './Ask';
 import { patItems } from './patternShared';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 type MenuSource = [TranslationKey, () => MenuItem[]][];
 let source: MenuSource = [];
@@ -43,8 +45,8 @@ export function Palette() {
     for (const [name, items] of source) flatten(items(), t(name), '', out);
     return out;
   });
-  /** The context sections as [title, colour of its dot, commands]. */
-  const context = (): [string, string, MenuItem[]][] => {
+  /** The context sections as [title, colour of its dot, commands]. A declaration (hoisted): `all` above reads it at once when the palette mounts already open. */
+  function context(): [string, string, MenuItem[]][] {
     const out: [string, string, MenuItem[]][] = [];
     if (U.sel.length) out.push([t('a.cmd.ctxSel', { n: U.sel.length }), 'var(--blue)', [
       { t: 'item', label: t('a.mn.copy'), kbd: 'Ctrl+C', act: () => void A.copy() },
@@ -56,7 +58,7 @@ export function Palette() {
     const p = S.project.patterns.length ? curPat() : null;
     if (p) out.push([t('a.cmd.ctxPat', { name: p.name }), p.color, patItems(p, window.innerWidth / 2 - 120, 160)]);
     return out;
-  };
+  }
   const dotOf = (menu: string) => context().find(c => c[0] === menu)?.[1];
   const shown = createMemo(() => all().filter(c => matchCommand(c.menu + ' ' + c.sub + ' ' + c.label, q())));
   /** The commands by menu, each with its place in the flat list the arrow keys walk. */
@@ -68,8 +70,8 @@ export function Palette() {
   // typed text can always be asked instead: the last row, and the only one when no command matches
   const asks = () => q().trim() !== '';
   const rows = () => shown().length + (asks() ? 1 : 0);
-  createEffect(() => { if (!paletteOpen()) setQ(''); });
-  createEffect(() => { q(); setAt(0); });
+  effect(() => { if (!paletteOpen()) setQ(''); });
+  effect(() => { q(); setAt(0); });
   const close = () => setPaletteOpen(false);
   const run = (c: Cmd | undefined) => { if (!c || c.disabled) return; close(); c.act(); };
   const ask = () => { const text = q().trim(); close(); askAbout(text); };
@@ -90,12 +92,13 @@ export function Palette() {
   };
   return (
     <Show when={paletteOpen()}>
+      <DialogBoundary name={t('a.cmd.title')} close={close}>
       <div class="overlay cmdover" onPointerDown={close}>
         <div class="dialog cmddlg" role="dialog" aria-modal="true" aria-label={t('a.cmd.title')} onPointerDown={e => e.stopPropagation()} onKeyDown={key}>
           <div class="cmdfind">
             <Icon d="M11 4a7 7 0 1 0 0 14a7 7 0 0 0 0-14z M20 20l-4-4" size={16} />
             <input type="search" ref={el => queueMicrotask(() => el.focus())} value={q()} onInput={e => setQ(e.currentTarget.value)}
-              placeholder={t('a.cmd.placeholder')} aria-label={t('a.cmd.title')} spellcheck={false} />
+              placeholder={t('a.cmd.placeholder')} aria-label={t('a.cmd.title')} spellcheck="false" />
             <kbd>Esc</kbd>
           </div>
           <div class="cmdlist" ref={list} role="listbox">
@@ -103,7 +106,7 @@ export function Palette() {
               <>
                 <div class="cmdsec"><Show when={dotOf(menu)}>{c => <span class="dot" style={{ background: c() }} />}</Show>{menu}</div>
                 <For each={items}>{({ c, i }) => (
-                  <div class="cmd" role="option" aria-selected={at() === i} aria-disabled={c.disabled} classList={{ on: at() === i, dis: !!c.disabled, danger: !!c.danger }}
+                  <div role="option" aria-selected={at() === i ? 'true' : 'false'} aria-disabled={c.disabled == null ? undefined : c.disabled ? 'true' : 'false'} class={['cmd', { on: at() === i, dis: !!c.disabled, danger: !!c.danger }]}
                     onPointerMove={() => setAt(i)} onClick={() => run(c)}>
                     <span class="gl">{c.glyph && <svg width="14" height="14" viewBox={c.glyph.vb} aria-hidden="true"><path d={c.glyph.d} fill="currentColor" fill-rule={c.glyph.eo ? 'evenodd' : undefined} /></svg>}</span>
                     <span class="name ell">{c.label}</span>
@@ -117,7 +120,7 @@ export function Palette() {
             <Show when={asks()}>
               <Show when={!shown().length}><div class="cmdnone">{t('a.cmd.none', { q: q().trim() })}</div></Show>
               <div class="cmdsec">{t('a.cmd.askSec')}</div>
-              <div class="cmd ask" role="option" aria-selected={at() === shown().length} classList={{ on: at() === shown().length }}
+              <div role="option" aria-selected={at() === shown().length ? 'true' : 'false'} class={['cmd ask', { on: at() === shown().length }]}
                 onPointerMove={() => setAt(shown().length)} onClick={ask}>
                 <svg width="14" height="14" viewBox={APP_GLYPH.ask.vb} aria-hidden="true"><path d={APP_GLYPH.ask.d} fill="currentColor" /></svg>
                 <span class="name ell">{t('a.cmd.ask', { q: q().trim() })}</span>
@@ -129,6 +132,7 @@ export function Palette() {
           </div>
         </div>
       </div>
+      </DialogBoundary>
     </Show>
   );
 }

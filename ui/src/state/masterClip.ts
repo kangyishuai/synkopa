@@ -5,7 +5,7 @@
 // live output). Like the clip LED of Logic's or Ableton's master meter it latches: a 30 ms over
 // in bar 9 must still be visible after playback has stopped. It clears on click or with another
 // project.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { fmtPos } from '../lib/format';
 import { t } from '../lib/i18n';
 

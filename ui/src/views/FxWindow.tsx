@@ -1,4 +1,6 @@
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show, type JSX } from 'solid-js';
+import { createMemo, For, Show, untrack } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { captureOn, createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import { PLUGIN_FORMAT_LABEL, unsafeReason, type Fx, type FxKind, type Id, type Op, type ParamDef, type PluginParam, type PluginRef } from '../api/types';
 import { sliderStep } from '../lib/pluginParam';
@@ -15,10 +17,11 @@ import { findFx, insName, plain, S } from '../state/store';
 import { onFxFrame, tele } from '../state/telemetry';
 import { openMenu, say, U, type PlugWin } from '../state/ui';
 import { closeEditor, editorOpen, isNoEditor, knownWithoutEditor, openEditor } from '../state/pluginWindows';
-import { dblCheck, track } from '../ui/drag';
+import { dblCheck, moveWindow, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts } from '../ui/frameLoop';
 import { FXMETA, FxTile } from '../ui/icons';
 import { Knob, MiniKnob, Segmented, type KnobSize } from '../ui/Knob';
+import { PanelBoundary } from '../ui/PanelBoundary';
 import { theme } from '../ui/theme';
 import type { Viz } from './fx/common';
 import { deessDb, DeessViz, deessFx, deessGeom, deessXf, deessY } from './fx/deess';
@@ -87,13 +90,7 @@ const HINTS: Partial<Record<Fx['type'], TranslationKey>> = {
   multiband: 'c.fx.hint.multiband',
 };
 
-/** Move a fixed window by its header. */
-export function moveWindow(e: PointerEvent, get: () => { x: number; y: number; w: number }, set: (x: number, y: number) => void) {
-  if (e.button !== 0 || (e.target as HTMLElement).closest('button,select,input,.miniknob')) return;
-  e.preventDefault();
-  const sx = e.clientX, sy = e.clientY, o = { ...get() };
-  track(ev => set(clamp(o.x + ev.clientX - sx, 80 - o.w, window.innerWidth - 80), clamp(o.y + ev.clientY - sy, 0, window.innerHeight - 40)), null, 'grabbing');
-}
+export { moveWindow };
 
 export function FxWindow(props: { pw: PlugWin; z: number }) {
   const ff = () => findFx(props.pw.fxId);
@@ -106,9 +103,9 @@ export function FxWindow(props: { pw: PlugWin; z: number }) {
         const info = () => presetInfo(S.catalog, fx(), S.project.bpm);
         return (
           <div class="win fxwin" style={{ left: props.pw.x + 'px', top: props.pw.y + 'px', width: props.pw.w + 'px', 'z-index': props.z }} data-fxwin={props.pw.fxId}
-            on:pointerdown={{ capture: true, handleEvent: () => A.plugFront(props.pw.fxId) }}>
+            ref={captureOn('pointerdown', () => A.plugFront(props.pw.fxId))}>
             <div class="winhd" onPointerDown={e => moveWindow(e, () => props.pw, setPos)}>
-              <button class="pwr" classList={{ off: fx().bypass }} title={fx().bypass ? t('c.fx.bypassOn') : t('c.fx.bypassOff')}
+              <button class={['pwr', { off: fx().bypass }]} title={fx().bypass ? t('c.fx.bypassOn') : t('c.fx.bypassOff')}
                 onPointerDown={e => { e.stopPropagation(); A.toggleBypass(fx().id); }} />
               <FxTile type={fx().type} size={20} icon={13} />
               <span class="title">{A.fxName(fx())}</span>
@@ -126,7 +123,7 @@ export function FxWindow(props: { pw: PlugWin; z: number }) {
               <Show when={!isVst() && presetList(S.catalog, fx().type).length}>
                 <div class="presetbar">
                   <button class="arrow" title={t('c.fx.presetPrev')} onClick={() => A.stepPreset(fx().id, -1)}>‹</button>
-                  <button class="name" title={t('c.fx.presets')} classList={{ mod: info().mod }} data-preset-name
+                  <button class={['name', { mod: info().mod }]} title={t('c.fx.presets')} data-preset-name
                     onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); openPresetMenu(fx().id, r.left, r.bottom + 4); }}>
                     <span class="ell" style={{ flex: 1, 'min-width': 0 }}>{tName(info().name)}{info().mod ? ' *' : ''}</span>
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
@@ -136,16 +133,19 @@ export function FxWindow(props: { pw: PlugWin; z: number }) {
               </Show>
               <button class="closebtn" title={t('c.fx.close')} onClick={() => A.closePlug(fx().id)}>×</button>
             </div>
-            <Show when={!isVst()} fallback={<PluginBody id={fx().id} plugin={fx().plugin} />}>
-              <Show when={fx().type === 'eq'} fallback={<VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H[fx().type] ?? 190} />}>
-                {/* EQ: band bank beside the graph, like FL Parametric EQ 2 */}
-                <div class="eqmain">
-                  <div class="eqgraph"><VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H.eq!} /></div>
-                  <EqStrips fx={fx()} />
-                </div>
+            {/* the body behind an error boundary: a failure shows in the window, whose title bar still moves and closes it */}
+            <PanelBoundary name={t('d.ui.pn.fx')}>
+              <Show when={!isVst()} fallback={<PluginBody id={fx().id} plugin={fx().plugin} />}>
+                <Show when={fx().type === 'eq'} fallback={<VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H[fx().type] ?? 190} />}>
+                  {/* EQ: band bank beside the graph, like FL Parametric EQ 2 */}
+                  <div class="eqmain">
+                    <div class="eqgraph"><VizCanvas fxId={props.pw.fxId} pw={props.pw} height={VIZ_H.eq!} /></div>
+                    <EqStrips fx={fx()} />
+                  </div>
+                </Show>
+                <Body fx={fx()} />
               </Show>
-              <Body fx={fx()} />
-            </Show>
+            </PanelBoundary>
           </div>
         );
       }}
@@ -252,7 +252,7 @@ function Ctl(props: { fx: Fx; id: string; ends?: [string, string]; danger?: numb
 
 /** How to use the window, behind a "?" in the header (hover or focus): there when wanted, never taking room. */
 function HintIcon(props: { fx: Fx }) {
-  return <Show when={HINTS[props.fx.type]}>{k => <span class="fxhint" tabIndex={0} role="note" aria-label={t(k())} data-tip={t(k())}>?</span>}</Show>;
+  return <Show when={HINTS[props.fx.type]}>{k => <span class="fxhint" tabindex={0} role="note" aria-label={t(k())} data-tip={t(k())}>?</span>}</Show>;
 }
 /** Layout entries starting with `c.` are translation keys, anything else ("C3", "2×") is shown as is. */
 const L = (s: string) => (s.startsWith('c.') ? t(s as TranslationKey) : s);
@@ -452,7 +452,7 @@ function Sections(props: { fx: Fx }) {
       <For each={shown()}>
         {(sec, i) => (
           <>
-            <div class="fxsec" classList={{ adv: !!sec.adv }}>
+            <div class={['fxsec', { adv: !!sec.adv }]}>
               <div class="fxsec-h">{L(sec.title)}</div>
               <div class="fxsec-b"><For each={sec.items}>{it => <LayoutItem fx={props.fx} it={it} />}</For></div>
             </div>
@@ -461,7 +461,7 @@ function Sections(props: { fx: Fx }) {
       </For>
       <div style={{ flex: 1 }} />
       <Show when={hasAdv()}>
-        <button class="smallbtn advbtn" classList={{ on: adv() }} title={t('c.fx.advTip')}
+        <button class={['smallbtn advbtn', { on: adv() }]} title={t('c.fx.advTip')}
           onClick={() => setAdvOpen(m => ({ ...m, [props.fx.id]: !adv() }))}>{adv() ? t('c.fx.less') : t('c.fx.advanced')}</button>
       </Show>
     </div>
@@ -507,7 +507,7 @@ function VizCanvas(props: { fxId: Id; pw: PlugWin; height: number }) {
   const height = createMemo(() => props.height);
   const pw = createMemo(() => props.pw);
   let version = 0, drawnVersion = -1, lastW = 0, fontEpoch = -1, themeEpoch = -1;
-  createEffect(() => { // anything param-ish changes → redraw
+  effect(() => { // anything param-ish changes → redraw
     const f = ff()?.f; if (!f) return;
     f.bypass; f.mix; for (const k in f.params) void f.params[k];
     f.bands?.forEach(b => { b.on; b.type; b.f; b.g; b.q; b.slope; b.place; b.dynamic?.range; b.dynamic?.thr; });
@@ -745,15 +745,18 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
   const [editorsWhy, setEditorsWhy] = createSignal<string | null>(null);
   const [q, setQ] = createSignal('');
   let refresh = 0;
-  const load = () => be().pluginParams(props.id).then(p => { setParams(p); setErr(null); }).catch(e => setErr(String(e)));
+  /** Parameters a capture drag is recording (id → the dragged value): the engine is not sent the
+   * value, so a refresh would put the slider back under the pointer; the drag's value is kept. */
+  const held = new Map<number, number>();
+  const load = () => be().pluginParams(props.id).then(p => { setParams(held.size ? p.map(x => (held.has(x.id) ? { ...x, value: held.get(x.id)! } : x)) : p); setErr(null); }).catch(e => setErr(String(e)));
   /** Why the engine could not load the plugin (not installed, refused): shown instead of a parameter error. */
   const loadErr = () => S.fxErrors[props.id];
   const [trusting, setTrusting] = createSignal(false);
   onMount(() => { load(); be().appInfo().then(i => { setEditors(i.pluginEditors); setEditorsWhy(i.pluginEditorsWhy ?? null); }).catch(() => {}); });
   // a window opened with the slot is asked before the engine has the instance: ask again once it does
-  createEffect(() => { void S.revision; if (err() && !loadErr()) load(); });
+  effect(() => { void S.revision; if (err() && !loadErr()) load(); });
   // knobs turned in the plugin's own window: the list follows while both are open
-  createEffect(() => {
+  effect(() => {
     if (!editorOpen(props.id)) return;
     const iv = window.setInterval(load, 1000);
     onCleanup(() => clearInterval(iv));
@@ -795,42 +798,51 @@ export function PluginBody(props: { id: Id; plugin?: PluginRef; instrument?: boo
         )}
       </Show>
       <div style={{ 'max-height': '320px', overflow: 'auto', 'padding-right': '4px' }}>
-        <For each={shown()} fallback={<span class="note">{t('c.fx.noParams')}</span>}>
+        {/* rows keyed by the parameter's id: a value change (a new object per parameter, here and on
+            every refresh) updates the row in place, so the slider being dragged stays in the page */}
+        <For each={shown()} keyed={p => p.id} fallback={<span class="note">{t('c.fx.noParams')}</span>}>
           {p => {
-            const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: p.id };
+            const id = untrack(() => p().id); // the row's key: the same for the row's whole life
+            const target: AutoTarget = { kind: 'plugin', fxId: props.id, paramId: id };
             let cap: Tweak | null = null;
-            const done = () => { cap?.end(); cap = null; };
-            // the 1 s param refresh replaces every row: a mid-drag replacement would drop the
-            // pointer-up handler, so the capture closes here instead of leaking the gesture
+            const done = () => { cap?.end(); cap = null; held.delete(id); };
+            // a row removed mid-drag (the search narrowed, the plugin reloaded) loses its
+            // pointer-up handler: the capture closes here instead of leaking the gesture
             onCleanup(done);
             return (
               <div class="vparam" onContextMenu={e => { e.preventDefault(); e.stopPropagation();
-                if (!props.instrument) paramMenu(e.clientX, e.clientY, target, () => set(p.id, p.def), undefined, { current: p.value, paramLabel: p.name });
-                else controlMenu(e.clientX, e.clientY, p.name, () => set(p.id, p.def), t('c.fx.instNoAuto'));
+                if (!props.instrument) paramMenu(e.clientX, e.clientY, target, () => set(id, p().def), undefined, { current: p().value, paramLabel: p().name });
+                else controlMenu(e.clientX, e.clientY, p().name, () => set(id, p().def), t('c.fx.instNoAuto'));
               }}>
-                <span class="ell" style={{ font: '12px var(--sans)', color: 'var(--fg)' }} title={paramTitle(p)}>{p.name}</span>
-                <Show when={p.options?.length} fallback={
-                  <Show when={p.toggle} fallback={
-                    <input type="range" min="0" max="1" step={sliderStep(p)} value={p.value}
-                      onInput={e => { const v = +e.currentTarget.value; if (cap) cap.move(v); else set(p.id, v); }}
-                      onDblClick={() => set(p.id, p.def)} aria-label={p.name}
+                <span class="ell" style={{ font: '12px var(--sans)', color: 'var(--fg)' }} title={paramTitle(p())}>{p().name}</span>
+                <Show when={p().options?.length} fallback={
+                  <Show when={p().toggle} fallback={
+                    <input type="range" min="0" max="1" step={sliderStep(p())} value={p().value}
+                      onInput={e => {
+                        const v = +e.currentTarget.value;
+                        if (!cap) return set(id, v);
+                        // capturing: the envelope gets the value, the row shows it (`held` keeps it over a refresh)
+                        held.set(id, v); setParams(ps => ps.map(q => (q.id === id ? { ...q, value: v } : q)));
+                        cap.move(v);
+                      }}
+                      onDblClick={() => set(id, p().def)} aria-label={p().name}
                       onPointerDown={e => {
-                        if (e.altKey && e.button === 0) { e.preventDefault(); set(p.id, p.def); }
-                        else if (!props.instrument && captureArmed()) cap = autoTweak(target, p.name, () => null, { current: p.value, paramLabel: p.name });
+                        if (e.altKey && e.button === 0) { e.preventDefault(); set(id, p().def); }
+                        else if (!props.instrument && captureArmed()) cap = autoTweak(target, p().name, () => null, { current: p().value, paramLabel: p().name });
                         else if (e.button === 0 && !props.instrument) noteManualTweak(target); // the tweak wins over the envelope (Ableton's override)
                       }}
                       onPointerUp={done} onPointerCancel={done} />
                   }>
-                    <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p.value >= 0.5} onChange={e => set(p.id, e.currentTarget.checked ? 1 : 0)} aria-label={p.name} />
+                    <input type="checkbox" style={{ 'justify-self': 'start' }} checked={p().value >= 0.5} onChange={e => set(id, e.currentTarget.checked ? 1 : 0)} aria-label={p().name} />
                   </Show>
                 }>
-                  <select class="textin" style={{ height: '22px', padding: '0 4px' }} aria-label={p.name}
-                    value={String(nearestOption(p))} onChange={e => set(p.id, p.options![+e.currentTarget.value].value)} onKeyDown={e => e.stopPropagation()}>
-                    <For each={p.options}>{(o, oi) => <option value={String(oi())}>{o.label}</option>}</For>
+                  <select class="textin" style={{ height: '22px', padding: '0 4px' }} aria-label={p().name}
+                    value={String(nearestOption(p()))} onChange={e => set(id, p().options![+e.currentTarget.value].value)} onKeyDown={e => e.stopPropagation()}>
+                    <For each={p().options} keyed={false}>{(o, oi) => <option value={String(oi)}>{o().label}</option>}</For>
                   </select>
                 </Show>
-                <span class="mono ell" style={{ 'font-size': '10px', color: 'var(--fg2)', 'text-align': 'right' }} title={!props.instrument && isAutomated(target) ? t('d.ui.knob.auto') : p.display}>
-                  <Show when={!props.instrument && isAutomated(target)}>● </Show>{p.display}
+                <span class="mono ell" style={{ 'font-size': '10px', color: 'var(--fg2)', 'text-align': 'right' }} title={!props.instrument && isAutomated(target) ? t('d.ui.knob.auto') : p().display}>
+                  <Show when={!props.instrument && isAutomated(target)}>● </Show>{p().display}
                 </span>
               </div>
             );

@@ -1,6 +1,6 @@
 // File → Open recent: the projects opened or saved lately (the app keeps the list in its
 // settings, newest first). Refreshed at start and after every open or save.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import type { RecentProject } from '../api/types';
 

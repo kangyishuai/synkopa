@@ -3,7 +3,7 @@
 // close). The gear opens Synkopa's window for it (parameters, level, routing). A plugin with no
 // interface of its own, or a session that cannot show one (no X11 display), opens Synkopa's window
 // instead, as before.
-import { createSignal } from 'solid-js';
+import { createSignal } from '../lib/reactive';
 import { be } from '../api/backend';
 import { PLUGIN_FORMAT_LABEL, type Id, type PluginRef } from '../api/types';
 import { t } from '../lib/i18n';

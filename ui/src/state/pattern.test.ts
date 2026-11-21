@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockBackend } from '../api/mock';
+import { syncEngine } from '../test/engine';
 
 // Pattern windows that follow a pattern switch, sampler channels made from project audio, and the
 // second Stop, against the mock backend (which behaves like the engine).
@@ -17,13 +18,14 @@ let P: typeof import('./pattern');
 let A: typeof import('./actions');
 let store: typeof import('./store');
 let ui: typeof import('./ui');
-const settle = () => new Promise(r => setTimeout(r, 30));
-const sync = async () => { await settle(); store.replaceState(await mock.getState()); };
+let edit: typeof import('./edit');
+const sync = () => syncEngine(mock, store, edit);
 
 beforeEach(async () => {
   vi.resetModules();
   const backend = await import('../api/backend');
   mock = (await backend.getBackend()) as MockBackend;
+  edit = await import('./edit');
   P = await import('./pattern');
   A = await import('./actions');
   store = await import('./store');
@@ -79,17 +81,21 @@ describe('sampler channels from project audio', () => {
     P.addSampler(a.id);
     await sync();
     const ch = P.channels()[P.channels().length - 1];
+    const was = store.plain(ch); // `ch` is the live store item: it changes with the replace
+    if (was.kind !== 'sample') throw new Error('kind');
     P.replaceWithSource(ch, b.id);
     await sync();
     const now = P.chanById(ch.id)!;
     expect(now.kind === 'sample' && now.source).toBe(b.id);
     expect(now.name).toBe(b.name);
-    expect(now.kind === 'sample' && ch.kind === 'sample' && now.sampler).toEqual(ch.kind === 'sample' ? ch.sampler : null);
+    if (now.kind !== 'sample') throw new Error('kind');
+    expect(now.sampler).toEqual(was.sampler);
   });
   it('makes another instrument a sampler of the source', async () => {
     const src = store.S.project.sources[0];
-    const other = P.channels().find(c => c.kind !== 'sample');
-    if (!other) return;
+    P.addKeys(); // an instrument that is not a sampler
+    await sync();
+    const other = store.plain(P.channels().find(c => c.kind === 'keys')!);
     P.replaceWithSource(other, src.id);
     await sync();
     const now = P.chanById(other.id)!;

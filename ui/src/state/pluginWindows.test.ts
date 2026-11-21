@@ -1,5 +1,6 @@
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockBackend } from '../api/mock';
+import { syncEngine } from '../test/engine';
 import type { PluginInfo } from '../api/types';
 
 // FL's plugin wrapper: opening an external plugin shows its own window under Synkopa's header; the header's
@@ -23,14 +24,15 @@ let A: typeof import('./actions');
 let store: typeof import('./store');
 let ui: typeof import('./ui');
 let pw: typeof import('./pluginWindows');
-const settle = () => new Promise(r => setTimeout(r, 30));
-const sync = async () => { await settle(); store.replaceState(await mock.getState()); };
+let edit: typeof import('./edit');
+const sync = () => syncEngine(mock, store, edit);
 
 beforeEach(async () => {
   vi.resetModules();
   localStorageMap.clear();
   const backend = await import('../api/backend');
   mock = (await backend.getBackend()) as MockBackend;
+  edit = await import('./edit');
   A = await import('./actions');
   store = await import('./store');
   ui = await import('./ui');

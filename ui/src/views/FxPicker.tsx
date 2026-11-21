@@ -3,7 +3,8 @@
 // Category rail on the left, tiles with icon + one-line description + preset count, a preset
 // column for the focused effect, Recent and Favourites at the top, built-in and VST3 separated.
 // A tile can also be dragged onto any mixer strip or the effect rack to add it there.
-import { createEffect, createMemo, createSignal, For, onCleanup, onMount, Show } from 'solid-js';
+import { createMemo, For, Show } from 'solid-js';
+import { createSignal, effect, onCleanup, onMount } from '../lib/reactive';
 import { PLUGIN_FORMAT_LABEL, type BuiltinKind, type Id, type PluginInfo } from '../api/types';
 import { lang, t as tr, tName, type TranslationKey } from '../lib/i18n';
 import { presetList } from '../lib/presets';
@@ -14,6 +15,7 @@ import { say, setU, U } from '../state/ui';
 import { openNotebook } from '../state/notebook';
 import { NOTEBOOK_ICON } from './Notebook';
 import { FX_ORDER, FXMETA, FxTile, Icon, ICONS } from '../ui/icons';
+import { DialogBoundary } from '../ui/PanelBoundary';
 
 /** What each built-in effect is for, in one line. */
 const DESC: Record<BuiltinKind, TranslationKey> = {
@@ -105,7 +107,7 @@ export function openFxPicker(insId: Id, x?: number, y?: number) {
 }
 
 export function FxPickerHost() {
-  return <Show when={U.fxPicker}>{p => <FxPicker insId={p().insId} x={p().x} y={p().y} />}</Show>;
+  return <Show when={U.fxPicker}>{p => <DialogBoundary name={tr('d.ui.pn.fxPicker')} close={() => setU('fxPicker', null)}><FxPicker insId={p().insId} x={p().x} y={p().y} /></DialogBoundary>}</Show>;
 }
 
 const W = 900, H = 520;
@@ -157,7 +159,7 @@ function FxPicker(props: { insId: Id; x: number; y: number }) {
     };
     return list.map(e => [e, score(e)] as const).filter(([, sc]) => sc >= 0).sort((a, b) => a[1] - b[1]).map(([e]) => e);
   });
-  createEffect(() => { shown(); setFocus(0); setPresetFocus(-1); });
+  effect(() => { shown(); setFocus(0); setPresetFocus(-1); });
   /** "All" without a search is drawn in sections, with a subtle divider (the section's name) before each. */
   const sectioned = () => cat() === 'all' && !q().trim();
   const sectionStart = (i: number) => sectioned() && (i === 0 || sectionOf(shown()[i]) !== sectionOf(shown()[i - 1]));
@@ -273,7 +275,7 @@ function FxPicker(props: { insId: Id; x: number; y: number }) {
         <div class="fxp-hd">
           <span class="fxp-search">
             <Icon d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15z M21 21l-5.2-5.2" size={14} />
-            <input ref={input} placeholder={tr('c.picker.search')} value={q()} onInput={e => setQ(e.currentTarget.value)} onKeyDown={onKey} spellcheck={false} />
+            <input ref={input} placeholder={tr('c.picker.search')} value={q()} onInput={e => setQ(e.currentTarget.value)} onKeyDown={onKey} spellcheck="false" />
             <Show when={q()}><button class="fxp-clear" title={tr('c.picker.clear')} onClick={() => { setQ(''); input.focus(); }}>×</button></Show>
           </span>
           <span class="fxp-dest">{tr('c.picker.to')} <b>{insName()}</b></span>
@@ -285,7 +287,7 @@ function FxPicker(props: { insId: Id; x: number; y: number }) {
               {(c, i) => (
                 <>
                   <Show when={i() === 3 || i() === 8 || i() === 9}><div class="fxp-sep" /></Show>
-                  <button classList={{ on: cat() === c.id && !q() }} onClick={() => { setCat(c.id); setQ(''); input.focus(); }}>
+                  <button class={{ on: cat() === c.id && !q() }} onClick={() => { setCat(c.id); setQ(''); input.focus(); }}>
                     <span>{tr(c.label)}</span>
                     <span class="n">{c.id === 'recent' ? recent().length || '' : c.id === 'fav' ? favs().length || '' : c.id === 'vst' ? (scan() ? plugins().length : '…') : c.id === 'tools' ? tools().length : c.types ? c.types.length : builtins().length + plugins().length + tools().length}</span>
                   </button>
@@ -311,7 +313,7 @@ function FxPicker(props: { insId: Id; x: number; y: number }) {
               <For each={shown()} fallback={<div class="fxp-empty">{cat() === 'fav' && !q() ? tr('c.picker.emptyFav') : cat() === 'recent' && !q() ? tr('c.picker.emptyRecent') : cat() === 'vst' && !scan() ? tr('c.picker.scanning') : tr('c.picker.noMatch')}</div>}>
                 {(e, i) => (<>
                   <Show when={sectionStart(i())}><div class="fxp-sect">{tr(CATS.find(c => c.id === sectionOf(e))!.label)}</div></Show>
-                  <div class="fxp-tile" data-i={i()} classList={{ focus: i() === focus() && presetFocus() < 0, cur: i() === focus() }} style={e.plugin?.unsupported ? { opacity: 0.55 } : undefined}
+                  <div class={['fxp-tile', { focus: i() === focus() && presetFocus() < 0, cur: i() === focus() }]} data-i={i()} style={e.plugin?.unsupported ? { opacity: 0.55 } : undefined}
                     onPointerDown={ev => tileDown(ev, e, i())} onPointerEnter={() => presetFocus() < 0 && setFocus(i())}
                     title={e.plugin ? (e.plugin.unsupported ? tr('c.picker.unsupportedTip', { why: e.plugin.unsupported }) : e.plugin.path || e.plugin.cid) : e.tool ? tr('c.picker.tipOpen') : tr('c.picker.tipAdd')}>
                     <Show when={e.builtin} fallback={<span class="tile" style={{ width: '40px', height: '40px', background: e.tool ? 'color-mix(in srgb, var(--blue) 18%, transparent)' : FXMETA.plugin.color + '26', color: e.tool ? 'var(--blue)' : FXMETA.plugin.color }}><Icon d={e.tool ? NOTEBOOK_ICON : ICONS.vst} size={20} /></span>}>
@@ -322,7 +324,7 @@ function FxPicker(props: { insId: Id; x: number; y: number }) {
                       <div class="fxp-desc">{e.desc}</div>
                       <Show when={e.presets}><div class="fxp-meta">{e.presets} {presetsWord(e.presets)}</div></Show>
                     </div>
-                    <button class="fxp-star" classList={{ on: favs().includes(e.key) }} title={favs().includes(e.key) ? tr('c.picker.favRemove') : tr('c.picker.favAdd')}
+                    <button class={['fxp-star', { on: favs().includes(e.key) }]} title={favs().includes(e.key) ? tr('c.picker.favRemove') : tr('c.picker.favAdd')}
                       onPointerDown={ev => { ev.stopPropagation(); }} onClick={ev => { ev.stopPropagation(); toggleFav(e.key); }}>{favs().includes(e.key) ? '★' : '☆'}</button>
                   </div>
                 </>)}
@@ -341,7 +343,7 @@ function FxPicker(props: { insId: Id; x: number; y: number }) {
                     <div class="fxp-plabel">{tr('c.picker.addWithPreset')}</div>
                     <For each={curPresets()}>
                       {(p, pi) => (
-                        <button class="fxp-pi" classList={{ focus: presetFocus() === pi() }} onClick={() => add(e(), pi())} onPointerEnter={() => setPresetFocus(pi())} onPointerLeave={() => setPresetFocus(-1)}>
+                        <button class={['fxp-pi', { focus: presetFocus() === pi() }]} onClick={() => add(e(), pi())} onPointerEnter={() => setPresetFocus(pi())} onPointerLeave={() => setPresetFocus(-1)}>
                           <span class="ell">{p.name}</span>{pi() === 0 && <span class="fxp-def">{tr('c.picker.default')}</span>}
                         </button>
                       )}

@@ -1,6 +1,6 @@
 // UI-only state (not saved, not undone).
-import { createEffect, createRoot, createSignal } from 'solid-js';
-import { createStore } from 'solid-js/store';
+import { createRoot } from 'solid-js';
+import { createSignal, createStore, effect } from '../lib/reactive';
 import { t } from '../lib/i18n';
 import type { ClipKind, Id } from '../api/types';
 import type { MenuGlyph } from '../ui/menuIcons';
@@ -159,14 +159,14 @@ export const [U, setU] = createStore<UiState>({
 
 // Until the first status message the readout follows the language (a live switch re-translates "Ready").
 let readoutPristine = true;
-createRoot(() => createEffect(() => { const ready = t('d.ui.ready'); if (readoutPristine) setU('readout', ready); }));
+createRoot(() => effect(() => { const ready = t('d.ui.ready'); if (readoutPristine) setU('readout', ready); }));
 
 // The working set-up survives a restart: tool, snap, zoom, follow and the panel layout used to
 // reset on every launch (the mixer reopened, the browser went back to the Project tab, ...).
 const LAYOUT_KEY = 'wave.layout';
 try { setU(parseLayout(localStorage.getItem(LAYOUT_KEY))); } catch { /* private window */ }
 const geo = (w: PatWin): Geo => ({ x: w.x, y: w.y, w: w.w, h: w.h });
-createRoot(() => createEffect(() => {
+createRoot(() => effect(() => {
   const s = JSON.stringify({ tool: U.tool, snap: U.snap, bw: U.bw, follow: U.follow, mixMin: U.mixMin, headW: U.headW, pickW: U.pickW, pickOpen: U.pickOpen, browserTab: U.browserTab, browserSec: U.browserSec,
     dock: U.dock, paneSize: U.paneSize, dockHome: U.dockHome, rollMax: U.rollMax,
     // the floating place: live while the window is open (a restart with it open keeps it), else where it closed

@@ -1,9 +1,8 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MockBackend } from '../api/mock';
 import type { AutoPoint, Id } from '../api/types';
-// `unwrap` must come from the same solid instance the app's modules resolve (resetModules), or
-// it is inert on their store proxies
-let unwrap: <T>(item: T) => T;
+// `rawOf` (the plain project) must come from the store module the app's modules resolve (resetModules)
+const rawOf = <T,>(item: T): T => store.rawOf(item);
 
 // Control tweaks capture envelope points while the record filter's automation is armed and the
 // song plays, and otherwise write static values (which override an automated control). The
@@ -35,7 +34,6 @@ beforeEach(async () => {
   edit = await import('./edit');
   A = await import('./automation');
   lib = await import('../lib/automation');
-  ({ unwrap } = await import('solid-js/store'));
   await mock.on('state', edit.onStateEvent); // main.tsx wires this in the app
   await mock.projectOpen();
   store.replaceState(await mock.getState());
@@ -139,7 +137,7 @@ describe('a control tweak routes by the record filter', () => {
 
     ui.setU('playing', true); // playing, but the record filter is off: the fader wins (override)
     const t = A.autoTweak(target, 'Test', v => {
-      const ops = lib.writeTargetOps(unwrap(store.S.project), target, v);
+      const ops = lib.writeTargetOps(rawOf(store.S.project), target, v);
       return ops;
     });
     t.move(0.15);
@@ -161,7 +159,7 @@ describe('a control tweak routes by the record filter', () => {
     expect(store.S.overriddenAutos).not.toContain(600);
 
     // a second tweak after re-enabling overrides again (a settled request must not block it)
-    const t2 = A.autoTweak(target, 'Test', v => lib.writeTargetOps(unwrap(store.S.project), target, v));
+    const t2 = A.autoTweak(target, 'Test', v => lib.writeTargetOps(rawOf(store.S.project), target, v));
     t2.move(0.4);
     t2.end();
     await edit.settled();
@@ -202,7 +200,7 @@ describe('a control tweak routes by the record filter', () => {
     await mock.applyOps(r.ops);
     store.replaceState(await mock.getState());
     ui.setU('playing', true);
-    const t = A.autoTweak(target, 'Test', v => lib.writeTargetOps(unwrap(store.S.project), target, v));
+    const t = A.autoTweak(target, 'Test', v => lib.writeTargetOps(rawOf(store.S.project), target, v));
     t.move(0.2);
     t.end();
     await edit.settled();
@@ -234,7 +232,7 @@ describe('a control tweak routes by the record filter', () => {
     const ch = store.S.project.channels?.[0]?.id ?? 1;
     const target = chanVol(ch);
     await mock.applyOps(lib.createAutomationOps(store.S.project, null, target, 'Test', '#e0a44a', 0, 8, () => 704).ops);
-    const muted = unwrap(store.S.project).clips.map(c => (c.id === 705 ? { ...c, muted: true } : c));
+    const muted = rawOf(store.S.project).clips.map(c => (c.id === 705 ? { ...c, muted: true } : c));
     await mock.applyOps([{ op: 'putClips', clips: muted }]);
     store.replaceState(await mock.getState());
     await arm();
@@ -265,7 +263,7 @@ describe('a control tweak routes by the record filter', () => {
   it('static and stopped: the tweak writes the value, no override is asked', async () => {
     const ch = store.S.project.channels?.[0]?.id ?? 1;
     const target = chanVol(ch);
-    const t = A.autoTweak(target, 'Test', v => lib.writeTargetOps(unwrap(store.S.project), target, v));
+    const t = A.autoTweak(target, 'Test', v => lib.writeTargetOps(rawOf(store.S.project), target, v));
     t.move(0.35);
     t.end();
     await edit.settled();

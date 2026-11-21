@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { createSignal } from './reactive';
 import { en } from '../i18n/en';
 import { pl } from '../i18n/pl';
 import { names as fxNames } from '../i18n/names-fx';

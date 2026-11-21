@@ -1,7 +1,8 @@
 // Synkopa Keys: the sampled grand piano's page in the channel window. Two knobs (how long a
 // released note rings, how much the velocity changes the level) and the state of the
 // recordings: shipped with the app, or downloaded once into the sample library.
-import { createSignal, onCleanup, onMount, Show } from 'solid-js';
+import { Show } from 'solid-js';
+import { createSignal, onCleanup, onMount } from '../lib/reactive';
 import { be } from '../api/backend';
 import { KEYS_DYNAMICS, KEYS_RELEASE, type Channel, type KeysStatus } from '../api/types';
 import { clamp } from '../lib/format';
