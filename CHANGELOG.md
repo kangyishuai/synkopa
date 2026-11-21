@@ -4,7 +4,7 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
-## Unreleased
+## 0.9.31 — 2026-11-21
 
 ### Added
 - **Music Box, a new built-in instrument.** A cylinder music box modeled from how its steel comb
