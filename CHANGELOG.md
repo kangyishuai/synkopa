@@ -4,6 +4,16 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## 0.9.32 — 2026-11-22
+
+### Fixed
+- **Zooming the Playlist on Linux no longer flickers.** With Ctrl+wheel on a big song, the view
+  could jump sideways or show blank strips (sometimes the whole grid) for a moment on every
+  step. Synkopa now starts Linux's web view without the renderer that caused it. If you want that
+  renderer back, start Synkopa with `WEBKIT_DISABLE_DMABUF_RENDERER=0`.
+- On a slower computer, zooming a big song no longer shows the Playlist briefly drawn off its
+  place, with an empty strip at its side, before it sharpens.
+
 ## 0.9.31 — 2026-11-21
 
 ### Added
