@@ -7,7 +7,10 @@
 //! workers, so if no worker wakes up in time it simply does all the work itself: never slower
 //! than single-threaded except for a few atomics. It waits only for jobs a worker has already
 //! started. Idle workers spin for a short while (the next stage of the same block usually
-//! follows within microseconds), then park; a dispatch unparks only the parked ones.
+//! follows within microseconds), then park; a dispatch unparks only the parked ones. Once the
+//! block's last stage is done the owner calls [`RtPool::rest`]: nothing more comes until the
+//! next callback, so the workers park at once instead of burning their spin on every block
+//! (with small buffers that spin alone was several % of a core per worker, even in silence).
 //!
 //! The threads are spawned by [`RtPool::new`] (off the audio thread). Dropping the pool tells
 //! them to exit and does not join them, so it is safe wherever the owner is dropped.
@@ -26,6 +29,9 @@ type Job = *const (dyn Fn(usize) + Sync);
 struct Inner {
     /// Bumped by every dispatch (and at shutdown): what wakes a worker.
     epoch: AtomicU64,
+    /// Set by [`RtPool::rest`] (no dispatch before the next block), cleared by every dispatch:
+    /// a waiting worker parks at once instead of spinning.
+    rest: AtomicBool,
     /// The job may be read (set after `job`/`total` are written, cleared before they change).
     open: AtomicBool,
     /// Workers between "I may look at the job" and "I am done with it".
@@ -55,6 +61,7 @@ impl RtPool {
     pub fn new(workers: usize) -> Self {
         let inner = Arc::new(Inner {
             epoch: AtomicU64::new(0),
+            rest: AtomicBool::new(false),
             open: AtomicBool::new(false),
             active: AtomicUsize::new(0),
             next: AtomicUsize::new(0),
@@ -102,6 +109,7 @@ impl RtPool {
         s.total.store(total, SeqCst);
         s.next.store(0, SeqCst);
         s.done.store(0, SeqCst);
+        s.rest.store(false, SeqCst);
         s.open.store(true, SeqCst);
         s.epoch.fetch_add(1, SeqCst);
         // wake only as many parked workers as there are jobs beyond this thread's first
@@ -134,6 +142,14 @@ impl RtPool {
             std::hint::spin_loop();
         }
         unsafe { *s.job.get() = None };
+    }
+
+    /// No dispatch follows until the next block: waiting workers park now instead of spinning.
+    /// A worker that misses it only spins out its usual [`SPIN`]. Real-time safe (one store).
+    pub fn rest(&self) {
+        if !self.inner.sleeping.is_empty() {
+            self.inner.rest.store(true, SeqCst);
+        }
     }
 
     /// `f(i, &mut items[i])` for every item, in parallel (each item to exactly one call).
@@ -172,7 +188,7 @@ fn worker(s: &Inner, w: usize) {
         while s.epoch.load(SeqCst) == seen {
             std::hint::spin_loop();
             spins += 1;
-            if spins.is_multiple_of(64) && t0.elapsed() > SPIN {
+            if spins.is_multiple_of(64) && (s.rest.load(SeqCst) || t0.elapsed() > SPIN) {
                 s.sleeping[w].store(true, SeqCst);
                 if s.epoch.load(SeqCst) == seen {
                     std::thread::park();
@@ -270,6 +286,27 @@ mod tests {
             });
         }
         assert!(ids.lock().unwrap().len() >= 2, "only the caller worked");
+    }
+
+    #[test]
+    fn rest_parks_the_workers_and_the_next_dispatch_wakes_them() {
+        let pool = RtPool::new(2);
+        let ids = std::sync::Mutex::new(std::collections::HashSet::new());
+        for _ in 0..200 {
+            pool.run(8, &|_| {
+                ids.lock().unwrap().insert(std::thread::current().id());
+                let t = Instant::now();
+                while t.elapsed() < Duration::from_micros(100) {}
+            });
+            pool.rest();
+            // parked well before the spin would have run out
+            let t = Instant::now();
+            while !pool.inner.sleeping.iter().all(|s| s.load(SeqCst)) {
+                assert!(t.elapsed() < Duration::from_millis(100), "a worker never parked");
+                std::hint::spin_loop();
+            }
+        }
+        assert!(ids.lock().unwrap().len() >= 2, "parked workers were not woken");
     }
 
     #[test]

@@ -779,7 +779,9 @@ impl SynthBank {
         pool: Option<&crate::pool::RtPool>,
         track_dirty: &mut [bool],
     ) {
-        if let Some(pool) = pool.filter(|_| self.insts.len() > 1 && n <= OUT_CAP) {
+        // an idle instance with nothing to play only advances its clock: not worth a dispatch
+        let busy = || self.insts.iter().filter(|s| !s.idle || !s.events.is_empty()).nth(1).is_some();
+        if let Some(pool) = pool.filter(|_| self.insts.len() > 1 && n <= OUT_CAP && busy()) {
             pool.for_each_mut(&mut self.insts, &|_, s| {
                 let (g, pan) =
                     chans.iter().find(|c| c.id == s.chan).map(|c| (if c.on { c.gain } else { 0.0 }, c.pan)).unwrap_or((0.0, 0.0));
