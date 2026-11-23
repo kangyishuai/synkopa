@@ -83,27 +83,29 @@ function openStripMenu(x: number, y: number, id: Id) {
     { t: 'swatches', current: m.color, pick: col => A.setInsert(id, { color: col }, tr('c.mix.undoColor')) },
     { t: 'sep' },
     { t: 'item', label: tr('c.mix.addFx'), act: () => openFxMenu(x, y, id) },
-    ...chainItems(x, y, m),
+    { t: 'sub', label: tr('c.mix.fxChain'), items: chainItems(x, y, m) },
     { t: 'item', label: tr('c.mix.resetVolPan'), act: () => A.setInsert(id, { vol: VOL_UNITY, pan: 0 }, tr('c.mix.undoReset')) },
     { t: 'sep' },
-    ...routeItems(id),
+    // only while channels are selected in the Channel Rack (the header's chip says so too)
+    ...(selectedChannels().length ? routeItems(id) : []),
     ...(id === 0 ? [] : sendItems(m)),
     ...(id === 0 ? [] : [{ t: 'sep' }, { t: 'item', label: tr('c.mix.removeInsert'), danger: true, act: () => A.removeInsert(id) }] as MenuItem[]),
   ], 330);
 }
 
-/** "Send to ▸" (every other insert: checked = sends there, click = add / remove; greyed when it
- *  would loop, with why) and "Output to Master" (FL's "route to this track only" when off). */
+/** "Send to ▸" (the master, then every other insert: checked = sends there, click = add / remove;
+ *  greyed when it would loop, with why) and "Sidechain to ▸". */
 function sendItems(m: Insert): MenuItem[] {
   const sends = sendsOf(m);
   const targets = S.project.inserts.filter(x => x.id !== 0 && x.id !== m.id);
+  // the master is the first target: unticking it is FL's "route to this track only"
+  const master: MenuItem = { t: 'item', label: 'Master', checked: toMaster(m), disabled: toMaster(m) && !sends.length, title: tr('c.rt.toMasterTip'), act: () => setToMaster(m.id, !toMaster(m)) };
   return [
-    { t: 'sub', label: tr('c.rt.sendTo'), items: targets.length ? targets.map(x => {
+    { t: 'sub', label: tr('c.rt.sendTo'), items: [master, { t: 'sep' }, ...(targets.length ? targets.map(x => {
       const s = sends.find(v => v.to === x.id), why = s ? null : sendBlock(m.id, x.id);
       return { t: 'item' as const, label: insName(x), checked: !!s, kbd: s ? pct(s.gain) : undefined, disabled: !!why, title: why ?? undefined,
         act: () => (s ? removeSend(m.id, x.id) : sendTo(m.id, x.id)) };
-    }) : [{ t: 'item', label: tr('c.mix.addInsert'), act: A.addInsert }] },
-    { t: 'item', label: tr('c.rt.toMaster'), checked: toMaster(m), disabled: toMaster(m) && !sends.length, title: tr('c.rt.toMasterTip'), act: () => setToMaster(m.id, !toMaster(m)) },
+    }) : [{ t: 'item' as const, label: tr('c.mix.addInsert'), act: A.addInsert }])] },
     sidechainItems(m),
   ];
 }
