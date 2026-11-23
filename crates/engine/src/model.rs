@@ -172,6 +172,13 @@ pub enum FxKind {
     Plugin,
 }
 
+impl FxKind {
+    /// Whether the effect can listen to another insert ([`Fx::key`]): the Compressor.
+    pub fn takes_key(self) -> bool {
+        matches!(self, FxKind::Comp)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Fx {
@@ -197,6 +204,11 @@ pub struct Fx {
     /// Warp only: its time and volume map slots.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub maps: Option<WarpMaps>,
+    /// Sidechain ([`FxKind::takes_key`]): an insert whose post-fader output drives this
+    /// effect's detector instead of its own input (a kick ducking the bass). Not the master,
+    /// not its own insert; checked by `putFx` so the routing stays a DAG.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub key: Option<Id>,
 }
 
 /// Most slots of each Warp map bank.

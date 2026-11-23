@@ -16,6 +16,7 @@ import { commit, Gesture } from '../state/edit';
 import { findFx, insName, plain, S } from '../state/store';
 import { onFxFrame, tele } from '../state/telemetry';
 import { openMenu, say, U, type PlugWin } from '../state/ui';
+import { keyMenu } from '../state/sidechain';
 import { closeEditor, editorOpen, isNoEditor, knownWithoutEditor, openEditor } from '../state/pluginWindows';
 import { dblCheck, moveWindow, track } from '../ui/drag';
 import { addFrameTask, fitCanvas, fonts } from '../ui/frameLoop';
@@ -262,7 +263,7 @@ const L = (s: string) => (s.startsWith('c.') ? t(s as TranslationKey) : s);
 // Choices render as segmented buttons; `stack` puts items in a column; `x` is a custom widget.
 /** `when`: the control is shown only while it applies (e.g. the delay's Offset vs Pan per model). */
 type Item = { id: string; size?: KnobSize; ends?: [string, string] | ((fx: Fx) => [string, string] | undefined); labels?: string[]; danger?: number; small?: boolean; when?: (fx: Fx) => boolean }
-  | { stack: Item[] } | { x: 'fetMeter' };
+  | { stack: Item[] } | { x: 'fetMeter' | 'key' };
 /** Titles, labels and ends: keys starting with `c.` (see `L`). `adv`: shown only after the window's "Advanced" toggle (keeps the first view simple). */
 type Section = { title: string; items: Item[]; adv?: boolean };
 const [advOpen, setAdvOpen] = createSignal<Record<number, boolean>>({});
@@ -271,6 +272,7 @@ const LAYOUT: Partial<Record<FxKind, Section[]>> = {
     { title: 'c.fx.sec.compression', items: [{ id: 'thr', size: 'lg' }, { id: 'ratio', size: 'lg' }] },
     { title: 'c.fx.sec.time', items: [{ id: 'att' }, { id: 'rel' }] },
     { title: 'c.fx.sec.output', items: [{ id: 'gain' }] },
+    { title: 'c.sc.title', items: [{ x: 'key' }] },
   ],
   fet: [
     { title: 'c.fx.sec.input', items: [{ id: 'input', size: 'lg' }] },
@@ -415,12 +417,30 @@ const dlyModel = (fx: Fx) => Math.round(fx.params.model ?? 1);
 function LayoutItem(props: { fx: Fx; it: Item }) {
   const it = props.it;
   if ('stack' in it) return <div class="stack">{it.stack.map(x => <LayoutItem fx={props.fx} it={x} />)}</div>;
+  if ('x' in it && it.x === 'key') return <KeyPicker fx={props.fx} />;
   if ('x' in it) {
     const mode = () => fetModes.get(props.fx.id);
     return <Segmented label={t('c.fx.meter')} small options={['GR', 'OUT']} value={() => (mode() === 'gr' ? 0 : 1)} pick={i => fetModes.set(props.fx.id, i ? 'out' : 'gr')} title={t('c.fx.meterTip')} />;
   }
   const ends = () => { const e = typeof it.ends === 'function' ? it.ends(props.fx) : it.ends; return e ? [L(e[0]), L(e[1])] as [string, string] : undefined; };
   return <Ctl fx={props.fx} id={it.id} size={it.size} ends={ends()} labels={it.labels?.map(L)} danger={it.danger} small={it.small} />;
+}
+
+/** The Compressor's sidechain: what its detector hears (its own input, or another insert's sound). */
+function KeyPicker(props: { fx: Fx }) {
+  const src = () => (props.fx.key == null ? undefined : S.project.inserts.find(m => m.id === props.fx.key));
+  return (
+    <div class="scpick">
+      <button class={['smallbtn', { on: !!src() }]} data-sidechain title={t('c.sc.tip')}
+        onClick={e => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); openMenu(r.left, r.bottom + 4, keyMenu(props.fx.id), 260); }}>
+        <Show when={src()} fallback={<span class="ell">{t('c.sc.own')}</span>}>
+          {m => <><span class="scdot" style={{ background: m().color }} /><span class="ell">{insName(m())}</span></>}
+        </Show>
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style={{ flex: 'none' }}><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      <span class="sclab">{src() ? t('c.sc.ducks') : t('c.sc.ownHint')}</span>
+    </div>
+  );
 }
 
 /** Sections of an effect's controls; params the layout doesn't place go to an "Other" section. */

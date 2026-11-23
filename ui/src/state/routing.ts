@@ -2,7 +2,7 @@
 // the master, each one undo step, with a status line saying what changed.
 import type { Id, Op } from '../api/types';
 import { t, tName } from '../lib/i18n';
-import { canSend, reaches, sendsOf, SEND_MAX, toMaster, withoutSend, withSend } from '../lib/routing';
+import { canSend, depends, reaches, sendsOf, SEND_MAX, toMaster, withoutSend, withSend } from '../lib/routing';
 import { insertOp } from './actions';
 import { commit } from './edit';
 import { S } from './store';
@@ -17,6 +17,7 @@ export function sendBlock(from: Id, to: Id): string | null {
   if (from === to) return t('c.rt.self');
   if (to === 0) return t('c.rt.toMasterHint');
   if (reaches(S.project, to, from)) return t('c.rt.loop', { a: nameOf(to), b: nameOf(from) });
+  if (depends(S.project, to, from)) return t('c.sc.sendLoop', { a: nameOf(to), b: nameOf(from) });
   return null;
 }
 
@@ -62,5 +63,7 @@ export function routeSummary(id: Id): string {
   const m = S.project.inserts.find(x => x.id === id); if (!m) return '';
   if (id === 0) return t('c.mix.toOutput');
   const parts = [...(toMaster(m) ? ['Master'] : []), ...sendsOf(m).map(s => nameOf(s.to) + (s.gain === 1 ? '' : ' ' + pct(s.gain)))];
-  return '→ ' + (parts.join(' · ') || t('c.rt.nowhere'));
+  // the inserts whose Compressor this one drives (sidechain): heard nowhere, but it matters
+  const sc = S.project.inserts.filter(x => x.fx.some(f => f.key === id)).map(x => 'SC ' + nameOf(x.id));
+  return '→ ' + ([...parts, ...sc].join(' · ') || t('c.rt.nowhere'));
 }

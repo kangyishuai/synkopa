@@ -795,6 +795,7 @@ pub fn pattern_project(mut p: Project, id: Id) -> Project {
 /// master is a plain unity sum (no effects, fader at 0 dB, centre, normal width). Inserts keep their
 /// effects so delay compensation stays the same as in the mix and every stem lines up.
 fn stem_project(mut p: Project, id: Id) -> Project {
+    let was_muted: Vec<Id> = p.inserts.iter().filter(|m| m.muted).map(|m| m.id).collect();
     for t in p.tracks.iter_mut() {
         t.solo = false;
     }
@@ -823,6 +824,29 @@ fn stem_project(mut p: Project, id: Id) -> Project {
         } else {
             m.muted = true;
         }
+    }
+    // sidechains the stem's effects listen to keep running, heard nowhere: the stem must sound
+    // as it does in the mix (a bass ducked by the kick stays ducked in its stem)
+    let mut need: Vec<Id> = feeds.iter().copied().chain([id]).collect();
+    let mut silent: Vec<Id> = vec![];
+    let mut i = 0;
+    while i < need.len() {
+        let keys: Vec<Id> = p.insert(need[i]).map(|m| m.fx.iter().filter_map(|f| f.key).collect()).unwrap_or_default();
+        for k in keys {
+            let kfeeds: Vec<Id> = p.inserts.iter().filter(|m| m.id != 0 && crate::routing::reaches(&p, m.id, k)).map(|m| m.id).collect();
+            for x in kfeeds {
+                if !need.contains(&x) {
+                    need.push(x);
+                    silent.push(x);
+                }
+            }
+        }
+        i += 1;
+    }
+    for m in p.inserts.iter_mut().filter(|m| silent.contains(&m.id)) {
+        m.muted = was_muted.contains(&m.id);
+        m.master = false;
+        m.sends.retain(|s| silent.contains(&s.to));
     }
     p
 }

@@ -635,9 +635,13 @@ export class MockBackend implements Backend {
       const fc = pr.freq ?? 6000;
       for (let k = 0; k < SPEC_BANDS; k++) specOut[k] = specIn[k] + (pr.mode || BAND_F[k] >= fc ? gr : 0);
     } else if (fx.type === 'comp' || fx.type === 'limit') {
-      const inDb = lvDb + (fx.type === 'limit' ? pr.gain : 0), thr = fx.type === 'limit' ? pr.ceil : pr.thr;
+      // a sidechain (dsp::Comp::process_keyed): the detector hears the key, a kick on every beat
+      const keyed = fx.type === 'comp' && fx.key != null;
+      const keyDb = playing ? -4 + 20 * Math.log10(Math.max(1e-6, pulse)) : -120;
+      const inDb = keyed ? keyDb : lvDb + (fx.type === 'limit' ? pr.gain : 0), thr = fx.type === 'limit' ? pr.ceil : pr.thr;
       const over = inDb - thr;
-      gr = level > 0 && over > 0 ? -(fx.type === 'limit' ? over : over - over / pr.ratio) : 0;
+      gr = (keyed || level > 0) && over > 0 ? -(fx.type === 'limit' ? over : over - over / pr.ratio) : 0;
+      if (fx.type === 'comp') { meters[0] = Math.max(-120, inDb); meters[1] = keyed ? 1 : 0; }
       for (let k = 0; k < SPEC_BANDS; k++) specOut[k] = specIn[k] + gr + (pr.gain ?? 0);
       out = level * dbg(gr);
     } else if (fx.type === 'reverb') {

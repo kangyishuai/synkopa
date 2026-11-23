@@ -140,7 +140,8 @@ pub fn save(engine: &Engine, dir: &Path, insert: u64, name: &str, overwrite: boo
     if existing.is_some() && !overwrite {
         return Err(format!("{ERR_EXISTS} a preset called {name} already exists"));
     }
-    let fx: Vec<Fx> = m.fx.iter().map(|f| Fx { id: 0, ..f.clone() }).collect();
+    // a sidechain names an insert of this project: a saved chain is for any insert of any project
+    let fx: Vec<Fx> = m.fx.iter().map(|f| Fx { id: 0, key: None, ..f.clone() }).collect();
     let body = serde_json::to_vec_pretty(&ChainFile { format: FORMAT.into(), version: VERSION, fx }).map_err(|e| e.to_string())?;
     std::fs::create_dir_all(dir).map_err(|e| format!("cannot create {}: {e}", dir.display()))?;
     let tmp = dir.join(format!(".{name}.{EXT}.tmp"));
@@ -181,7 +182,7 @@ pub fn load(engine: &Engine, dir: &Path, insert: u64, name: &str, mode: Option<M
         ops.extend(m.fx.iter().map(|f| Op::RemoveFx { fx_id: f.id }));
     }
     let ids: Vec<u64> = (0..chain.len() as u64).map(|i| p.next_id + i).collect();
-    ops.extend(chain.into_iter().zip(&ids).map(|(f, &id)| Op::PutFx { insert_id: insert, fx: Fx { id, ..f }, index: None }));
+    ops.extend(chain.into_iter().zip(&ids).map(|(f, &id)| Op::PutFx { insert_id: insert, fx: Fx { id, key: None, ..f }, index: None }));
     let revision = engine.apply(&ops, false, if_revision).map_err(|e| e.to_string())?;
     let errors = engine.state().fx_errors;
     let after = engine.project();

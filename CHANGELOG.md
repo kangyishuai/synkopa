@@ -4,6 +4,19 @@ What changed in each release of Synkopa (called WAVE up to 0.9.21). The newest v
 shown in the app after an update and is published as the release notes (see
 `docs/releasing.md`). Write for musicians: what you can do now, not how it works inside.
 
+## Unreleased
+
+### Added
+- **Sidechain compression: let the kick duck the bass.** Right-click the kick's mixer strip →
+  Sidechain to → Bass, as FL Studio's "Sidechain to this track". The bass's Compressor now listens
+  to the kick (or one set up for ducking is added and opened), and the bass dips on every hit
+  and swells back between them. In the Compressor window, the Sidechain box picks what it listens
+  to: its own sound or any other insert. The window then draws the kick's level against the
+  gain reduction, so you see the pump. The kick insert doesn't even have to be heard: route it nowhere
+  and it still drives the ducking (a "ghost kick"). The maximized mixer shows each sidechain
+  as a dashed cable marked SC, and stems keep their ducking. From the command line:
+  `synkopa sidechain --from 1 --to 3`.
+
 ## 0.9.32 — 2026-11-22
 
 ### Fixed

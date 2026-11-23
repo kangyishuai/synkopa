@@ -55,6 +55,8 @@ export interface Fx {
   plugin?: PluginRef;
   /** Warp only: its time and volume map slots. */
   maps?: WarpMaps;
+  /** Compressor only: the insert whose sound drives the detector (sidechain); absent = its own input. */
+  key?: Id;
 }
 
 /** A Warp map over one bar: `t` 0..4 beats, `v` 0..1 (time: 1 = now, 0 = 8 beats back; volume: gain). */

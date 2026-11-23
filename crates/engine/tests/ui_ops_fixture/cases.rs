@@ -673,6 +673,43 @@ pub fn cases() -> Vec<Case> {
     c.push(("main", "setLoop sets the loop", vec![Op::SetLoop { range: Some(LoopRange { a: 4.0, b: 16.0 }) }]));
     c.push(("main", "setLoop clears the loop", vec![Op::SetLoop { range: None }]));
     c.push(("main", "setLoop refuses an empty loop", vec![Op::SetLoop { range: Some(LoopRange { a: 16.0, b: 4.0 }) }]));
+    // ---- sidechain (a Compressor listening to another insert)
+    let keyed = |id: Id, key: Id| Fx { key: Some(key), ..fx(id, FxKind::Comp) };
+    c.push(("main", "putFx adds a compressor with a sidechain", vec![Op::PutFx { insert_id: 2, fx: keyed(950, 1), index: None }]));
+    c.push(("main", "putFx refuses the master as a sidechain", vec![Op::PutFx { insert_id: 2, fx: keyed(950, 0), index: None }]));
+    c.push(("main", "putFx refuses its own insert as a sidechain", vec![Op::PutFx { insert_id: 2, fx: keyed(950, 2), index: None }]));
+    c.push(("main", "putFx refuses a missing sidechain insert", vec![Op::PutFx { insert_id: 2, fx: keyed(950, 77), index: None }]));
+    c.push((
+        "main",
+        "putFx refuses a sidechain on a delay",
+        vec![Op::PutFx { insert_id: 2, fx: Fx { key: Some(1), ..delay_fx(951, &[]) }, index: None }],
+    ));
+    c.push((
+        "main",
+        "putFx refuses a sidechain from an insert it feeds",
+        vec![
+            Op::PutInsert { insert: Insert { sends: vec![InsertSend { to: 1, gain: 1.0 }], ..base().inserts[2].clone() } },
+            Op::PutFx { insert_id: 2, fx: keyed(950, 1), index: None },
+        ],
+    ));
+    c.push((
+        "main",
+        "putFx refuses a sidechain loop",
+        vec![Op::PutFx { insert_id: 2, fx: keyed(950, 1), index: None }, Op::PutFx { insert_id: 1, fx: keyed(952, 2), index: None }],
+    ));
+    c.push((
+        "main",
+        "putInsert refuses a send that loops through a sidechain",
+        vec![
+            Op::PutFx { insert_id: 2, fx: keyed(950, 1), index: None },
+            Op::PutInsert { insert: Insert { sends: vec![InsertSend { to: 1, gain: 1.0 }], ..base().inserts[2].clone() } },
+        ],
+    ));
+    c.push((
+        "main",
+        "removeInsert returns compressors keyed from it to their own signal",
+        vec![Op::PutFx { insert_id: 2, fx: keyed(950, 1), index: None }, Op::RemoveInsert { id: 1 }],
+    ));
     c.push((
         "main",
         "putComp replaces and normalises the regions",

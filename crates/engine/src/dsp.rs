@@ -436,6 +436,9 @@ pub struct Comp {
     rms: bool,
     ms: f32,
     k_ms: f32,
+    /// Peak (dBFS) of what the detector heard in the last block: the input, or the sidechain.
+    det_db: f32,
+    keyed: bool,
 }
 impl Default for Comp {
     fn default() -> Self {
@@ -452,6 +455,8 @@ impl Default for Comp {
             rms: false,
             ms: 0.0,
             k_ms: 0.0,
+            det_db: -120.0,
+            keyed: false,
         }
     }
 }
@@ -471,6 +476,38 @@ impl Comp {
         }
     }
 }
+impl Comp {
+    /// Detector input: this signal, or the sidechain `key` (same length) when there is one.
+    fn run(&mut self, l: &mut [f32], r: &mut [f32], key: Option<&[f32]>) {
+        let mut gr_peak = 0f32;
+        let mut det = 0f32;
+        for i in 0..l.len() {
+            let (dl, dr) = match key {
+                Some(k) => (k[i], k[i]),
+                None => (l[i], r[i]),
+            };
+            det = det.max(dl.abs().max(dr.abs()));
+            let x = if self.rms {
+                let p = 0.5 * (dl * dl + dr * dr);
+                self.ms = flush(self.ms + (p - self.ms) * self.k_ms);
+                (10.0 * self.ms.max(1e-12).log10()).max(-120.0)
+            } else {
+                gain_to_db(dl.abs().max(dr.abs())).max(-120.0)
+            };
+            let target = self.curve(x);
+            // envelope on the gain reduction: attack when reducing more
+            let k = if target < self.env_db { self.att } else { self.rel };
+            self.env_db = target + (self.env_db - target) * k;
+            let g = db_to_gain(self.env_db) * self.makeup;
+            l[i] *= g;
+            r[i] *= g;
+            gr_peak = gr_peak.min(self.env_db);
+        }
+        self.gr = gr_peak;
+        self.det_db = gain_to_db(det).max(-120.0);
+        self.keyed = key.is_some();
+    }
+}
 impl Processor for Comp {
     fn prepare(&mut self, sr: f32, _max: usize) {
         self.sr = sr;
@@ -486,25 +523,12 @@ impl Processor for Comp {
         self.k_ms = 1.0 - (-1.0 / (self.sr * 0.005)).exp();
     }
     fn process(&mut self, l: &mut [f32], r: &mut [f32], _c: &ProcessCtx) {
-        let mut gr_peak = 0f32;
-        for i in 0..l.len() {
-            let x = if self.rms {
-                let p = 0.5 * (l[i] * l[i] + r[i] * r[i]);
-                self.ms = flush(self.ms + (p - self.ms) * self.k_ms);
-                (10.0 * self.ms.max(1e-12).log10()).max(-120.0)
-            } else {
-                gain_to_db(l[i].abs().max(r[i].abs())).max(-120.0)
-            };
-            let target = self.curve(x);
-            // envelope on the gain reduction: attack when reducing more
-            let k = if target < self.env_db { self.att } else { self.rel };
-            self.env_db = target + (self.env_db - target) * k;
-            let g = db_to_gain(self.env_db) * self.makeup;
-            l[i] *= g;
-            r[i] *= g;
-            gr_peak = gr_peak.min(self.env_db);
-        }
-        self.gr = gr_peak;
+        self.run(l, r, None);
+    }
+    /// Sidechain: the detector hears `key` (another insert's post-fader output, mono) and the
+    /// gain lands on this insert's own signal, a kick ducking the bass.
+    fn process_keyed(&mut self, l: &mut [f32], r: &mut [f32], key: &[f32], _c: &ProcessCtx) {
+        self.run(l, r, Some(key));
     }
     fn reset(&mut self) {
         self.env_db = 0.0;
@@ -518,6 +542,10 @@ impl Processor for Comp {
     }
     fn gain_reduction_db(&self) -> f32 {
         self.gr
+    }
+    fn meters(&self, out: &mut [f32; crate::processor::METERS]) {
+        out[0] = self.det_db;
+        out[1] = if self.keyed { 1.0 } else { 0.0 };
     }
 }
 

@@ -320,6 +320,12 @@ html.dragcur, html.dragcur * { cursor: var(--drag-cursor) !important; }
 .winhd .sub { min-width: 0; font: 500 11px var(--sans); color: var(--fg4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .closebtn { width: 24px; height: 22px; border: 0; border-radius: 3px; background: transparent; color: var(--fg3); cursor: pointer; font-size: 14px; padding: 0; flex: none; }
 .closebtn:hover { background: var(--line2); color: var(--fg-hi); }
+.scpick { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; min-width: 120px; max-width: 170px; }
+.scpick > .smallbtn { display: flex; align-items: center; gap: 6px; width: 100%; min-width: 0; text-align: left; }
+.scpick > .smallbtn.on { color: var(--fg-hi); border-color: var(--fxc, var(--accent)); }
+.scpick > .smallbtn > .ell { flex: 1; min-width: 0; }
+.scdot { width: 7px; height: 7px; border-radius: 2px; flex: none; }
+.sclab { font-size: 10px; color: var(--fg4); }
 .presetbar { display: flex; align-items: center; gap: 1px; flex: none; padding: 1px; background: var(--bg1); border: 1px solid var(--line); border-radius: 4px; }
 .presetbar > button { height: 20px; border: 0; border-radius: 3px; background: transparent; color: var(--fg3); cursor: pointer; padding: 0; }
 .presetbar > button:hover { background: var(--line); color: var(--fg-hi); }

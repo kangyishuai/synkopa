@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use serde_json::{json, Value};
 use wave_engine::catalog::{self, load_preset, new_fx};
-use wave_engine::{Engine, FxKind, Op, PluginRef, RefTune};
+use wave_engine::{Engine, Fx, FxKind, Op, PluginRef, RefTune};
 
 use crate::plugins::Plugins;
 
@@ -115,6 +115,61 @@ pub fn add_fx(app: &dyn Host, insert_id: u64, kind: FxKind, preset: Option<usize
     }
     let rev = app.engine().apply(&[Op::PutFx { insert_id, fx, index }], false, None).map_err(|e| e.to_string())?;
     Ok((id, rev))
+}
+
+/// Ducking settings for a Compressor that [`sidechain`] adds (the mixer's "Sidechain to ▸" uses
+/// the same, `ui/src/state/sidechain.ts`): fast attack, a release that swells back before the
+/// next beat, deep enough to hear the pump on a typical kick.
+pub const DUCK_PARAMS: [(&str, f64); 6] = [("thr", -24.0), ("ratio", 6.0), ("att", 1.0), ("rel", 150.0), ("gain", 0.0), ("det", 0.0)];
+
+/// Sidechain compression: a Compressor whose detector listens to another insert.
+///
+/// * `fx` given: that Compressor listens to `from` (`off`: back to its own input).
+/// * otherwise, as FL Studio's "Sidechain to this track": insert `from` drives a Compressor on
+///   `to`: one already keyed from it is kept, else the first Compressor of `to`'s chain without
+///   a sidechain gets it, else a Compressor set up for ducking is added at the end. `off`:
+///   every Compressor on `to` keyed from `from` goes back to its own input.
+///
+/// One undo step. Returns the Compressor (`null` after `off` without `fx`), whether it was
+/// added, and the revision.
+pub fn sidechain(app: &dyn Host, fx: Option<u64>, from: Option<u64>, to: Option<u64>, off: bool, if_revision: Option<u64>) -> R<Value> {
+    let p = app.engine().project();
+    let apply = |ops: &[Op]| app.engine().apply(ops, false, if_revision).map_err(|e| e.to_string());
+    if let Some(fx_id) = fx {
+        let (m, f) = p.find_fx(fx_id).ok_or(format!("no effect {fx_id}"))?;
+        let mut f = f.clone();
+        f.key = if off { None } else { Some(from.ok_or("pass --from INSERT (or --off)")?) };
+        let rev = apply(&[Op::PutFx { insert_id: m.id, fx: f, index: None }])?;
+        return Ok(json!({ "fxId": fx_id, "added": false, "revision": rev }));
+    }
+    let (from, to) = (from.ok_or("pass --from INSERT")?, to.ok_or("pass --to INSERT (or --fx ID)")?);
+    let m = p.insert(to).ok_or(format!("no insert {to}"))?;
+    p.insert(from).ok_or(format!("no insert {from}"))?;
+    let keyed: Vec<&Fx> = m.fx.iter().filter(|f| f.kind.takes_key() && f.key == Some(from)).collect();
+    if off {
+        let ops: Vec<Op> = keyed.iter().map(|f| Op::PutFx { insert_id: to, fx: Fx { key: None, ..(*f).clone() }, index: None }).collect();
+        if ops.is_empty() {
+            return Err(format!("no compressor on insert {to} listens to insert {from}"));
+        }
+        let rev = apply(&ops)?;
+        return Ok(json!({ "fxId": null, "added": false, "revision": rev }));
+    }
+    if let Some(f) = keyed.first() {
+        return Ok(json!({ "fxId": f.id, "added": false, "revision": app.engine().state().revision }));
+    }
+    if let Some(f) = m.fx.iter().find(|f| f.kind.takes_key() && f.key.is_none()) {
+        let rev = apply(&[Op::PutFx { insert_id: to, fx: Fx { key: Some(from), ..f.clone() }, index: None }])?;
+        return Ok(json!({ "fxId": f.id, "added": false, "revision": rev }));
+    }
+    let id = p.next_id;
+    let mut f = new_fx(id, FxKind::Comp, p.bpm);
+    for (k, v) in DUCK_PARAMS {
+        f.params.insert(k.into(), v);
+    }
+    f.preset = None;
+    f.key = Some(from);
+    let rev = apply(&[Op::PutFx { insert_id: to, fx: f, index: None }])?;
+    Ok(json!({ "fxId": id, "added": true, "revision": rev }))
 }
 
 /// Mixer routing (FL Studio style): insert `from` sends to insert `to` at `gain` (linear,
@@ -300,6 +355,7 @@ pub fn plugin_add(app: &dyn Host, insert_id: u64, format: &str, path: &str, cid:
             state: None,
         }),
         maps: None,
+        key: None,
     };
     let rev = app.engine().apply(&[Op::PutFx { insert_id, fx, index }], false, None).map_err(|e| e.to_string())?;
     if let Some(err) = app.engine().state().fx_errors.get(&id) {
@@ -1576,7 +1632,7 @@ pub fn control(app: &dyn Host, cmd: &str, a: &Value, if_revision: Option<u64>, l
         }
         "context" => Ok(context(app, arg(a, "full").and_then(Value::as_bool).unwrap_or(false))),
         "catalog" => Ok(
-            json!({ "effects": catalog::catalog(), "commands": ["status","context","catalog","schema","apply","undo","redo","play","stop","render","import","add_fx","route","unroute","set_param","load_preset","save","open","export_project_zip","pitch_analyze","pitch_target","pitch_inspect","pitch_compare","pitch_suggest","pitch_edit","pitch_render","melody_channels","melody_reference","tune_ref","f0_model","f0_model_install","music_analyze","auto_vocal_plan","auto_vocal","bake_rider","midi_inspect","midi_import","midi_export","fx_chains","fx_chain_save","fx_chain_load","fx_chain_rename","fx_chain_delete","missing","relink","set_project","make_unique","export_in_place","stems_model","stems_model_install","extract_stems","takes","comp","flatten_comp","comp_audition","channels","pattern","pattern_play","pattern_loop","note_audition","plugin_scan","plugin_add","plugin_params","plugin_set_param","plugin_load_anyway","vst3_scan","vst3_add","vst3_params","vst3_set_param"] }),
+            json!({ "effects": catalog::catalog(), "commands": ["status","context","catalog","schema","apply","undo","redo","play","stop","render","import","add_fx","route","unroute","sidechain","set_param","load_preset","save","open","export_project_zip","pitch_analyze","pitch_target","pitch_inspect","pitch_compare","pitch_suggest","pitch_edit","pitch_render","melody_channels","melody_reference","tune_ref","f0_model","f0_model_install","music_analyze","auto_vocal_plan","auto_vocal","bake_rider","midi_inspect","midi_import","midi_export","fx_chains","fx_chain_save","fx_chain_load","fx_chain_rename","fx_chain_delete","missing","relink","set_project","make_unique","export_in_place","stems_model","stems_model_install","extract_stems","takes","comp","flatten_comp","comp_audition","channels","pattern","pattern_play","pattern_loop","note_audition","plugin_scan","plugin_add","plugin_params","plugin_set_param","plugin_load_anyway","vst3_scan","vst3_add","vst3_params","vst3_set_param"] }),
         ),
         "schema" => Ok(schema()),
         "apply" => {
@@ -1609,6 +1665,11 @@ pub fn control(app: &dyn Host, cmd: &str, a: &Value, if_revision: Option<u64>, l
             route(app, need_u64(a, "from")?, need_u64(a, "to")?, opt_f64(a, "gain").map(|g| g as f32), only, if_revision).map(ok_rev)
         }
         "unroute" => unroute(app, need_u64(a, "from")?, need_u64(a, "to")?, if_revision).map(ok_rev),
+        "sidechain" => {
+            let off = arg(a, "off").map(|v| v.as_bool().ok_or("`off` must be a boolean")).transpose()?.unwrap_or(false);
+            let num = |k: &str| arg(a, k).and_then(Value::as_u64);
+            sidechain(app, num("fxId"), num("from"), num("to"), off, if_revision)
+        }
         "set_param" => {
             set_param(app, need_u64(a, "fxId")?, need_str(a, "param")?, opt_f64(a, "value").ok_or("`value` is required")?, if_revision)
                 .map(ok_rev)
@@ -2141,3 +2202,7 @@ mod tests {
 #[cfg(test)]
 #[path = "autovocal_actions_tests.rs"]
 mod autovocal_tests;
+
+#[cfg(test)]
+#[path = "sidechain_actions_tests.rs"]
+mod sidechain_tests;
