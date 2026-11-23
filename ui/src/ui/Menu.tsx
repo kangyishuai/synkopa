@@ -8,7 +8,7 @@ import { commit } from '../state/edit';
 import { clamp, dbText } from '../lib/format';
 import { t } from '../lib/i18n';
 import { Icon } from './icons';
-import { SWATCHES } from '../lib/color';
+import { SUGGESTED, SWATCHES } from '../lib/color';
 import { INST_ICONS, InstIcon } from './instIcons';
 import { isPointerEvent, pressKeepsMenu } from './menuPress';
 import { PopupBoundary } from './PanelBoundary';
@@ -123,11 +123,7 @@ function MenuList(props: { items: MenuItem[]; x: number; y: number; sub?: boolea
                     )}
                   </Match>
                   <Match when={it.t === 'swatches' && it}>
-                    {i => (
-                      <div class="swatches">
-                        <For each={SWATCHES}>{c => <button title={t('d.ui.color')} style={{ background: c, 'box-shadow': c === i().current ? '0 0 0 2px var(--fg-hi)' : 'none' }} onClick={() => { i().pick(c); closeMenu(); }} />}</For>
-                      </div>
-                    )}
+                    {i => <SwatchRow current={i().current} pick={c => { i().pick(c); closeMenu(); }} />}
                   </Match>
                   <Match when={it.t === 'icons' && it}>
                     {i => (
@@ -206,5 +202,34 @@ function MenuIco(props: { g: MenuGlyph | null }) {
     <span class="mico">
       <Show when={props.g}>{g => <svg viewBox={g().vb} width="12" height="12" fill="currentColor"><path fill-rule={g().eo ? 'evenodd' : 'nonzero'} d={g().d} /></svg>}</Show>
     </span>
+  );
+}
+
+/**
+ * A colour row that stays small: the current colour (when it is not one of them) and five
+ * suggestions; "…" opens the full palette and a free colour picker in place.
+ */
+function SwatchRow(props: { current?: string; pick: (c: string) => void }) {
+  const [more, setMore] = createSignal(false);
+  const cur = () => props.current?.toLowerCase();
+  const row = () => {
+    const c = props.current;
+    return c && !SUGGESTED.includes(c.toLowerCase()) ? [c, ...SUGGESTED] : SUGGESTED;
+  };
+  const sw = (c: string) => (
+    <button title={t('d.ui.color')} style={{ background: c, 'box-shadow': c.toLowerCase() === cur() ? '0 0 0 2px var(--fg-hi)' : 'none' }} onClick={() => props.pick(c)} />
+  );
+  return (
+    <div class="swatches">
+      <For each={more() ? SWATCHES : row()}>{sw}</For>
+      <Show when={!more()} fallback={
+        <label class="swmore" title={t('d.ui.colorCustom')}>
+          <input type="color" value={props.current ?? '#4f8ef7'} onChange={e => props.pick(e.currentTarget.value)} />
+          <span>+</span>
+        </label>
+      }>
+        <button class="swmore" title={t('d.ui.colorMore')} onClick={() => setMore(true)}>…</button>
+      </Show>
+    </div>
   );
 }

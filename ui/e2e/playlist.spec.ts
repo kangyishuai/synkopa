@@ -73,6 +73,20 @@ test.describe('Playlist', () => {
     expect((await engine(app)).project.clips).toHaveLength(before.length - 2);
   });
 
+  test('right-click on the name bar of a clip opens its menu and keeps the clip; on its body it deletes', async ({ app }) => {
+    const victim = (await engine(app)).project.clips.find(c => c.track === 0)!;
+    const p = await at(app, 0, victim.start + 1);
+    const tracks = (await engine(app)).project.tracks;
+    // the name bar: the top 15 px of the clip (one px below the lane's top edge)
+    const head = { x: p.x, y: p.y - tracks[0].h / 2 + 8 };
+    await app.mouse.click(head.x, head.y, { button: 'right' });
+    await expect(app.getByText('Rename pattern…', { exact: true })).toBeVisible();
+    expect((await engine(app)).project.clips.some(c => c.id === victim.id)).toBe(true);
+    await app.keyboard.press('Escape');
+    await app.mouse.click(p.x, p.y, { button: 'right' });
+    await pollEngine(app, s => s.project.clips.some(c => c.id === victim.id)).toBe(false);
+  });
+
   test('dragging a lane header reorders the lanes with their clips; Esc cancels; undo restores', async ({ app }) => {
     const names = () => engine(app).then(s => s.project.tracks.map(t => t.name));
     const start = await names();
