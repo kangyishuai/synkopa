@@ -33,6 +33,8 @@ export const CHANNEL_PALETTE = [
   '#4f8ef7', '#e0a44a', '#5fbf8a', '#d9678f', '#9a8cf0', '#47b8a8',
   '#f07f4f', '#c77ddb', '#a3d65f', '#6cc4ff', '#e8c55a', '#e05263',
 ];
+/** The colour menu's first row: five clearly different hues; the rest are one click away. */
+export const SUGGESTED = ['#4f8ef7', '#e0a44a', '#5fbf8a', '#d9678f', '#9a8cf0'];
 /** The colour menu's swatches: the channel palette, the older blues/teals (so existing colours stay pickable) and a grey. */
 export const SWATCHES = [...CHANNEL_PALETTE, '#5aa9e6', '#69c3d6', '#7c8cf8', '#8b93a1'];
 
