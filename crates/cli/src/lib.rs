@@ -59,6 +59,9 @@ EDIT  (all edits are one undo step each; --if-revision N refuses to act if the p
   route --from ID --to ID [--gain 0..2] [--only]   mixer routing: insert FROM sends to TO (post-fader;
                                                   --only: no longer to the master; --to 0: to the master again)
   unroute --from ID --to ID                       remove that send (--to 0: stop going to the master)
+  sidechain --from ID --to ID [--off]             insert FROM ducks insert TO: keys TO's compressor, or adds one
+                                                  set up for ducking (--off: back to its own input)
+  sidechain --fx ID --from ID | --off             what that compressor listens to
   set-param --fx ID --param NAME --value V
   preset --fx ID --index N
   import <file>... [--track N --beat B]    load audio, optionally place it
@@ -804,6 +807,17 @@ fn run(cx: &Cx, cmd: &str, a: &Args) -> Result<Value, Fail> {
                 "to": a.num("to").map_err(u)?.ok_or_else(|| u("missing --to".into()))? as u64,
                 "gain": a.num("gain").map_err(u)?,
                 "only": a.has("only"),
+            }),
+        ),
+        "sidechain" => send(
+            cx,
+            a,
+            "sidechain",
+            json!({
+                "fxId": a.num("fx").map_err(u)?.map(|x| x as u64),
+                "from": a.num("from").map_err(u)?.map(|x| x as u64),
+                "to": a.num("to").map_err(u)?.map(|x| x as u64),
+                "off": a.has("off"),
             }),
         ),
         "unroute" => send(

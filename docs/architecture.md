@@ -256,6 +256,24 @@ drag or wheel a cable's level, right-click it for 100 % / only here / remove; th
 chip is the output into the master. Docked, a strip's right-click menu has *Send to* and
 *Output to Master*, and the chain header says where the insert goes.
 
+**Sidechain** (`Fx.key`, a Compressor only: `FxKind::takes_key`): the effect's detector hears
+another insert's post-fader output (mono, of this very block) instead of its own input, and the
+gain lands on its own insert, so a kick ducks the bass. A key is a dependency edge in
+`routing::order`: the listening insert runs at a deeper level than its key, so the key costs no
+latency (it is not delay-compensated against the listener: that only matters with a look-ahead
+effect on the key's chain). The key carries no sound into the mix, so a key insert that goes
+nowhere (FL's "ghost kick": no master, no sends) still drives it; a muted or silent key does
+not duck. `putFx` refuses a key on another effect, from the master, from its own insert, from a
+missing insert, or from an insert that already waits for this one through sends or keys
+(`routing::depends`); `putInsert` refuses a send that would close such a loop. `removeInsert`
+returns compressors keyed from it to their own input. Stem export keeps the keys running but
+silent, so a ducked stem sounds as in the mix. FX chain presets drop keys (they name inserts of
+one project). The Compressor's `meters[0]` is the level its detector heard, so its window plots
+the key (labelled SC) against the gain reduction. Two ways in: the Compressor window's
+Sidechain source menu, and the source strip's *Sidechain to ▸* (FL's "Sidechain to this
+track": keys the target's first free Compressor or adds one set up for ducking, a second click
+removes it); the maximized mixer draws each sidechain as a dashed cable tagged SC.
+
 PAT mode (L) loops the current pattern and follows
 it when it changes. The loop plays the pattern itself, not its place in the song: a channel
 goes into its own insert, or the master when it has none, never through the insert of the
@@ -785,6 +803,7 @@ u32 underruns       // output underruns since the engine started: callbacks slow
 | type | meters |
 | --- | --- |
 | `eq` | `[0..24]` current dynamic gain offset of band *k* in dB (0 for static bands) |
+| `comp` | `[0]` peak dBFS of what the detector heard (the input, or the sidechain), `[1]` 1 while it listens to a sidechain |
 | `fet` | `[0]` gain reduction dB, `[1]` input peak dBFS (after the Input knob), `[2]` output peak dBFS |
 | `deess` | `[0]` gain reduction dB, `[1]` sidechain (high band) level dB — with Detect = Relative the high/low band energy ratio dB, `[2]` sibilance 0..1, `[3]` threshold dB |
 | `rider` | `[0]` gain applied dB, `[1]` word level dB (K-weighted, ~200 ms), `[2]` phrase level dB (~2 s, confident vocal only), `[3]` vocal confidence 0..1, all at the moment being heard. Look-ahead (`look`): Live (default, value 2) adds no latency (trailing windows, forward slew only, gain applied 20 ms behind the analysis); Short ≈ 0.3 s and Long ≈ 1.6 s (the offline research windows exactly) are compensated by PDC |

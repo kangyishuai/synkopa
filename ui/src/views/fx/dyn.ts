@@ -15,11 +15,14 @@ export class DynViz implements Viz {
   private hgr = new Float32Array(HN);
   private n = 0; private head = 0;
   private inDb = -90; private gr = 0;
+  /** The detector hears a sidechain: the dot and the level history are its level, labelled SC. */
+  private sc = false;
 
   update(fx: Fx, a: FxFrame | null): boolean {
     if (!this.gate.fresh(a, HN)) return false;
     const lim = fx.type === 'limit';
-    this.inDb = a!.inPeak > 1e-5 ? 20 * Math.log10(a!.inPeak) : -90;
+    this.sc = fx.type === 'comp' && fx.key != null && a!.meters[1] > 0.5;
+    this.inDb = this.sc ? Math.max(-90, a!.meters[0]) : a!.inPeak > 1e-5 ? 20 * Math.log10(a!.inPeak) : -90;
     this.gr = a!.grDb;
     this.hin[this.head] = this.inDb + (lim ? fx.params.gain ?? 0 : 0);
     this.hgr[this.head] = this.gr;
@@ -65,6 +68,6 @@ export class DynViz implements Viz {
     g.fillStyle = T.red; g.fillRect(gx, 0, 12, clamp(-gr / 24, 0, 1) * H);
     g.globalAlpha = 1;
     g.font = MONO11; g.fillStyle = T.ink; g.fillText('GR ' + (gr < -0.05 ? gr.toFixed(1) : '0.0') + ' dB', x0 + 6, 16);
-    g.fillStyle = T.fg4; g.fillText('IN ' + (this.inDb > -90 ? this.inDb.toFixed(1) : '-∞') + ' dB', x0 + 6, 30);
+    g.fillStyle = T.fg4; g.fillText((this.sc ? 'SC ' : 'IN ') + (this.inDb > -90 ? this.inDb.toFixed(1) : '-∞') + ' dB', x0 + 6, 30);
   }
 }

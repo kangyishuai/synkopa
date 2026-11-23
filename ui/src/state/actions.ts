@@ -10,6 +10,7 @@ import { clamp, fmtPos } from '../lib/format';
 import { loadPreset as loadPresetFx, newFx, presetInfo, presetList } from '../lib/presets';
 import { snapName, snapRes } from '../lib/snap';
 import { samePath } from '../lib/paths';
+import { keyError } from '../lib/routing';
 import { deletePoints } from '../lib/envEdit';
 import { acceptReply, commit, endWheelGestures, enqueue, inGesture, projectRevision, resync } from './edit';
 import { flushNotebook } from './notebook';
@@ -686,9 +687,11 @@ export async function moveFxTo(fxIds: Id[], toIns: Id, copy: boolean) {
   const list = fxIds.map(id => findFx(id)).filter((x): x is NonNullable<typeof x> => !!x && (copy || x.m.id !== toIns));
   if (!list.length) return;
   const ops: Op[] = [];
+  // a sidechain goes along while the target can listen to it (not to itself, no loop)
+  const keyed = (fx: Fx): Fx => { if (fx.key != null && keyError(S.project, toIns, fx)) delete fx.key; return fx; };
   for (const { f } of list) {
-    if (!copy) { ops.push({ op: 'removeFx', fxId: f.id }, { op: 'putFx', insertId: toIns, fx: plain(f) }); continue; }
-    let fx: Fx = { ...plain(f), id: allocId() };
+    if (!copy) { ops.push({ op: 'removeFx', fxId: f.id }, { op: 'putFx', insertId: toIns, fx: keyed(plain(f)) }); continue; }
+    let fx: Fx = keyed({ ...plain(f), id: allocId() });
     if (fx.type === 'plugin' && fx.plugin && !S.fxErrors[f.id]) {
       try { fx = { ...fx, plugin: { ...fx.plugin, state: await be().pluginState(f.id) } }; } catch (e) { console.warn(e); }
     }

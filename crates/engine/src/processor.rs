@@ -30,6 +30,13 @@ pub trait Processor: Send {
     /// Process `l.len()` frames in place. `l.len() == r.len() <= max_block`.
     fn process(&mut self, l: &mut [f32], r: &mut [f32], ctx: &ProcessCtx);
 
+    /// Like [`Processor::process`], with a mono sidechain `key` (`key.len() == l.len()`): the
+    /// post-fader output of another insert, of this very block. Effects without sidechain
+    /// support ignore it. Same real-time contract as `process`.
+    fn process_keyed(&mut self, l: &mut [f32], r: &mut [f32], _key: &[f32], ctx: &ProcessCtx) {
+        self.process(l, r, ctx);
+    }
+
     /// Apply a parameter set (built-in effects). Called on the audio thread,
     /// so it must not allocate either. Unknown ids are ignored.
     fn set_params(&mut self, _params: &ParamBlock) {}

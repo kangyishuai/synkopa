@@ -368,8 +368,18 @@ pub fn default_params(kind: FxKind) -> BTreeMap<String, f64> {
 
 /// A fresh built-in effect loaded with its first preset.
 pub fn new_fx(id: Id, kind: FxKind, bpm: f64) -> Fx {
-    let mut fx =
-        Fx { id, kind, bypass: false, mix: 1.0, preset: None, params: default_params(kind), bands: None, plugin: None, maps: None };
+    let mut fx = Fx {
+        id,
+        kind,
+        bypass: false,
+        mix: 1.0,
+        preset: None,
+        params: default_params(kind),
+        bands: None,
+        plugin: None,
+        maps: None,
+        key: None,
+    };
     if kind == FxKind::Eq {
         fx.bands = Some(default_bands());
     }

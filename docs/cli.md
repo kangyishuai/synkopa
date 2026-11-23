@@ -154,6 +154,9 @@ synkopa add-fx --insert 6 --type reverb --preset 3          # â†’ {"fxId":1203,â
 synkopa route --from 2 --to 1 --only                        # Hats only into the Drums bus
 synkopa route --from 6 --to 8 --gain 0.35                   # Vocal also sends to a reverb bus
 synkopa unroute --from 6 --to 8
+synkopa sidechain --from 1 --to 3                           # the kick (1) ducks the bass (3): keys its compressor or adds one
+synkopa sidechain --from 1 --to 3 --off                     # the bass's compressor hears itself again
+synkopa sidechain --fx 1204 --from 1                        # this compressor listens to insert 1
 synkopa set-param --fx 1203 --param mix --value 30
 synkopa preset --fx 1203 --index 4
 synkopa import kick.wav loop.wav --track 3 --beat 16

@@ -17,6 +17,15 @@ shown in the app after an update and is published as the release notes (see
   name). Every change is one undo step and markers are saved with the song.
   `synkopa markers --add Hook --bar 9` and `synkopa markers --loop Hook` do the same from the
   command line.
+- **Sidechain compression: let the kick duck the bass.** Right-click the kick's mixer strip →
+  Sidechain to → Bass, as FL Studio's "Sidechain to this track". The bass's Compressor now listens
+  to the kick (or one set up for ducking is added and opened), and the bass dips on every hit
+  and swells back between them. In the Compressor window, the Sidechain box picks what it listens
+  to: its own sound or any other insert. The window then draws the kick's level against the
+  gain reduction, so you see the pump. The kick insert doesn't even have to be heard: route it nowhere
+  and it still drives the ducking (a "ghost kick"). The maximized mixer shows each sidechain
+  as a dashed cable marked SC, and stems keep their ducking. From the command line:
+  `synkopa sidechain --from 1 --to 3`.
 
 ### Changed
 - **Right-click on a clip's name opens its menu.** Right-clicking the bar with the clip's name

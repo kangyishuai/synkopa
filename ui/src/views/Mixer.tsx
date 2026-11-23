@@ -29,6 +29,7 @@ import { openFxChains, saveFxChain } from './FxChains';
 import { useSize } from './patternShared';
 import { canSend, sendsOf, toMaster } from '../lib/routing';
 import { pct, removeSend, routeSummary, sendBlock, sendGainOp, sendTo, setToMaster } from '../state/routing';
+import { keyedFrom, sidechainItems, sidechainSources, sidechainTo } from '../state/sidechain';
 
 const L30 = 51.84, C30 = 69.12;
 
@@ -82,27 +83,30 @@ function openStripMenu(x: number, y: number, id: Id) {
     { t: 'swatches', current: m.color, pick: col => A.setInsert(id, { color: col }, tr('c.mix.undoColor')) },
     { t: 'sep' },
     { t: 'item', label: tr('c.mix.addFx'), act: () => openFxMenu(x, y, id) },
-    ...chainItems(x, y, m),
+    { t: 'sub', label: tr('c.mix.fxChain'), items: chainItems(x, y, m) },
     { t: 'item', label: tr('c.mix.resetVolPan'), act: () => A.setInsert(id, { vol: VOL_UNITY, pan: 0 }, tr('c.mix.undoReset')) },
     { t: 'sep' },
-    ...routeItems(id),
+    // only while channels are selected in the Channel Rack (the header's chip says so too)
+    ...(selectedChannels().length ? routeItems(id) : []),
     ...(id === 0 ? [] : sendItems(m)),
     ...(id === 0 ? [] : [{ t: 'sep' }, { t: 'item', label: tr('c.mix.removeInsert'), danger: true, act: () => A.removeInsert(id) }] as MenuItem[]),
   ], 330);
 }
 
-/** "Send to ▸" (every other insert: checked = sends there, click = add / remove; greyed when it
- *  would loop, with why) and "Output to Master" (FL's "route to this track only" when off). */
+/** "Send to ▸" (the master, then every other insert: checked = sends there, click = add / remove;
+ *  greyed when it would loop, with why) and "Sidechain to ▸". */
 function sendItems(m: Insert): MenuItem[] {
   const sends = sendsOf(m);
   const targets = S.project.inserts.filter(x => x.id !== 0 && x.id !== m.id);
+  // the master is the first target: unticking it is FL's "route to this track only"
+  const master: MenuItem = { t: 'item', label: 'Master', checked: toMaster(m), disabled: toMaster(m) && !sends.length, title: tr('c.rt.toMasterTip'), act: () => setToMaster(m.id, !toMaster(m)) };
   return [
-    { t: 'sub', label: tr('c.rt.sendTo'), items: targets.length ? targets.map(x => {
+    { t: 'sub', label: tr('c.rt.sendTo'), items: [master, { t: 'sep' }, ...(targets.length ? targets.map(x => {
       const s = sends.find(v => v.to === x.id), why = s ? null : sendBlock(m.id, x.id);
       return { t: 'item' as const, label: insName(x), checked: !!s, kbd: s ? pct(s.gain) : undefined, disabled: !!why, title: why ?? undefined,
         act: () => (s ? removeSend(m.id, x.id) : sendTo(m.id, x.id)) };
-    }) : [{ t: 'item', label: tr('c.mix.addInsert'), act: A.addInsert }] },
-    { t: 'item', label: tr('c.rt.toMaster'), checked: toMaster(m), disabled: toMaster(m) && !sends.length, title: tr('c.rt.toMasterTip'), act: () => setToMaster(m.id, !toMaster(m)) },
+    }) : [{ t: 'item' as const, label: tr('c.mix.addInsert'), act: A.addInsert }])] },
+    sidechainItems(m),
   ];
 }
 
@@ -500,6 +504,8 @@ function RouteLane() {
   const index = createMemo(() => new Map(S.project.inserts.map((m, i) => [m.id, i])));
   // keyed "from:to:k" strings: a level change keeps the cable's elements (a drag on its label goes on)
   const cables = createMemo(() => S.project.inserts.flatMap(m => sendsOf(m).filter(s => index().has(s.to)).map((s, k) => `${m.id}:${s.to}:${k}`)));
+  // sidechains (a Compressor on "to" listening to "from"): dashed, they carry no sound into the mix
+  const scCables = createMemo(() => S.project.inserts.flatMap(t => sidechainSources(t).filter(k => index().has(k.id)).map(k => `${k.id}:${t.id}`)));
   const cx = (i: number) => i * stripW() + stripW() / 2;
   // a cable dips lower the farther it goes, and one more step per send of the same strip (no stacking)
   const geo = (a: number, b: number, k: number) => {
@@ -550,18 +556,50 @@ function RouteLane() {
             </g>
           );
         }}</For>
+        <For each={scCables()}>{key => {
+          const [fromId, to] = key.split(':').map(Number);
+          const src = () => S.project.inserts[index().get(fromId) ?? 0];
+          // below the source's sends, so the two never share a curve
+          const g = () => geo(index().get(fromId) ?? 0, index().get(to) ?? 0, sendsOf(src()).length);
+          return (
+            <g class={['cable sc', { dim: !lit(fromId, to) }]}>
+              <path d={g().d} fill="none" stroke={src().color} stroke-width={lit(fromId, to) ? 2 : 1.25} stroke-dasharray="4 3" stroke-linecap="round" />
+              <g class="clabel" onPointerDown={e => scLabelDown(e, fromId, to)} onContextMenu={e => e.preventDefault()}>
+                <title>{tr('c.sc.cableTip', { a: nameOf(fromId), b: nameOf(to) })}</title>
+                <rect x={g().mx - 13} y={g().my - 8} width="26" height="16" rx="3" stroke={src().color} stroke-dasharray="3 2" />
+                <text x={g().mx} y={g().my + 3.5} text-anchor="middle">SC</text>
+              </g>
+            </g>
+          );
+        }}</For>
         <Show when={routeDrag()}>{d => {
           const x1 = () => cx(index().get(d().from) ?? 0);
           return <path class="rtghost" d={`M${x1()} 0 C${x1()} 36 ${d().x} 36 ${d().x} ${d().y}`} fill="none" stroke-width="2" stroke-dasharray="5 4" />;
         }}</Show>
       </svg>
-      <Show when={!cables().length && !routeDrag()}><div class="lanehint">{tr('c.rt.laneEmpty')}</div></Show>
+      <Show when={!cables().length && !scCables().length && !routeDrag()}><div class="lanehint">{tr('c.rt.laneEmpty')}</div></Show>
     </div>
   );
 }
 
 const nameOf = (id: Id) => { const m = S.project.inserts.find(x => x.id === id); return m ? tName(m.name) || 'Insert ' + id : String(id); };
 const levelText = (from: Id, to: Id, v: number) => tr('c.rt.level', { a: nameOf(from), b: nameOf(to), v: pct(v) });
+
+/** A sidechain cable's tag: click opens the Compressor that listens; right-click offers removing it. */
+function scLabelDown(e: PointerEvent, from: Id, to: Id) {
+  e.stopPropagation(); e.preventDefault();
+  const dst = S.project.inserts.find(m => m.id === to); if (!dst) return;
+  const comps = keyedFrom(dst, from);
+  A.selectInsert(to);
+  if (e.button === 0 && comps.length) { setU({ fxSel: comps[0].id }); A.openPlug(comps[0].id); return; }
+  if (e.button !== 2) return;
+  openMenu(e.clientX, e.clientY, [
+    { t: 'title', label: nameOf(from) + ' → ' + nameOf(to) + ' (SC)' },
+    ...comps.map(f => ({ t: 'item' as const, label: tr('c.sc.open', { name: A.fxName(f) }), act: () => A.openPlug(f.id) })),
+    { t: 'sep' },
+    { t: 'item', label: tr('c.sc.remove'), danger: true, act: () => sidechainTo(from, to) },
+  ], 220);
+}
 
 /** Right-click on a cable's level: 100 %, only here (not to the master), remove. */
 function cableMenu(x: number, y: number, from: Id, to: Id) {

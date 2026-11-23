@@ -4,7 +4,7 @@
 // error strings, and opsParity.test.ts / mockParity.test.ts fail when this port drifts.
 import { CLIP_PITCH, MAX_BANDS, STRETCH_MAX, STRETCH_MIN, type Clip, type ClipTune, type Fx, type Id, type Op, type Project } from '../api/types';
 import { applyCompOp } from './comp';
-import { forgetInsert, routingError } from './routing';
+import { forgetInsert, keyError, routingError } from './routing';
 import { applyNotebookOp } from './notebook';
 import { putMarker, removeMarker } from './markers';
 import { applyPatternOp, fitLen as fitPatternLen, followPatternLength, PatternOpError } from './pattern';
@@ -107,6 +107,8 @@ export function applyOp(p: Project, op: Op): void {
       if (fx.type === 'warp' && !fx.maps) throw new OpError('a Warp needs `maps` (see fx_catalog().warp for the factory slots)');
       if (fx.type !== 'warp' && fx.maps) throw new OpError('only a Warp has `maps`');
       for (const [k, v] of Object.entries(fx.params)) if (!isFinite(v)) throw new OpError(`parameter ${k} is not a number`);
+      const keyWhy = keyError(p, op.insertId, fx);
+      if (keyWhy) throw new OpError(keyWhy);
       for (const m of p.inserts) {
         const j = m.fx.findIndex(f => f.id === fx.id);
         if (j < 0) continue;

@@ -382,6 +382,12 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
             }
             p.inserts.retain(|m| m.id != *id);
             crate::routing::forget(p, *id);
+            // effects listening to it as their sidechain go back to their own signal
+            for f in p.inserts.iter_mut().flat_map(|m| m.fx.iter_mut()) {
+                if f.key == Some(*id) {
+                    f.key = None;
+                }
+            }
             for t in &mut p.tracks {
                 if t.insert == *id {
                     t.insert = 0;
@@ -397,6 +403,7 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
         }
         Op::PutFx { insert_id, fx, index } => {
             validate_fx(fx)?;
+            validate_key(p, *insert_id, fx)?;
             if let Some((m, old)) = p.find_fx(fx.id) {
                 if m.id != *insert_id || old.kind != fx.kind {
                     return Err(OpError::Invalid(format!("effect {} cannot change insert or type; remove and add it", fx.id)));
@@ -407,8 +414,10 @@ pub fn apply(p: &mut Project, op: &Op) -> Result<Dirty, OpError> {
                     return Err(OpError::Invalid("a plugin slot cannot swap its plugin; remove and add it".into()));
                 }
                 // a parameter that changes the effect's latency (look-ahead) re-plans the PDC
-                let bypass_changed =
-                    old.bypass != fx.bypass || crate::catalog::latency(old, 48000.0) != crate::catalog::latency(fx, 48000.0);
+                // so does a new sidechain: it reorders the inserts (the key is processed first)
+                let bypass_changed = old.bypass != fx.bypass
+                    || old.key != fx.key
+                    || crate::catalog::latency(old, 48000.0) != crate::catalog::latency(fx, 48000.0);
                 let m = p.inserts.iter_mut().find(|m| m.id == *insert_id).unwrap();
                 let slot = m.fx.iter_mut().find(|f| f.id == fx.id).unwrap();
                 *slot = fx.clone();
@@ -1081,6 +1090,31 @@ pub fn validate_comp(p: &Project, comp: &Comp) -> Result<Comp, OpError> {
         return bad("comp regions overlap".into());
     }
     Ok(Comp { regions: merge_regions(regions), ..comp.clone() })
+}
+
+/// A sidechain (`Fx::key`): only on an effect that takes one ([`FxKind::takes_key`]), from
+/// another non-master insert that exists and that does not already wait for this insert
+/// (through sends or other sidechains): the key is processed before the listening insert.
+fn validate_key(p: &Project, insert_id: Id, fx: &Fx) -> Result<(), OpError> {
+    let Some(k) = fx.key else { return Ok(()) };
+    if !fx.kind.takes_key() {
+        return Err(OpError::Invalid("only a Compressor takes a sidechain (`key`)".into()));
+    }
+    if k == 0 {
+        return Err(OpError::Invalid("the master cannot be a sidechain: it is processed last".into()));
+    }
+    if k == insert_id {
+        return Err(OpError::Invalid("a sidechain is another insert (an effect hears its own insert without one)".into()));
+    }
+    if p.insert(k).is_none() {
+        return Err(OpError::Missing { what: "insert", id: k });
+    }
+    if crate::routing::depends(p, insert_id, k) {
+        return Err(OpError::Invalid(format!(
+            "insert {k} already takes insert {insert_id}'s sound: a sidechain from it would close a loop"
+        )));
+    }
+    Ok(())
 }
 
 fn validate_fx(fx: &Fx) -> Result<(), OpError> {
