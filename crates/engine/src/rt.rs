@@ -1772,6 +1772,10 @@ impl Rt {
             self.preroll -= mute;
             pos += m;
         }
+        // nothing is dispatched until the next callback: the workers park instead of spinning
+        if let Some(p) = self.pool.as_ref() {
+            p.rest();
+        }
         let spent = t0.elapsed().as_secs_f32();
         // later than the audio it rendered lasts: the device ran dry before this block arrived
         // (the pre-roll counts here: the deadline is missed all the same)
@@ -2085,7 +2089,10 @@ impl Rt {
                     ins.take_sends(n);
                 }
                 let keys = &g.keys;
-                if let Some(pool) = self.pool.as_ref().filter(|_| count > 2) {
+                // waking the workers costs more than it saves unless at least two chains of this
+                // level have work: a parked chain with nothing written into it is skipped at once
+                let busy = || g.inserts[1..].iter().filter(|i| i.level == lv && (i.dirty || !i.parked)).nth(1).is_some();
+                if let Some(pool) = self.pool.as_ref().filter(|_| count > 2 && busy()) {
                     // the pool's threads take this level's chains one by one. A chain with a
                     // watched effect writes the analysis taps: this thread runs it.
                     let shared = &*self.shared;
