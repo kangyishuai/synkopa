@@ -7,6 +7,16 @@ shown in the app after an update and is published as the release notes (see
 ## Unreleased
 
 ### Added
+- **Markers on the Playlist, as FL Studio's time markers.** Name the parts of your song (Intro,
+  Verse, Hook, Drop) and see them in a strip above the ruler. Press Alt+T to drop a marker where
+  the song is (the playhead while it plays) and type its name, or right-click the ruler → Add marker
+  here. Click a marker to jump there, drag it to move it (it snaps to the grid; Esc puts it back),
+  double-click it to loop the section up to the next marker, and right-click it to rename or delete
+  it. Alt+→ / Alt+← (or Alt+Num * / Alt+Num /, as in FL) jump to the next or previous marker, also
+  while playing, and Edit → Markers lists them all (the command palette, Ctrl+K, finds them by
+  name). Every change is one undo step and markers are saved with the song.
+  `synkopa markers --add Hook --bar 9` and `synkopa markers --loop Hook` do the same from the
+  command line.
 - **Sidechain compression: let the kick duck the bass.** Right-click the kick's mixer strip →
   Sidechain to → Bass, as FL Studio's "Sidechain to this track". The bass's Compressor now listens
   to the kick (or one set up for ducking is added and opened), and the bass dips on every hit
