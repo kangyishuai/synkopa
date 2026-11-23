@@ -27,6 +27,14 @@ shown in the app after an update and is published as the release notes (see
   as a dashed cable marked SC, and stems keep their ducking. From the command line:
   `synkopa sidechain --from 1 --to 3`.
 
+### Changed
+- **Right-click on a clip's name opens its menu.** Right-clicking the bar with the clip's name
+  opens its menu. Right-clicking below it still deletes the clip, as in FL Studio, and a
+  right-drag still deletes everything it crosses. The menu used to open only from the small icon
+  in the corner, and only on a wide enough clip; the status bar now says this when you point at a clip.
+- **Calmer colour pickers.** Menus that set a colour show five colours, plus the one in use. The
+  "…" box opens the full palette, and its "+" picks any colour you like.
+
 ## 0.9.32 — 2026-11-22
 
 ### Fixed

@@ -118,7 +118,10 @@ function hasSamplerOf(ref: Id): boolean {
 }
 
 /** `cb`: a comp region boundary (`bnd` = its index in `boundaries(comp.regions)`). */
-interface Hit { c: Clip; edge: 'l' | 'r' | 'fi' | 'fo' | 'cb' | 'menu' | null; bnd?: number }
+/** `head`: on the clip's name bar (the top CLIP_HEAD px), where a right-click opens its menu. */
+interface Hit { c: Clip; edge: 'l' | 'r' | 'fi' | 'fo' | 'cb' | 'menu' | null; bnd?: number; head?: boolean }
+/** Height (px) of a clip's name bar. */
+const CLIP_HEAD = 15;
 /** Trim zone of a clip's edge (px): this far inside the clip, and this far outside it. Together
  *  14 px, about what REAPER / Ableton give an edge; 6 px inside alone was hard to hit. */
 const EDGE_IN = 8, EDGE_OUT = 6;
@@ -703,9 +706,9 @@ export function Playlist() {
       const ez = cwid < 14 ? 0 : Math.min(EDGE_IN, cwid / 4);
       if (!edge) edge = x - cx < ez ? 'l' : cx + cwid - x < ez ? 'r' : null;
       // the icon in the clip's top-left corner opens its menu (FL), with either button
-      if (!edge && cwid >= 36 && x - cx < 20 && y - cy < 15) edge = 'menu';
+      if (!edge && cwid >= 36 && x - cx < 20 && y - cy < CLIP_HEAD) edge = 'menu';
     }
-    return { c, edge };
+    return { c, edge, head: y - cy < CLIP_HEAD };
   }
 
   /** The take lane under a grid point, if any. */
@@ -716,6 +719,7 @@ export function Playlist() {
     const k = Math.floor(dy / LANE_H), take = row.comp.takes[k]; if (!take) return null;
     return { ...row, ti, k, take, cb: toComp(row.clip, x / U.bw) };
   }
+  let hintClip: Id | null = null;
   const hover = (e: PointerEvent) => {
     if (e.buttons) return;
     const p = pt(e), L = laneHit(p.x, p.y), h0 = L ? null : hit(p.x, p.y);
@@ -734,6 +738,9 @@ export function Playlist() {
       if (!prevEnv || prevEnv.clip !== h.c.id) say(tl('a.pl.autoEditHint'));
       if (hv) { const c = hv.kind === 'point' ? 'move' : 'ns-resize'; if (gridCv.style.cursor !== c) gridCv.style.cursor = c; return; }
     } else if (prevEnv) setEnvHover(null);
+    // the first time the pointer is on a clip: where its menu is and where a right-click deletes
+    if (h0 && h0.c.id !== hintClip && h0.c.kind !== 'auto' && editable()) { hintClip = h0.c.id; say(tl('a.pl.clipRmbHint')); }
+    else if (!h0) hintClip = null;
     let cur = toolCursor();
     if (h) {
       if (h.edge === 'menu') cur = 'pointer';
@@ -750,6 +757,12 @@ export function Playlist() {
     const modK = e.ctrlKey || e.metaKey;
     if (e.button === 2 && modK) return zoomBoxDrag(e);
     const p = pt(e), h = hit(p.x, p.y), id = h?.c.id ?? null;
+    // right-click on a clip's name bar: its menu; on the rest of the clip: delete (FL)
+    if (e.button === 2 && h?.head && h.edge !== 'cb') {
+      e.preventDefault(); closeMenu();
+      if (!U.sel.includes(h.c.id)) setU('sel', [h.c.id]);
+      return openClipMenu(e.clientX, e.clientY, h.c, p);
+    }
     if (h?.c.kind === 'auto' && editable() && (e.button === 0 || e.button === 2) && envDown(e, h.c, p.x, p.y)) return;
     const near = h || modK || laneHit(p.x, p.y) ? null : nearEdge(p.x, p.y);
     if (near && (e.button === 0 || e.button === 2)) {
@@ -1027,8 +1040,8 @@ export function Playlist() {
       g.update([{ op: 'removeClips', ids: [cid] }]);
       if (U.sel.includes(cid)) setU('sel', U.sel.filter(x => x !== cid));
     };
-    // FL: a right-click on a clip deletes it at once and a right-drag deletes what it crosses (one
-    // undo step). The clip's menu is on its icon; empty space and a comp boundary keep their menus.
+    // FL: a right-click on a clip's body deletes it at once and a right-drag deletes what it crosses
+    // (one undo step). Its name bar opens the menu (handled before this); a comp boundary keeps its menu.
     const start = () => { g = new Gesture(tl('a.pl.deleteClips')); dragCursor('not-allowed'); del(h?.c.id); };
     if (h && h.edge !== 'cb') start();
     track(ev => {
